@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="YoggTree" Version="1.0.0-CI-20230411-191200" />
+  </ItemGroup>
+
 </Project>
