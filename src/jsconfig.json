@@ -1,0 +1,6 @@
+﻿{
+  "include": [
+    "EventUI.js",
+    "Modules/*.js"
+  ]
+}

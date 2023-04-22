@@ -901,94 +901,6 @@ $evui.deepExtend = function (target, source, filter)
     return EVUI.Modules.Core.Utils.deepExtend(target, source, filter);
 };
 
-/**Returns a CaseInsensitiveObject that contains all the keys found in the query string and URL hash.
-@param {String} requestURL The URL to get the query string and URL hash values from. If omitted, window.location.href is used instead.
-@param {Boolean} hashWins If true, in the event that the URL hash and query string contain the same key, the hash value will overwrite the query string value. Otherwise the query string value wins.
-@param {EVUI.Constants.Utils.Fn_CustomDecoder} customDecoder Optional. In the event that decodeURIComponent doesn't isn't adequate to decode the query string value, use this function to implement custom URL decoding for query string or url hash values.
-@returns {EVUI.Modules.Core.CaseInsensitiveObject}*/
-EVUI.Modules.Core.Utils.getQueryStringValues = function (requestURL, hashWins, customDecoder)
-{
-    if (typeof requestURL !== "string") requestURL = window.location.href;
-    var qsIndex = requestURL.indexOf("?");
-    var hashIndex = requestURL.indexOf("#");
-
-    //no hash, no qs, nothing to do
-    if (qsIndex === -1 && hashIndex === -1)
-    {
-        return new EVUI.Modules.Core.CaseInsensitiveObject();
-    }
-
-    var queryString = null;
-    var hashVars = null;
-
-    //if there is a hash in the URL, we "fudge" it by making it into a query string and passing it back into this same function.
-    if (hashIndex > -1)
-    {
-        var hash = "?" + requestURL.substring(hashIndex + 1, requestURL.length);
-
-        hashVars = EVUI.Modules.Core.Utils.getQueryStringValues(hash, false, customDecoder);
-        requestURL.substring(qsIndex + 1, requestURL.length - hashIndex); //chop off hash
-    }
-
-    //no qs. Either return hash if we had it or noting if we didn't.
-    if (qsIndex < 0)
-    {
-        if (hashVars != null) return hashVars;
-        return new EVUI.Modules.Core.CaseInsensitiveObject();
-    }
-
-    //chop off the "?"
-    queryString = requestURL.substring(qsIndex + 1, requestURL.length);
-
-    var qsKeys = queryString.split("&");
-    var paramsObject = new EVUI.Modules.Core.CaseInsensitiveObject();
-    var decodingFunction = (typeof customDecoder !== "function") ? decodeURIComponent : customDecoder;
-
-    var numQSKeys = qsKeys.length;
-    for (var x = 0; x < numQSKeys; x++)
-    {
-        var curKey = qsKeys[x];
-        var split = curKey.split("=");
-
-        if (split.length != 2) continue;
-
-        //set the values in the case insensitive object, making sure no two keys differ by only case
-        paramsObject.setValue(split[0], decodingFunction(split[1]));
-    }
-
-    //load up the hash variables into the return object
-    if (hashVars != null)
-    {
-        for (var hashPropName in hashVars)
-        {
-            var qsValue = paramsObject.getValue(hashPropName);
-            if (qsValue === undefined) //query string did not include the value, add it to the result
-            {
-                paramsObject[hashPropName] = hashVars[hashPropName];
-            }
-            else //query string did have the value
-            {
-                if (hashWins === true) //the hash wins, override the 
-                {
-                    paramsObject.setValue(hashPropName, value);
-                }
-            }
-        }
-    }
-
-    return paramsObject;
-};
-
-/**Returns a CaseInsensitiveObject that contains all the keys found in the query string and URL hash.
-@param {String} requestURL The URL to get the query string and URL hash values from. If omitted, window.location.href is used instead.
-@param {Boolean} hashWins If true, in the event that the URL hash and query string contain the same key, the hash value will overwrite the query string value. Otherwise the query string value wins.
-@param {Function} customDecoder Optional. In the event that decodeURIComponent doesn't isn't adequate to decode the query string value, use this function to implement custom URL decoding for query string or url hash values.
-@returns {EVUI.Modules.Core.CaseInsensitiveObject}*/
-$evui.getQueryString = function (requestURL, hashWins, customDecoder)
-{
-    return EVUI.Modules.Core.Utils.getQueryStringValues(requestURL, hashWins, customDecoder)
-};
-
 /**Returns a CaseInsensitiveObject that contains all the attributes on an element as members of the object.
 @param {Object} element The element to get the attributes of.
 @returns {EVUI.Modules.Core.CaseInsensitiveObject}*/
@@ -1018,56 +930,6 @@ $evui.getAttrs = function (element)
 {
     return EVUI.Modules.Core.Utils.getElementAttributes(element);
 }
-
-/**Reads the document's cookies and returns them in the form of a CaseInsensitiveObject. Sub-cookies are sub-objects of the CaseInsensitiveObject.
-@returns {EVUI.Modules.Core.CaseInsensitiveObject}*/
-EVUI.Modules.Core.Utils.readCookies = function ()
-{
-    var cookie = document.cookie;
-    var cookies = cookie.split(";");
-    var numCookies = cookies.length;
-
-    var cookieContainer = new EVUI.Modules.Core.CaseInsensitiveObject();
-
-    for (var x = 0; x < numCookies; x++)
-    {
-        var curCookie = cookies[x].trim();
-        var firstEquals = curCookie.indexOf("=");
-
-        var cookieName = curCookie.substring(0, firstEquals);
-        var cookieValue = curCookie.substr(firstEquals + 1);
-        var subValues = cookieValue.split("&");
-
-        if (subValues.length === 1)
-        {
-            cookieContainer.setValue(decodeURIComponent(cookieName), decodeURIComponent(cookieValue));
-        }
-        else
-        {
-            var subCookieContainer = new EVUI.Modules.Core.CaseInsensitiveObject();
-
-            var numSubValues = subValues.length;
-            for (var y = 0; y < numSubValues; y++)
-            {
-                var curSubValue = subValues[y].split("=");
-                if (curSubValue.length != 2) continue;
-
-                subCookieContainer.setValue(decodeURIComponent(curSubValue[0]), decodeURIComponent(curSubValue[1]));
-            }
-
-            cookieContainer.setValue(decodeURIComponent(cookieName), subCookieContainer);
-        }
-    }
-
-    return cookieContainer;
-};
-
-/**Reads the document's cookies and returns them in the form of a CaseInsensitiveObject. Sub-cookies are sub-objects of the CaseInsensitiveObject.
-@returns {EVUI.Modules.Core.CaseInsensitiveObject}*/
-$evui.cookie = function ()
-{
-    return EVUI.Modules.Core.Utils.readCookies();
-};
 
 /**Wraps all the properties specified in the property mappings parameter so that they are settable on the source object but are set and read from the target object.
 @param {Object} source The source object to receive the properties.
@@ -1607,8 +1469,6 @@ $evui.removeFlag = function (flagSet, flag)
 {
     return EVUI.Modules.Core.Utils.removeFlag(flagSet, flag);
 };
-
-
 
 /**Checks to see if an object is an instance of a jQuery object.
 @param {Object} object The object to check.
