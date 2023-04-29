@@ -1,3 +1,6 @@
+using EventUITestFramework.Utils;
+using Microsoft.Extensions.FileProviders;
+
 namespace EventUITest
 {
     public class Program
@@ -20,8 +23,9 @@ namespace EventUITest
             }
 
             app.UseHttpsRedirection();
-            app.UseStaticFiles();
 
+            AddStaticFiles(app);
+            
             app.UseRouting();
 
             app.UseAuthorization();
@@ -29,6 +33,38 @@ namespace EventUITest
             app.MapRazorPages();
 
             app.Run();
+        }
+
+        internal static void AddStaticFiles(WebApplication app)
+        {
+            DirectoryInfo rootContentPath = RootDirectoryFinder.GetRootRepositoryDirectory();
+
+            string rootSrcPath = Path.Combine(rootContentPath.FullName, "src");
+            string rootTestPath = Path.Combine(rootContentPath.FullName, "test", "test_src");
+
+            if (Directory.Exists(rootSrcPath) == false)
+            {
+                throw new DirectoryNotFoundException("Could not locate root EventUI's raw source path. \"" + rootSrcPath + "\" did not exist.");
+            }
+
+            if (Directory.Exists(rootTestPath) == false)
+            {
+                throw new DirectoryNotFoundException("Could not locate root EventUI's test source path. \"" + rootTestPath + "\" did not exist.");
+            }
+
+            app.UseStaticFiles();
+
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = new PhysicalFileProvider(rootSrcPath),
+                RequestPath = "/evuisrc"
+            });
+
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = new PhysicalFileProvider(rootSrcPath),
+                RequestPath = "/evuitest"
+            });
         }
     }
 }

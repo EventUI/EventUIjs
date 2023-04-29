@@ -10,4 +10,8 @@
     <ProjectReference Include="..\EventUITestFramework\EventUITestFramework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\lib\" />
+  </ItemGroup>
+
 </Project>

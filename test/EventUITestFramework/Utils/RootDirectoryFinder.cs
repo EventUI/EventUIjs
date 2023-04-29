@@ -42,7 +42,7 @@ namespace EventUITestFramework.Utils
 
                     if (hasTest == true && hasSrc == true && hasBuild == true)
                     {
-                        dir.GetFiles().Any(f => f.Name.ToLower() == "license") == true)
+                        if (parent.GetFiles().Any(f => f.Name.ToLower() == "license") == true)
                         {
                             return parent;
                         }
