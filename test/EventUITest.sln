@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITest", "EventUITest\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITestFramework", "EventUITestFramework\EventUITestFramework.csproj", "{4539212C-4D4E-44F2-B9F2-8976736C0F57}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventUITestFrameworkTests", "EventUITestFrameworkTests\EventUITestFrameworkTests.csproj", "{636C89A6-5B03-435E-9213-4746DA6CCA5B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITestFrameworkTests", "EventUITestFrameworkTests\EventUITestFrameworkTests.csproj", "{636C89A6-5B03-435E-9213-4746DA6CCA5B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

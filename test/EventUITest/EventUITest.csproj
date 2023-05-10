@@ -14,4 +14,8 @@
     <Folder Include="wwwroot\lib\" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Content Include="..\test_src\**" Link="test_src\%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
 </Project>

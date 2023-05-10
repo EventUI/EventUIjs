@@ -57,12 +57,12 @@ namespace EventUITest
             app.UseStaticFiles(new StaticFileOptions()
             {
                 FileProvider = new PhysicalFileProvider(rootSrcPath),
-                RequestPath = "/evuisrc"
+                RequestPath = "/evuisrc",
             });
 
             app.UseStaticFiles(new StaticFileOptions()
             {
-                FileProvider = new PhysicalFileProvider(rootSrcPath),
+                FileProvider = new PhysicalFileProvider(rootTestPath),
                 RequestPath = "/evuitest"
             });
         }

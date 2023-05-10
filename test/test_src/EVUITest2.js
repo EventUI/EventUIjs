@@ -90,7 +90,7 @@ EVUITest2.OutputWriter = function ()
     @param {Any} args Any arguments to write to outpit.*/
     this.writeOutput = function (...args)
     {
-        console.log(args);
+        console.log(...args);
     };
 
     /**Formats a testResult into a loggable string.
@@ -121,25 +121,19 @@ EVUITest2.OutputWriter = function ()
 
         if (testResult.arguments != null)
         {
-            var argsStr = "\n\n With Arguments:\n";
+            var argsStr = "\n\nWith Arguments:\n";
 
             if (typeof arguments === "function")
             {
-                argsStr = testResult.arguments.toString();
+                argsStr += testResult.arguments.toString();
             }
             else if (typeof arguments === "object")
             {
-                argsStr = JSON.stringify(testResult.arguments, function (target, key, value)
-                {
-                    if (typeof value === "function")
-                    {
-                        return value.toString();
-                    }
-                })
+                argsStr += JSON.stringify(testResult.arguments);
             }
             else
             {
-                argsStr = testResult.arguments.toString();
+                argsStr += testResult.arguments.toString();
             }
 
             output += argsStr;
@@ -225,6 +219,11 @@ EVUITest2.TestHostController = function ()
         });
     };
 
+    this.writeOutput = function (...args)
+    {
+        writeOutput(...args);
+    };
+
     /**Takes ambiguous user input and makes a TestState object from it.
     @param {EVUITest2.Test|EVUITest2.Constants.Fn_Test} test The test to turn into a TestState.*/
     var getTestAmbiguously = function (name, test)
@@ -232,7 +231,7 @@ EVUITest2.TestHostController = function ()
         var testType = typeof test;
         var nameType = typeof name;
 
-        if (name == null || (nameType !== "object" && nameType !== "function" || nameType !== "string")) return null;
+        if (name == null || (nameType !== "object" && nameType !== "function" && nameType !== "string")) return null;
 
         if (nameType === "string")
         {
@@ -241,6 +240,7 @@ EVUITest2.TestHostController = function ()
         else
         {
             test = name;
+            testType = nameType;
         }
 
         name = (typeof test.name === "string" && test.name.trim().length > 0) ? test.name : "<anonymous>";
@@ -263,11 +263,16 @@ EVUITest2.TestHostController = function ()
                     args = args.slice();
                 }
             }
+            else
+            {
+                args = [];
+            }
 
             //move the properties from the user's test onto the real test
             extend(realTest, test, ["id", "testArgs"]);
 
             realTest.testArgs = args;
+            state.arguments = args;
         }
         else if (testType === "function") //if the test was just a function, just set the actual test part of the test.
         {
@@ -282,7 +287,6 @@ EVUITest2.TestHostController = function ()
 
         realTest.name = name;
 
-        state.id = _testIdCounter++;
         state.test = realTest;
 
         return state;
@@ -321,7 +325,6 @@ EVUITest2.TestHostController = function ()
 
     var writeOutput = function (...args)
     {
-
         if (typeof _self.outputWriter.writeOutput !== "function")
         {
             console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function that accepts a ...args set of arguments.");
@@ -331,7 +334,7 @@ EVUITest2.TestHostController = function ()
 
             try
             {
-                _self.outputWriter.writeOutput(result);
+                _self.outputWriter.writeOutput(...args);
             }
             catch (ex)
             {
@@ -446,15 +449,15 @@ EVUITest2.TestHostController = function ()
         //add the global error event listener to catch exceptions thrown not on the stack trace of the promise (i.e. in a callback for a native API, like a XMLHttpRequest)
         addEventListener("error", errorHandler);
 
-        timeoutID = setTimeout(function ()
-        {
-            fail(new Error("Timeout reached after " + timeout + "ms."))
-        }, timeout);
-
-        Promise.then(function ()
+        Promise.resolve().then(function ()
         {
             try
             {
+                timeoutID = setTimeout(function ()
+                {
+                    fail(new Error("Timeout reached after " + timeout + "ms."))
+                }, timeout);
+
                 var allArgs = [pass, fail].concat(testInstance.arguments);
                 testInstance.startTime = performance.now();
 
@@ -678,20 +681,17 @@ EVUITest2.TestHost = null;
             }
 
             return host;
-        }
+        },
+        enumerable: true
     });
 }());
 
-/**Awaitable. Runs a test function based on the TestHostArgs passed in.
-@param {String|EVUITest2.Constants.Fn_Test|EVUITest2.Test} name The name of the test being run, a test function to run, or a Test yolo to run.
-@param {EVUITest2.Constants.Fn_Test|EVUITest2.Test} test The test function to run, or a Test yolo to run.
-@returns {Promise}*/
-$evui.testAsync = function (name, test)
-{
-    return EVUITest2.TestHost.runAsync(name, test);
-}
-
-$evui.testAsync("basic", function (pass, fail)
-{
-    fail("Some reason");
-});
+/**
+@type {EVUITest2.TestHostController}*/
+$evui.testHost = null;
+Object.defineProperty($evui, "testHost", {
+    get: function ()
+    {
+        return EVUITest2.TestHost;
+    }
+})
