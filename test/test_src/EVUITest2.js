@@ -3,6 +3,8 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
+if ($evui == null) $evui = {};
+
 EVUITest2 = {};
 
 EVUITest2.Constants = {};
@@ -20,7 +22,7 @@ EVUITest2.Constants.Fn_TestPass = function () { };
 @param {String} reason The reason why the test failed.*/
 EVUITest2.Constants.Fn_TestFail = function (reason) { };
 
-/**Object representing a test to run in a TestRunner.
+/**Object representing a test to run in the TestHost.
 @class*/
 EVUITest2.Test = function ()
 {
@@ -33,8 +35,8 @@ EVUITest2.Test = function ()
     /**String. The name of the test. Used for logging purposes.*/
     this.name = null;
 
-    /**Array. Arguments to pass into the test. Multiple elements in the array will result in multiple test runs (one for each a).
-    @type {[]}*/
+    /**Array. Arguments to pass into the test. Multiple elements in the array will result in multiple test runs (one for each value). If more than one parameter is desired, make the elements of the array be arrays of the parameters to pass into each test instance.
+    @type {[[]]}*/
     this.testArgs = null;
 
     /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestExecutionArgs instance
@@ -58,24 +60,37 @@ EVUITest2.TestResult = function ()
     @type {Boolean}*/
     this.success = false;
 
-    /**String. The error message if the test failed.*/
+    /**String. The error message if the test failed.
+    @type {String}*/
     this.reason = null;
 
     /**Array. The array of user-provided values that was fed into the test function.
     @type {Array}*/
     this.testName = null;
 
+    /**Array. The arguments that were passed into the test.
+    @type {Array}*/
     this.arguments = null;
 
+    /**Object. If the test crashed, this is the Error thrown inside the test.
+    @type {Error}*/
     this.error = null;
 
+    /**Number. The number of milliseconds the test took.
+    @type {Number}*/
     this.duration = 0;
 
+    /**Number. The incremental unqiue ID of this test.
+    @type {Number}*/
     this.instanceId = 0;
 
+    /**Number. The ordinal of this test in the set of tests that contained it.
+    @type {Number}*/
     this.testSetId = 0;
 };
 
+/**Simple utility class used for writing output from the TestHost. The default implementation writes to the console, but it can be overwritten to write to anything.
+@class*/
 EVUITest2.OutputWriter = function ()
 {
     /**Writes the output of a TestResult.
@@ -219,12 +234,15 @@ EVUITest2.TestHostController = function ()
         });
     };
 
+    /**Uses the ouputWriter to write arbitrary output.
+    @param {Any} args Any arguments to write as output.*/
     this.writeOutput = function (...args)
     {
         writeOutput(...args);
     };
 
     /**Takes ambiguous user input and makes a TestState object from it.
+    @param {String|EVUITest2.Test|EVUITest2.Constants.Fn_Test} name Either the name of the test, a test yolo, or a test function.
     @param {EVUITest2.Test|EVUITest2.Constants.Fn_Test} test The test to turn into a TestState.*/
     var getTestAmbiguously = function (name, test)
     {
@@ -292,16 +310,19 @@ EVUITest2.TestHostController = function ()
         return state;
     };
 
+    /**Gets the next test in the test queue.
+    @returns {TestState}*/
     var getNextTest = function ()
     {
         var testToRun = _testQueue.shift();
         return testToRun;
     };
 
-    /**
-    @param {TestInstance} testState*/
-    var writeTestOuput = function (testState)
+    /**Utility function for ensuring that there is a valid outputWriter before attempting to write any output about the results of a test instance.
+    @param {TestInstance} testInstance The instance of a test that was just completed.*/
+    var writeTestOuput = function (testInstance)
     {
+        //ensure we have at least the default output writer
         if (_self.outputWriter == null) _self.outputWriter = new EVUITest2.OutputWriter();
 
         if (typeof _self.outputWriter.writeTestOuput !== "function")
@@ -310,7 +331,7 @@ EVUITest2.TestHostController = function ()
         }
         else
         {
-            var result = makeResultFromState(testState);
+            var result = makeResultFromState(testInstance);
 
             try
             {
@@ -323,11 +344,13 @@ EVUITest2.TestHostController = function ()
         }
     };
 
+    /**Utility function for writing arbitrary content to the outputWriter's destination.
+    @param {Any} args Any values to write as output.*/
     var writeOutput = function (...args)
     {
         if (typeof _self.outputWriter.writeOutput !== "function")
         {
-            console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function that accepts a ...args set of arguments.");
+            console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function that accepts an ...args set of arguments.");
         }
         else
         {
@@ -343,8 +366,9 @@ EVUITest2.TestHostController = function ()
         }
     }
 
-    /**
-    @param {TestState} testState*/
+    /**Executes a test via executing all of the test instances made from its arugments list.
+    @param {TestState} testState THe internal property bag holding state information about a test.
+    @param {Function} callback A callback function to call once all instances of this test have been run.*/
     var executeTest = function (testState, callback)
     {
         _executing = true;
@@ -386,16 +410,17 @@ EVUITest2.TestHostController = function ()
         runTest(0);
     };
 
-    /**
-    @param {TestInstance} testInstance*/
+    /**Executes an instance of a test (a test function combined with a set of arguments).
+    @param {TestInstance} testInstance The instance of the test to run.
+    @param {Function} callback A callback function to call once the test instance has finished running - takes the completed test instance as a parameter.*/
     var executeInstance = function (testInstance, callback)
     {
-        var testFinished = false;
-        var finalOptions = makeFinalOptions(testInstance.state.test.options, _self.options);
-        var timeout = typeof finalOptions.timeout !== "number" ? 100 : finalOptions.timeout;
-        var timeoutID = -1;
+        var testFinished = false; //flag to make sure that the callback is not called twice
+        var finalOptions = makeFinalOptions(testInstance.state.test.options, _self.options); //combination of the options on the test and on the host
+        var timeout = typeof finalOptions.timeout !== "number" ? 100 : finalOptions.timeout; //timeout before the test auto-fails.
+        var timeoutID = -1; //id of the setTimeout return value. Used to cancel the timeout in the event the test completes before it expires.
 
-        var finish = function ()
+        var finish = function () //final function to call on all exit paths from this function
         {
             removeEventListener("error", errorHandler);
 
@@ -403,7 +428,7 @@ EVUITest2.TestHostController = function ()
             callback(testInstance);
         }
 
-        var pass = function ()
+        var pass = function () //function to call when the test passes
         {
             if (testFinished === true) return;
             testFinished = true;
@@ -414,7 +439,7 @@ EVUITest2.TestHostController = function ()
             finish();
         };
 
-        var fail = function (reasonOrEx)
+        var fail = function (reasonOrEx) //function to call whent he test fails
         {
             if (testFinished === true) return;
             testFinished = true;
@@ -430,7 +455,7 @@ EVUITest2.TestHostController = function ()
             {
                 testInstance.error = reasonOrEx;
             }
-            else
+            else //make an error so we get a stack trace
             {
                 testInstance.error = new Error("Manually failed for an unknown reason.");
             }
@@ -438,7 +463,7 @@ EVUITest2.TestHostController = function ()
             finish();
         };
 
-        var errorHandler = function (args)
+        var errorHandler = function (args) //event handler to attach to the window to catch errors that would normally escape the try-catch below due to being in a different stack frame
         {
             //if the error came from a script file that we don't care about, do nothing
             if (meetsScriptFilter(args.filename, finalOptions.fileFilter) === false) return;
@@ -449,22 +474,24 @@ EVUITest2.TestHostController = function ()
         //add the global error event listener to catch exceptions thrown not on the stack trace of the promise (i.e. in a callback for a native API, like a XMLHttpRequest)
         addEventListener("error", errorHandler);
 
+        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow
         Promise.resolve().then(function ()
         {
             try
             {
-                timeoutID = setTimeout(function ()
+                timeoutID = setTimeout(function () //set the timeout failsafe
                 {
                     fail(new Error("Timeout reached after " + timeout + "ms."))
                 }, timeout);
 
+                //make the final args array to use to invoke the test. The first two parameters are awlays the pass and fail functions
                 var allArgs = [pass, fail].concat(testInstance.arguments);
                 testInstance.startTime = performance.now();
 
                 var result = testInstance.testFn.apply(this, allArgs);
                 if (result instanceof Promise)
                 {
-                    result.catch(function (ex)
+                    result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
                         fail(ex);
                     });
@@ -472,14 +499,13 @@ EVUITest2.TestHostController = function ()
             }
             catch (ex)
             {
-                testInstance.endTime = performance.now();
                 fail(ex);
             }
         });
     };
 
-    /**
-    @param {TestState} testState*/
+    /**Creates a TestInstance for every set of arguments in the args list provided by the user.
+    @param {TestState} testState The internal property bag of state about the test being run.*/
     var getTestInstances = function (testState)
     {
         var instances = [];
@@ -512,20 +538,21 @@ EVUITest2.TestHostController = function ()
         return instances;
     };
 
-    /**
-    @param {TestInstance} testState*/
-    var makeResultFromState = function (testState)
+    /**Makes a TestResult from a TestInstance.
+    @param {TestInstance} testInstance The instance of the test that was just completed.
+    @type {EVUITest2.TestResult}*/
+    var makeResultFromState = function (testInstance)
     {
         var result = new EVUITest2.TestResult();
 
-        result.arguments = testState.arguments;
-        result.duration = testState.endTime - testState.startTime;
-        result.error = testState.error;
-        result.success = testState.success;
-        result.testId = testState.state.testId;
-        result.testName = testState.state.test.name;
-        result.instanceId = testState.instanceId;
-        result.testSetId = testState.instanceInSet;
+        result.arguments = testInstance.arguments;
+        result.duration = testInstance.endTime - testInstance.startTime;
+        result.error = testInstance.error;
+        result.success = testInstance.success;
+        result.testId = testInstance.state.testId;
+        result.testName = testInstance.state.test.name;
+        result.instanceId = testInstance.instanceId;
+        result.testSetId = testInstance.instanceInSet;
 
         return result;
     }
@@ -618,54 +645,76 @@ EVUITest2.TestHostController = function ()
         return target;
     };
 
+    /**The internal state property bag that contains all the known info about a user's test.
+    @class*/
     var TestState = function ()
     {
+        /**Number. The unqiue ID of the test.
+        @type {Number}*/
         this.testId = _idCounter++;
 
-        /**
+        /**Object. The actual test to run.
         @type {EVUITest2.Test}*/
         this.test = null;
 
-        /**
-        @type {[]}*/
+        /**Array.The arugments given by the user to run the test with.
+        @type {[[]]}*/
         this.arguments = null;
 
-        /**
+        /**Array. An instance of each test the user "requested" by providing multiple parameters.
         @type {TestInstance[]}*/
         this.instances = [];
 
-        this.running = false;
-
+        /**Function. A callback to call once this test has completed running all of its instances.
+        @type {Function}*/
         this.callback = null;
     };
 
+    /**Represents a single invocation of a user's test with a set of given parameters.
+    @class*/
     var TestInstance = function ()
     {
+        /**Number. THe unique ID of this test instance.
+        @type {Number}*/
         this.instanceId = _instanceCounter++;
 
+        /**Number. The index of this test in a set of tests spawned by a Test with multiple argument sets.
+        @type {Number}*/
         this.instanceInSet = 0;
 
-        /**
+        /**Object. The TestState associated with this TestInstance.
         @type {TestState}*/
         this.state = null;
 
+        /**Number. The starting timestamp of the TestInstance immediately before running the test.
+        @type {Number}*/
         this.startTime = null;
 
+        /**Number. The ending timestamp of the TestInstance immediately after running the test.*/
         this.endTime = null;
 
+        /**Array. The arguments passed into the test.
+        @type {Array}*/
         this.arguments = null;
 
+        /**Boolean. Whether or not the test succeeded.
+        @type {Boolean}*/
         this.success = false;
 
+        /**String. If the test was manually failed, this is the reason why.
+        @type {String}*/
         this.reason = null;
 
+        /**Error. If the test crashed, this is the exception that was thrown.*/
         this.error = null;
 
+        /**Function. The actual test being run.
+        @type {EVUITest2.Constants.Fn_Test}*/
         this.testFn = null;
     }
 };
 
-/**
+/**Global instance of the TestHost.
 @type {EVUITest2.TestHostController}*/
 EVUITest2.TestHost = null;
 (function ()
@@ -686,7 +735,7 @@ EVUITest2.TestHost = null;
     });
 }());
 
-/**
+/**The singleton instance of the TestHostController used to run tests.
 @type {EVUITest2.TestHostController}*/
 $evui.testHost = null;
 Object.defineProperty($evui, "testHost", {
@@ -694,4 +743,4 @@ Object.defineProperty($evui, "testHost", {
     {
         return EVUITest2.TestHost;
     }
-})
+});
