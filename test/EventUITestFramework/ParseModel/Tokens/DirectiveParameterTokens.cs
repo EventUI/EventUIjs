@@ -83,12 +83,12 @@ namespace EventUITestFramework.ParseModel.Tokens
     }
 
     /// <summary>
-    /// Token for the separating "|" in a set of multiple parameters. Always sits between runs of text or quoted text contents.
+    /// Token for the separating "," in a set of multiple parameters. Always sits between runs of text or quoted text contents.
     /// </summary>
-    public class DirectiveParameterSeperatorToken : TokenDefinition, IEventUIParameterToken
+    public class DirectiveParameterSeparatorToken : TokenDefinition, IEventUIParameterToken
     {
-        public DirectiveParameterSeperatorToken()
-            : base(TestGenRegexStore.ParameterSeperator, "|")
+        public DirectiveParameterSeparatorToken()
+            : base(TestGenRegexStore.ParameterSeperator, ",")
         {
         }
 

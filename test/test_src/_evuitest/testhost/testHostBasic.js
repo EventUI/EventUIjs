@@ -3,7 +3,6 @@ await $evui.testHost.runAsync({
     test: function (pass, fail)
     {
         $evui.testHost.writeOutput("passing");
-
         pass();
     }
 });
@@ -24,3 +23,4 @@ await $evui.testHost.runAsync({
         fail("manual");
     }
 });
+

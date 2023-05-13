@@ -7,28 +7,51 @@
             -REMOVE: removes the dependency
 
 TEST_ROOT("<rootName>")
- - Marks the top level of a hierarchy of TestSets and their associated tests. Defines the base dependencies for all TestSets and tests underneath it.
-
-TEST_SET("<setName>")
- - Marks the next level down in the hierarchy, sits above actual test files and can override or define the setup
-    -TEST_RUN(type|[path|pattern]/RexExp|recursive)
+ - Marks the top level of a hierarchy of TestSets and their associated tests. Defines the base dependencies for all TestSets and tests underneath it. 
+ - Must have an ".tstroot" extension.
+    - RUN_SET(type|[path|pattern]/RexExp|recursive)
         -Command from telling it to run a test with the given file name or run multiple test files that satisfy a regular expression.
             -type can be either:
                 -@file to run a file in a path relative to the TEST_SET file.
                 -@regexp to run a batch of files in and possibly below the directory that satisfy the regular expression
             -can recursively look down to child directories, false by default.
 
-    -TEST_SKIP(type|"<path|pattern>")
+    - SKIP_SET(type|[path|pattern]/RexExp|recursive)
+        -Command from telling it to not run a test with the given file name or run multiple test sets that satisfy a regular expression.
+            -type can be either:
+                -@file to run a file in a path relative to the TEST_SET file.
+                -@regexp to run a batch of files in and possibly below the directory that satisfy the regular expression
+            -can recursively look down to child directories, false by default.
+
+TEST_SET("<setName>", continuationMode)
+ - Marks the next level down in the hierarchy, sits above actual test files and can override or define the setup.
+ - Must have an ".tstset" extension.
+ - ContinuationMode describes what the test set should do should a test fail. 
+   - Possible values are:
+     -CONTINUE: If there is an error in a test, the tests continue executing. If this parameter is omitted from the TEST_SET tag, this is used as the default.
+     -FAIL: If there is an error in a test, the test set will cease executing.
+     -CRITICAL: If there is an error in a test, no further tests or test sets will be executed.
+    
+    -RUN_FILE(type,[path|pattern]/RexExp,recursive)
+        -Command from telling it to run a test with the given file name or run multiple test files that satisfy a regular expression.
+            -type can be either:
+                -@file to run a file in a path relative to the TEST_SET file.
+                -@regexp to run a batch of files in and possibly below the directory that satisfy the regular expression
+            -can recursively look down to child directories, false by default.
+
+    -SKIP_FILE(type,"<path|pattern>")
         -Command from _testSet.txt telling it to skip files that match a given relative path or pattern.
             -type can be either:
                 -@file to run a specific file
                 -@regexp to run a batch of files that satisfy the regular expression
 
 TEST_FILE("<testFileName>")
+ - Must have a ".js" extension.
  - Next level down in the hierarchy, these contain actual blocks of code to execute.
  - Header put at the top of a file to label is being tested.
 
 
 -TEST_START("<testName>")
+- Must be contained within a .js file with a TEST_FILE header.
 - testName is the human-readable name of test.
 - Signals the beginning of a new test with the given name. Used to define multiple tests all in the same code file. All the code between the TESTSTART and the next TESTSTART will be executed as a single test unit.

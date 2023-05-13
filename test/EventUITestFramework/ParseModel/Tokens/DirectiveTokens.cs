@@ -74,7 +74,7 @@ namespace EventUITestFramework.ParseModel.Tokens
     public class EventUITestDirectiveTypeToken : TokenDefinition
     {
         public EventUITestDirectiveTypeToken()
-            : base(new Regex("(?>TEST_)(ROOT|SET|SKIP|FILE|DEPENDENCY|START)"), "EventUITestDirectiveType")
+            : base(new Regex("((?>TEST_)(ROOT|SET|FILE|DEPENDENCY|START))|((?>(RUN_|SKIP_))(FILE|SET))"), "EventUITestDirectiveType")
         {
 
         }
@@ -91,5 +91,4 @@ namespace EventUITestFramework.ParseModel.Tokens
             return previousIsValid;
         }
     }
-
 }

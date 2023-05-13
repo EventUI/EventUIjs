@@ -26,7 +26,7 @@ namespace EventUITestFramework.ParseModel.Contexts
                 typeof(EventUITestDirectiveEndToken),
                 typeof(EventUITestDirectiveTypeToken),
                 typeof(DirectiveParametersStartToken),
-                typeof(DirectiveParametersEndToken)
+                typeof(DirectiveParametersEndToken),
             });
         }
 
