@@ -1,0 +1,34 @@
+<globals> - Can be in any hierarchical unit
+
+    -TEST_DEPENDENCY("<name>"|mode)
+        -Defined in a config file where a name is mapped to a file path
+        -mode can be one of the following:
+            -ADD: adds the dependency. Default if not specified.
+            -REMOVE: removes the dependency
+
+TEST_ROOT("<rootName>")
+ - Marks the top level of a hierarchy of TestSets and their associated tests. Defines the base dependencies for all TestSets and tests underneath it.
+
+TEST_SET("<setName>")
+ - Marks the next level down in the hierarchy, sits above actual test files and can override or define the setup
+    -TEST_RUN(type|[path|pattern]/RexExp|recursive)
+        -Command from telling it to run a test with the given file name or run multiple test files that satisfy a regular expression.
+            -type can be either:
+                -@file to run a file in a path relative to the TEST_SET file.
+                -@regexp to run a batch of files in and possibly below the directory that satisfy the regular expression
+            -can recursively look down to child directories, false by default.
+
+    -TEST_SKIP(type|"<path|pattern>")
+        -Command from _testSet.txt telling it to skip files that match a given relative path or pattern.
+            -type can be either:
+                -@file to run a specific file
+                -@regexp to run a batch of files that satisfy the regular expression
+
+TEST_FILE("<testFileName>")
+ - Next level down in the hierarchy, these contain actual blocks of code to execute.
+ - Header put at the top of a file to label is being tested.
+
+
+-TEST_START("<testName>")
+- testName is the human-readable name of test.
+- Signals the beginning of a new test with the given name. Used to define multiple tests all in the same code file. All the code between the TESTSTART and the next TESTSTART will be executed as a single test unit.
