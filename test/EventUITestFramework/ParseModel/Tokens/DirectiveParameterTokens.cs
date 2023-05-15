@@ -88,7 +88,7 @@ namespace EventUITestFramework.ParseModel.Tokens
     public class DirectiveParameterSeparatorToken : TokenDefinition, IEventUIParameterToken
     {
         public DirectiveParameterSeparatorToken()
-            : base(TestGenRegexStore.ParameterSeperator, ",")
+            : base(TestGenRegexStore.ParameterSeparator, ",")
         {
         }
 

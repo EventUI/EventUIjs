@@ -1,0 +1,3 @@
+/*#TEST_SET("TestHost", CRITICAL)#*/
+
+/*#RUN_FILE(@name, "TestHost_Basic_Awaited")#*/

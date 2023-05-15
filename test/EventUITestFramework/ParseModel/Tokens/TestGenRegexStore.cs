@@ -17,6 +17,6 @@ namespace EventUITestFramework.ParseModel.Tokens
 
         public static Regex DirectiveEnd { get; } = new Regex("#\\*\\/", RegexOptions.NonBacktracking | RegexOptions.Compiled);
 
-        public static Regex ParameterSeperator { get; } = new Regex(",", RegexOptions.NonBacktracking | RegexOptions.Compiled);
+        public static Regex ParameterSeparator { get; } = new Regex("\\s*,\\s*", RegexOptions.NonBacktracking | RegexOptions.Compiled);
     }
 }

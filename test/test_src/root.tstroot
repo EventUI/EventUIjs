@@ -1,3 +1,6 @@
 /*#TEST_ROOT("EventUI Test Suite")#*/
 
-/*#RUN_SET()#*/
+/*#TEST_DEPENDENCY("EVUITestLib", ADD)#*/
+
+/*#RUN_SET(@name, "EVUITest Tests")#*/
+/*#RUN_SET(@regex, "/.*\.tstset/i", true)#*/
