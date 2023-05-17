@@ -75,11 +75,12 @@ EVUITest.Test = function ()
     @type {Number}*/
     this.id = null;
 
-    /**String. The name of the test. Used for logging purposes.*/
+    /**String. The name of the test. Used for logging purposes.
+    @type {String}*/
     this.name = null;
 
     /**Array. Arguments to pass into the test. Multiple elements in the array will result in multiple test runs (one for each value). If more than one parameter is desired, make the elements of the array be arrays of the parameters to pass into each test instance.
-    @type {[[]]}*/
+    @type {[]}*/
     this.testArgs = null;
 
     /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestExecutionArgs instance
@@ -123,7 +124,7 @@ EVUITest.TestResult = function ()
     @type {Number}*/
     this.duration = 0;
 
-    /**Number. The incremental unqiue ID of this test.
+    /**Number. The incremental unique ID of this test.
     @type {Number}*/
     this.instanceId = 0;
 
@@ -145,7 +146,7 @@ EVUITest.OutputWriter = function ()
     };
 
     /**Writes arbitrary output.
-    @param {Any} args Any arguments to write to outpit.*/
+    @param {Any} args Any arguments to write to output.*/
     this.writeOutput = function (...args)
     {
         console.log(...args);
@@ -177,7 +178,7 @@ EVUITest.OutputWriter = function ()
             }
         }
 
-        if (testResult.arguments != null)
+        if (testResult.arguments != null && testResult.arguments.length > 0)
         {
             var argsStr = "\n\nWith Arguments:\n";
 
@@ -298,9 +299,7 @@ EVUITest.TestHostController = function ()
         {
             test = name;
             testType = nameType;
-        }
-
-        name = (typeof test.name === "string" && test.name.trim().length > 0) ? test.name : "<anonymous>";
+        }        
 
         var state = new TestState();
         var realTest = new EVUITest.Test(state);
@@ -343,8 +342,10 @@ EVUITest.TestHostController = function ()
 
         if (typeof (realTest.test) !== "function") throw Error("Test must have a test property that is a function.");
 
-        realTest.name = name;
+        name = (typeof realTest.name === "string" && realTest.name.trim().length > 0) ? realTest.name : name;
+        name = (typeof name === "string" && name.trim().length > 0) ? name : "<anonymous>";
 
+        realTest.name = name;
         state.test = realTest;
 
         return state;
@@ -360,7 +361,7 @@ EVUITest.TestHostController = function ()
 
     /**Utility function for ensuring that there is a valid outputWriter before attempting to write any output about the results of a test instance.
     @param {TestInstance} testInstance The instance of a test that was just completed.*/
-    var writeTestOuput = function (testInstance)
+    var writeTestOutput = function (testInstance)
     {
         if (typeof EVUITest.Settings.outputWriter?.writeTestOuput !== "function")
         {
@@ -394,7 +395,7 @@ EVUITest.TestHostController = function ()
 
             try
             {
-                EVUITest.Settings.outputWriter.writeTestOuput(...args);
+                EVUITest.Settings.outputWriter.writeOutput(...args);
             }
             catch (ex)
             {
@@ -403,13 +404,14 @@ EVUITest.TestHostController = function ()
         }
     }
 
-    /**Executes a test via executing all of the test instances made from its arugments list.
+    /**Executes a test via executing all of the test instances made from its arguments list.
     @param {TestState} testState THe internal property bag holding state information about a test.
     @param {Function} callback A callback function to call once all instances of this test have been run.*/
     var executeTest = function (testState, callback)
     {
         _executing = true;
         var numInstances = testState.instances.length;
+        if (typeof callback === "function" && typeof testState.callback !== "function") testState.callback = callback;
 
         var runTest = function (index)
         {
@@ -421,13 +423,13 @@ EVUITest.TestHostController = function ()
                 }
                 catch (ex)
                 {
-                    writeOuput("Error in " + testState.test.name + " callback!", ex);
+                    writeOutput("Error in " + testState.test.name + " callback!", ex);
                 }
 
                 var next = getNextTest();
                 if (next != null)
                 {
-                    executeTest(testState, testState.callback);
+                    executeTest(next, next.callback);
                 }
                 else
                 {
@@ -439,7 +441,7 @@ EVUITest.TestHostController = function ()
 
             executeInstance(testState.instances[index], function (testInstance)
             {
-                writeTestOuput(testInstance);
+                writeTestOutput(testInstance);
                 runTest(++index);
             });
         };
@@ -476,7 +478,7 @@ EVUITest.TestHostController = function ()
             finish();
         };
 
-        var fail = function (reasonOrEx) //function to call whent he test fails
+        var fail = function (reasonOrEx) //function to call when the test fails
         {
             if (testFinished === true) return;
             testFinished = true;
@@ -521,7 +523,7 @@ EVUITest.TestHostController = function ()
                     fail(new Error("Timeout reached after " + timeout + "ms."))
                 }, timeout);
 
-                //make the final args array to use to invoke the test. The first two parameters are awlays the pass and fail functions
+                //make the final args array to use to invoke the test. The first two parameters are always the pass and fail functions
                 var allArgs = [pass, fail].concat(testInstance.arguments);
                 testInstance.startTime = performance.now();
 
@@ -686,7 +688,7 @@ EVUITest.TestHostController = function ()
     @class*/
     var TestState = function ()
     {
-        /**Number. The unqiue ID of the test.
+        /**Number. The unique ID of the test.
         @type {Number}*/
         this.testId = _idCounter++;
 
@@ -694,7 +696,7 @@ EVUITest.TestHostController = function ()
         @type {EVUITest.Test}*/
         this.test = null;
 
-        /**Array.The arugments given by the user to run the test with.
+        /**Array.The arguments given by the user to run the test with.
         @type {[[]]}*/
         this.arguments = null;
 
@@ -997,7 +999,7 @@ EVUITest.Assertion = function (value, settings)
         return this;
     };
 
-    /**Performs an atrbitrary comparison between two values as specified by the compareOptions parameter.
+    /**Performs an arbitrary comparison between two values as specified by the compareOptions parameter.
     @param {any} b Any value or predicate function to use in the comparison.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.Assertion}*/
@@ -1589,7 +1591,7 @@ EVUITest.AssertionSettings = function ()
     @type {Boolean}*/
     this.throwOnFailure = EVUITest.Settings.throwOnFailure;
 
-    /**Boolean. Whether ot not the Assertion should log its success.
+    /**Boolean. Whether or not the Assertion should log its success.
     @type {Boolean}*/
     this.logOnSuccess = EVUITest.Settings.logOnSuccess;
 };
@@ -2267,7 +2269,7 @@ EVUITest.ValueComparer = function ()
             }
         }
 
-        //now, if we have any objects that were different between the two lists, we need to use whatever logic specified in the options tp determine that all the objects in the list have a match somewhere else in the list.
+        //now, if we have any objects that were different between the two lists, we need to use whatever logic specified in the options to determine that all the objects in the list have a match somewhere else in the list.
         var numUntagged = untaggedObjects.length;
         for (var x = 0; x < numUntagged; x++)
         {
