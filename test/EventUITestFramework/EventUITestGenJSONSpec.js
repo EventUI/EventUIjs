@@ -18,20 +18,24 @@ TestRoot = function ()
     @type {String}*/
     this.description = null;
 
-    /**Object. A DeclarationSet where resources can be mapped to human-readable names or identifiers that can be used as references.
+    /**Object. A DeclarationSet where resources can be mapped to human-readable aliases or identifiers that can be used as references.
     @type {DeclarationSet}*/
     this.declarations = null;
 
-    /**Array. An array of names of dependency definitions, or the dependency definitions themselves.
+    /**Array. An array of aliases of dependency definitions, or the dependency definitions themselves.
     @type {String[]|Dependency[]}*/
     this.dependencies = null;
 
-    /**Array. An array of Runnable objects describing which test sets or files to run.
-    @type {Runnable[]}*/
+    /**Boolean. Whether or not the set includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.
+    @type {Boolean}*/
+    this.recursive = false;
+
+    /**Array. An array of Runnable objects describing which test sets or files to run or string alias of files or sets to run.
+    @type {String[]|Runnable[]}*/
     this.run = [];
 
-    /**Array. An array of Runnable objects describing which test sets or files to run.
-    @type {Runnable[]}*/
+    /**Array. An array of Runnable objects describing which test sets or files to run or string alias of files or sets to run.
+    @type {String[]|Runnable[]}*/
     this.skip = [];
 };
 
@@ -39,15 +43,11 @@ TestRoot = function ()
 @class*/
 TestSet = function ()
 {
-    /**String. The version of the testing JSON definitions.
-    @type {String}*/
-    this.version = "1.0";
-
     /**String. The type of the object being described.
     @type {String}*/
     this.type = "set";
 
-    /**String. The name of the test set. Used for both selection and logging purposes.
+    /**String. The alias of the test set. Used for both selection and logging purposes.
     @type {String}*/
     this.name = null;
 
@@ -55,19 +55,24 @@ TestSet = function ()
     @type {String}*/
     this.description = null;
 
-    /**Array. An array of names of dependency definitions, or the dependency definitions themselves.
+    /**Array. An array of aliases of dependency definitions, or the dependency definitions themselves.
     @type {String[]|Dependency[]}*/
     this.dependencies = null;
 
-    /**Boolean. Whether or not the set includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.*/
+    /**Boolean. Whether or not the set includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.
+    @type {Boolean}*/
     this.recursive = false;
 
-    /**Array. An array of Runnable objects describing which test sets or files to run.
-    @type {Runnable[]}*/
+    /**String. Should the set have a failing test, this communicates whether or not the tests should continue (default), stop the set that the test was run from, or stop all subsequent tests. Must be a value from FailureMode.
+    @type {String}*/
+    this.failureMode = FailureMode.Continue;
+
+    /**Array. An array of Runnable objects describing which test sets or files to run or string alias of files or sets to run.
+    @type {String[]|Runnable[]}*/
     this.run = [];
 
-    /**Array. An array of Runnable objects describing which test sets or files to skip if they would otherwise be included in the run list or implicit hierarchy.
-    @type {Runnable[]}*/
+    /**Array. An array of Runnable objects describing which test sets or files to run or string alias of files or sets to run.
+    @type {String[]|Runnable[]}*/
     this.skip = [];
 };
 
@@ -78,10 +83,10 @@ Runnable = function ()
     /**String. The type of item being run. Must be a value from RunnableType.
     @type {String}*/
     this.type = RunnableType.Set;
-    /**String. The name of the item to run if it has a unique name.
+    /**String. The alias of the item to run if it has a unique alias.
     @type {String}*/
     this.name = null;
-    /**Object. A FileSelecgtor to use if the item being run does NOT have a name, this is the metadata that selects a file based on a glob pattern, a regex, a name, or a path.
+    /**Object. A FileSelecgtor to use if the item being run does NOT have a alias, this is the metadata that selects a file based on a glob pattern, a regex, a alias, or a path.
     @type {FileSelector}*/
     this.selector = null;
     /**String. Should the runnable item fail, this communicates whether or not the tests should continue (default), stop the set that the test was run from, or stop all subsequent tests. Must be a value from FailureMode.
@@ -90,10 +95,10 @@ Runnable = function ()
 };
 
 /**A definition that instructs the test running to include a file as a dependency for a test.
- @class*/
+@class*/
 Dependency = function ()
 {
-    /**String. The human-readable alias or name of the dependency. Used to reference it from declarations or dependencies.
+    /**String. The human-readable alias of the dependency. Used to reference it from declarations or dependencies.
     @type {String}*/
     this.name = null;
     /**String. The relative or full path of the dependency code file.
@@ -102,36 +107,59 @@ Dependency = function ()
     /**Object. A FileSelector to use for the dependency (or set of dependency files).
     @type {FileSelector}*/
     this.selector = null;
-    /**Boolean. Whether or not the dependencies with the matching name or that meet the FileSelector should be excluded from the dependencies if they would otherwise be included.
+    /**Boolean. Whether or not the dependencies with the matching alias or that meet the FileSelector should be excluded from the dependencies if they would otherwise be included.
     @type {Boolean}*/
     this.exclude = false;
-    /**Number. Dependencies are normally added in order of addition in TestSets or TestRoots - this field can be used to change the order of dependency injection into the test. All members with the same ordinal are added as a set in order of addition.
+    /**Number. Dependencies are normally added in order of addition in TestSets or TestRoots - this field can be used to change the order of dependency injection into the test. All members with the same ordinal are added as a set in order of addition. Lower ordinals are injected before higher ordinals.
     @type {Number}*/
     this.priority = 0;
 };
 
-/**Metadata object used */
+/**Metadata object used to find and select files to include or exclude as tests or dependencies.
+@class*/
 FileSelector = function ()
 {
+    /**String. A file path (relative or absolute) where a file can be found.
+    @type {String}*/
     this.path = null;
+    /**String. A .NET glob pattern to select files to include.
+    @type {String}*/
     this.glob = null;
+    /**String. A .NET Regular expression pattern used to select file names that satisfy the expression. 
+    Use the JavaScript "/" notation to wrap the expression followed by the regex flags: "/myFile\.js/ig" 
+    @type {String}*/
     this.regex = null;
-    this.name = null;
-    this.recursive = false;
+    /**String. If a file was given an explicit alias to be referred to as (i.e. the "name" property of a file, set, or dependency), this is the name of the item to find.
+    @type {String}*/
+    this.alias = null;
+    /**Boolean. Whether or not the search should recursively drill down past the current directory.
+    @type {Boolean}*/
+    this.recursive = true;
 };
 
+/**A wrapper object for containing declarations of items that can be referred to by name (currently only supports dependencies).
+@class*/
 DeclarationSet = function ()
 {
+    /**Array. An array of Dependency objects populated with aliases to be used by sets and files under the root.
+    @type {Dependency[]}*/
     this.dependencies = [];
 };
 
+/**Enum. The behavior for the system to take when a failure is encountered.
+@enum*/
 FailureMode =
 {
+    /**Default. Continues test execution.*/
     Continue: "continue",
+    /**Abandons the container that requested the run of the failing test.*/
     Abandon: "abandon",
-    Terminate: "terminate"
+    /**Terminates the execution of all further tests.*/
+    Terminate: "terminate",
 };
 
+/**Enum. The type of item being run.
+@enum*/
 RunnableType =
 {
     Set: "set",

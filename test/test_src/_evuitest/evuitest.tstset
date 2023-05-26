@@ -1,4 +1,0 @@
-/*#TEST_SET("EVUITest Tests", CRITICAL)#*/
-
-/*#RUN_SET(@name, "TestHost")#*/
-/*#RUN_SET(@name, "Assertions")#*/
