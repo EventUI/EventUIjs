@@ -37,7 +37,7 @@ namespace EventUITest
 
         internal static void AddStaticFiles(WebApplication app)
         {
-            DirectoryInfo rootContentPath = RootDirectoryFinder.GetRootRepositoryDirectory();
+            DirectoryInfo rootContentPath = RootDirectoryFinder.GetRootRepositoryDirectory(new string[] { "license", "test", "src", "build" }, true);
 
             string rootSrcPath = Path.Combine(rootContentPath.FullName, "src");
             string rootTestPath = Path.Combine(rootContentPath.FullName, "test", "test_src");

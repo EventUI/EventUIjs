@@ -26,7 +26,7 @@ TestRoot = function ()
     @type {String[]|Dependency[]}*/
     this.dependencies = null;
 
-    /**Boolean. Whether or not the set includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.
+    /**Boolean. Whether or not the root includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.
     @type {Boolean}*/
     this.recursive = false;
 
@@ -107,9 +107,6 @@ Dependency = function ()
     /**Object. A FileSelector to use for the dependency (or set of dependency files).
     @type {FileSelector}*/
     this.selector = null;
-    /**Boolean. Whether or not the dependencies with the matching alias or that meet the FileSelector should be excluded from the dependencies if they would otherwise be included.
-    @type {Boolean}*/
-    this.exclude = false;
     /**Number. Dependencies are normally added in order of addition in TestSets or TestRoots - this field can be used to change the order of dependency injection into the test. All members with the same ordinal are added as a set in order of addition. Lower ordinals are injected before higher ordinals.
     @type {Number}*/
     this.priority = 0;
@@ -126,10 +123,10 @@ FileSelector = function ()
     @type {String}*/
     this.glob = null;
     /**String. A .NET Regular expression pattern used to select file names that satisfy the expression. 
-    Use the JavaScript "/" notation to wrap the expression followed by the regex flags: "/myFile\.js/ig" 
+    Use the JavaScript "/" notation to wrap the expression followed by the regex flags: "/myFile\.js/i" 
     @type {String}*/
     this.regex = null;
-    /**String. If a file was given an explicit alias to be referred to as (i.e. the "name" property of a file, set, or dependency), this is the name of the item to find.
+    /**String. If an item was given an explicit alias to be referred to as (i.e. the "name" property of a file, set, or dependency), this is the name of the item to find.
     @type {String}*/
     this.alias = null;
     /**Boolean. Whether or not the search should recursively drill down past the current directory.

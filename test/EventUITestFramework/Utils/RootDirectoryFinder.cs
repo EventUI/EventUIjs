@@ -8,45 +8,46 @@ namespace EventUITestFramework.Utils
 {
     public static class RootDirectoryFinder
     {
-        public static DirectoryInfo GetRootRepositoryDirectory()
+        public static DirectoryInfo GetRootRepositoryDirectory(IEnumerable<string> rootFolderFileSystemItems, bool ignoreCase)
         {
             DirectoryInfo executingDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
             if (executingDirectory == null || executingDirectory.Exists == false)
             {
                 throw new DirectoryNotFoundException("Cannot resolve root directory.");
-            }            
+            }
+
+            HashSet<string> items = new HashSet<string>();
+            foreach (string item in rootFolderFileSystemItems)
+            {
+                if (ignoreCase == true)
+                {
+                    items.Add(item.ToLower());
+                }
+                else
+                {
+                    items.Add(item);
+                }
+            }
+
+            int numItemsToFind = items.Count;
 
             var parent = executingDirectory;
             while (parent != null)
             {
-                bool hasTest = false;
-                bool hasBuild = false;
-                bool hasSrc = false;
+                int foundItems = 0;
 
-                var dirs = parent.GetDirectories();
-                foreach (var dir in dirs)
-                {
-                    string lowerName = dir.Name.ToLower();
-                    if (lowerName == "test")
+                foreach (var fiItem in parent.EnumerateFileSystemInfos())
+                {                    
+                    string name = (ignoreCase == true) ? fiItem.Name.ToLower(): fiItem.Name;
+                    if (items.Contains(name))
                     {
-                        hasTest = true;
-                    }
-                    else if (lowerName == "src")
-                    {
-                        hasSrc = true;
-                    }
-                    else if (lowerName == "build")
-                    {
-                        hasBuild = true;
+                        foundItems++;
                     }
 
-                    if (hasTest == true && hasSrc == true && hasBuild == true)
+                    if (foundItems == numItemsToFind)
                     {
-                        if (parent.GetFiles().Any(f => f.Name.ToLower() == "license") == true)
-                        {
-                            return parent;
-                        }
-                    }                    
+                        return parent;
+                    }
                 }
 
                 parent = parent.Parent;

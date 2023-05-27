@@ -7,7 +7,10 @@ using System.Threading.Tasks;
 
 namespace EventUITestFramework.TestModel2.Deserialization
 {
-    public class TestFile : INamedTestItem
+    /// <summary>
+    /// Represents a file that contains actual test code.
+    /// </summary>
+    public class TestFile : INamedRunnableItem
     {
         public Guid ID { get; } = Guid.NewGuid();
 
@@ -15,6 +18,9 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
         public TestRunnableType ItemType { get; } = TestRunnableType.File;
 
+        /// <summary>
+        /// The dependencies that are specific to this file.
+        /// </summary>
         public List<TestDependency> Dependency { get; } = new List<TestDependency>();
     }
 }

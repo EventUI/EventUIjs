@@ -7,7 +7,10 @@ using System.Threading.Tasks;
 
 namespace EventUITestFramework.TestModel2.Deserialization
 {
-    public class TestCode : INamedTestItem
+    /// <summary>
+    /// Represents a segment of code from a TestFile to execute as its own test in isolation.
+    /// </summary>
+    public class TestCode : INamedRunnableItem
     {
         public Guid ID { get; } = Guid.NewGuid();
 
