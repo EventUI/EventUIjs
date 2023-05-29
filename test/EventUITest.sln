@@ -7,10 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITest", "EventUITest\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITestFramework", "EventUITestFramework\EventUITestFramework.csproj", "{4539212C-4D4E-44F2-B9F2-8976736C0F57}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{B9163C68-70F0-41A2-858E-4A298640C427}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITestFrameworkTests", "Test\EventUITestFrameworkTests\EventUITestFrameworkTests.csproj", "{BCB8440F-0898-4997-A853-CBF7DC08E7D9}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUITestFrameworkTests", "EventUITestFrameworkTests\EventUITestFrameworkTests.csproj", "{5C9B7874-1A57-4ACA-BE55-BAB1BE2D4849}"
 EndProject
 Global
@@ -27,10 +23,6 @@ Global
 		{4539212C-4D4E-44F2-B9F2-8976736C0F57}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4539212C-4D4E-44F2-B9F2-8976736C0F57}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4539212C-4D4E-44F2-B9F2-8976736C0F57}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BCB8440F-0898-4997-A853-CBF7DC08E7D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BCB8440F-0898-4997-A853-CBF7DC08E7D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BCB8440F-0898-4997-A853-CBF7DC08E7D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BCB8440F-0898-4997-A853-CBF7DC08E7D9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5C9B7874-1A57-4ACA-BE55-BAB1BE2D4849}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5C9B7874-1A57-4ACA-BE55-BAB1BE2D4849}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5C9B7874-1A57-4ACA-BE55-BAB1BE2D4849}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -38,9 +30,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{BCB8440F-0898-4997-A853-CBF7DC08E7D9} = {B9163C68-70F0-41A2-858E-4A298640C427}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {39806B77-1401-43BE-B5EB-3B64F5DAA481}
