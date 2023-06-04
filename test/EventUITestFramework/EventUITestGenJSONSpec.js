@@ -128,7 +128,7 @@ FileSelector = function ()
     this.regex = null;
     /**String. If an item was given an explicit alias to be referred to as (i.e. the "name" property of a file, set, or dependency), this is the name of the item to find.
     @type {String}*/
-    this.alias = null;
+    this.name = null;
     /**Boolean. Whether or not the search should recursively drill down past the current directory.
     @type {Boolean}*/
     this.recursive = true;

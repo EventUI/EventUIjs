@@ -16,14 +16,13 @@ namespace EventUITestFramework.TestModel2.Deserialization
     /// <summary>
     /// Represents a hierarchical unit of tests that live under a test root.
     /// </summary>
-    public class TestSet : INamedRunnableItem
+    public class TestSet : ITestHierarchyContainer
     {
         public Guid ID { get; } = Guid.NewGuid();
 
         public string Name { get; set; } = null;
 
         public TestRunnableType ItemType { get; } = TestRunnableType.Set;
-
 
         /// <summary>
         /// The description of the tests under this set. Used for logging purposes.
@@ -38,7 +37,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
         /// <summary>
         /// The specific dependencies to bring in for all the tests under this root.
         /// </summary>
-        public List<TestDependency> Dependencies { get; } = new List<TestDependency>();
+        public List<TestDependency> Dependencies { get; set; } = new List<TestDependency>();
 
         /// <summary>
         /// Whether or not the set includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.
@@ -48,11 +47,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
         /// <summary>
         /// A list of items that are to be run directly under this set.
         /// </summary>
-        public List<TestRunnable> Run { get; } = new List<TestRunnable>();
+        public List<TestRunnable> Run { get; set; } = new List<TestRunnable>();
 
         /// <summary>
         /// A list of items that, if included in the "Run" or recursive search options, will be skipped.
         /// </summary>
-        public List<TestRunnable> Skip { get; } = new List<TestRunnable>();
+        public List<TestRunnable> Skip { get; set; } = new List<TestRunnable>();
     }
 }

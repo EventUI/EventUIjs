@@ -17,7 +17,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
     /// <summary>
     /// The root of a test hierarchy, represents a new hierarchy if it is nested within another root's hierarchy.
     /// </summary>
-    public class TestRoot : INamedRunnableItem
+    public class TestRoot : ITestHierarchyContainer
     {
         public Guid ID { get; } = Guid.NewGuid();
 
@@ -43,7 +43,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
         /// <summary>
         /// The specific dependencies to bring in for all the tests under this root.
         /// </summary>
-        public List<TestDependency> Dependencies { get; } = new List<TestDependency>();
+        public List<TestDependency> Dependencies { get; set; } = new List<TestDependency>();
 
         /// <summary>
         /// Whether or not the root includes all .js files beneath it in the file hierarchy. Only applies if "run" is omitted.
@@ -53,11 +53,26 @@ namespace EventUITestFramework.TestModel2.Deserialization
         /// <summary>
         /// A list of items that are to be run directly under this root.
         /// </summary>
-        public List<TestRunnable> Run { get; } = new List<TestRunnable>();
+        public List<TestRunnable> Run { get; set; } = new List<TestRunnable>();
 
         /// <summary>
         /// A list of items that, if included in the "Run" or recursive search options, will be skipped.
         /// </summary>
-        public List<TestRunnable> Skip { get; } = new List<TestRunnable>();
+        public List<TestRunnable> Skip { get; set;} = new List<TestRunnable>();
+
+        public static TestRoot FromSet(TestSet testSet)
+        {
+            if (testSet == null) return null;
+
+            return new TestRoot()
+            {
+                Dependencies = testSet.Dependencies,
+                Description = testSet.Description,
+                Name = testSet.Name,
+                Recursive = testSet.Recursive,
+                Run = testSet.Run,
+                Skip = testSet.Skip
+            };
+        }
     }
 }

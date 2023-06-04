@@ -20,6 +20,6 @@ namespace EventUITestFramework.TestModel2.Deserialization
         /// <summary>
         /// All of the dependencies to map.
         /// </summary>
-        public List<TestDependency> Dependencies { get; } = new List<TestDependency>();
+        public List<TestDependency> Dependencies { get; set; } = null;
     }
 }
