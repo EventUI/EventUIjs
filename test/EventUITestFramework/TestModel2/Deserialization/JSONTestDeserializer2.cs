@@ -21,8 +21,8 @@ namespace EventUITestFramework.TestModel2.Deserialization
 {
     public class JSONTestDeserializer2
     {
+        private Stack<string> _path = new Stack<string>();
         private static HashSet<JsonTokenType> _valueTypeTokens = new HashSet<JsonTokenType>() { JsonTokenType.String, JsonTokenType.Number, JsonTokenType.True, JsonTokenType.False, JsonTokenType.Null };
-        private static HashSet<string> _testRootProperties = new HashSet<string>() { "version", "declarations" }; //the names of the properties that only TestRoot objects have,
 
         public List<ITestHierarchyContainer> Deserialize(string json)
         {
@@ -32,50 +32,44 @@ namespace EventUITestFramework.TestModel2.Deserialization
         public List<ITestHierarchyContainer> Deserialize(Span<byte> utf8Json)
         {
             Utf8JsonReader reader = new Utf8JsonReader(utf8Json, new JsonReaderOptions() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            TokenParseState state = new TokenParseState()
-            {
-                Path = new Stack<string>(new string[] { "<root>" }),
-                Reader = reader
-            };
 
-            var firstToken = GetNextToken(ref state);
-
+            var firstToken = GetNextToken(ref reader);
             if (firstToken.TokenType != JsonTokenType.StartObject && firstToken.TokenType != JsonTokenType.StartArray) throw new Exception("Invalid JSON - must be a single object or an array.");
 
             List<ITestHierarchyContainer> containers = new List<ITestHierarchyContainer>();
 
             if (firstToken.TokenType == JsonTokenType.StartObject)
             {
-                var deserialized = DeserializeHierarchyContainer(ref state);
+                var deserialized = DeserializeHierarchyContainer(ref reader);
                 if (deserialized != null) containers.Add(deserialized);
             }
             else if (firstToken.TokenType == JsonTokenType.StartArray)
             {
-                TokenResult nextContainerStart = GetNextToken(ref state);
+                TokenResult nextContainerStart = GetNextToken(ref reader);
                 int objCtr = 0;
                 while (nextContainerStart.TokenType != JsonTokenType.EndArray && nextContainerStart.TokenType != JsonTokenType.None)
                 {
                     if (nextContainerStart.TokenType == JsonTokenType.StartObject)
                     {
-                        state.Path.Push(objCtr.ToString());
-                        var deserialized = DeserializeHierarchyContainer(ref state);
+                        _path.Push(objCtr.ToString());
+                        var deserialized = DeserializeHierarchyContainer(ref reader);
                         if (deserialized != null)
                         {
                             containers.Add(deserialized);
                         }
 
                         objCtr++;
-                        state.Path.Pop();
+                        _path.Pop();
                     }
 
-                    nextContainerStart = GetNextToken(ref state);
+                    nextContainerStart = GetNextToken(ref reader);
                 }
             }
 
             return containers;
         }
 
-        private ITestHierarchyContainer DeserializeHierarchyContainer(ref TokenParseState state)
+        private ITestHierarchyContainer DeserializeHierarchyContainer(ref Utf8JsonReader reader)
         {
             ITestHierarchyContainer container = new TestSet(); //in general we will be making more test sets than test roots, so we start with a TestSet and will change to a
             bool isRoot = false;
@@ -84,12 +78,12 @@ namespace EventUITestFramework.TestModel2.Deserialization
             TestSet set = (TestSet)container;
             TestRoot root = null;
 
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
                 if (IsTokenValid(nextToken) == false)
                 {
-                    nextToken = GetNextToken(ref state);
+                    nextToken = GetNextToken(ref reader);
                 }
 
                 switch (nextToken.PropertyName)
@@ -104,7 +98,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                                 isRoot = true;
                             }
 
-                            ValidateType(nextToken, JsonTokenType.String, container.GetType(), state.Path);
+                            ValidateType(nextToken, JsonTokenType.String, container.GetType());
 
                             root.Version = GetString(nextToken.ValueData);
                         }
@@ -122,21 +116,21 @@ namespace EventUITestFramework.TestModel2.Deserialization
                                 isRoot = true;
                             }
 
-                            ValidateType(nextToken, JsonTokenType.StartObject, container.GetType(), state.Path);
+                            ValidateType(nextToken, JsonTokenType.StartObject, container.GetType());
 
-                            state.Path.Push(nextToken.PropertyName);
-                            root.Declarations = DeserializeDeclarationSet(ref state);
-                            state.Path.Pop();
+                            _path.Push(nextToken.PropertyName);
+                            root.Declarations = DeserializeDeclarationSet(ref reader);
+                            _path.Pop();
                         }
 
                         break;
 
                     case "type":
 
-                        ValidateType(nextToken, JsonTokenType.String, container.GetType(), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, container.GetType());
 
                         type = GetString(nextToken.ValueData).ToLower();
-                        if (type != "set" && type != "root") throw new JSONParseException($"Invalid object - 'type' property value must be 'root' or 'set'.\nError at: {GetPath(state.Path)}");
+                        if (type != "set" && type != "root") throw new JSONParseException($"Invalid object - 'type' property value must be 'root' or 'set'.\nError at: {GetPath(_path)}");
 
                         if (isRoot == true && type != "root")
                         {
@@ -156,7 +150,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                     case "failureMode":
 
-                        ValidateType(nextToken, JsonTokenType.String, container.GetType(), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, container.GetType());
 
                         if (isRoot == false && (type == null || type == "set"))
                         {
@@ -165,7 +159,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                             var enumValue = Enum.Parse(typeof(TestFailureMode), failureMode, true);
                             if (enumValue == null)
                             {
-                                throw new JSONParseException($"Invalid failureMode - must be 'continue', 'abandon', or 'terminate'.\nError at: {GetPath(state.Path)}");
+                                throw new JSONParseException($"Invalid failureMode - must be 'continue', 'abandon', or 'terminate'.\nError at: {GetPath(_path)}");
                             }
                             else
                             {
@@ -177,31 +171,31 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                     case "name":
 
-                        ValidateType(nextToken, JsonTokenType.String, container.GetType(), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, container.GetType());
 
                         container.Name = GetString(nextToken.ValueData);
                         break;
 
                     case "description":
 
-                        ValidateType(nextToken, JsonTokenType.String, container.GetType(), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, container.GetType());
 
                         container.Description = GetString(nextToken.ValueData);
                         break;
 
                     case "dependencies":
-                        ValidateType(nextToken, JsonTokenType.StartArray, container.GetType(), state.Path);
+                        ValidateType(nextToken, JsonTokenType.StartArray, container.GetType());
 
-                        state.Path.Push(nextToken.PropertyName);
-                        container.Dependencies = DeserializeDependenciesList(ref state, true);
-                        state.Path.Pop();
+                        _path.Push(nextToken.PropertyName);
+                        container.Dependencies = DeserializeDependenciesList(ref reader, true);
+                        _path.Pop();
                         break;
 
                     case "recursive":
 
                         if (nextToken.TokenType != JsonTokenType.True && nextToken.TokenType != JsonTokenType.False)
                         {
-                            ValidateType(nextToken, JsonTokenType.True, container.GetType(), state.Path);
+                            ValidateType(nextToken, JsonTokenType.True, container.GetType());
                         }
 
                         container.Recursive = BitConverter.ToBoolean(nextToken.ValueData);
@@ -209,25 +203,25 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                     case "run":
 
-                        ValidateType(nextToken, JsonTokenType.StartArray, container.GetType(), state.Path);
-                        state.Path.Push(nextToken.PropertyName);
-                        container.Run = DeserializeRunnablesList(ref state);
-                        state.Path.Pop();
+                        ValidateType(nextToken, JsonTokenType.StartArray, container.GetType());
+                        _path.Push(nextToken.PropertyName);
+                        container.Run = DeserializeRunnablesList(ref reader);
+                        _path.Pop();
                         break;
 
 
                     case "skip":
 
-                        ValidateType(nextToken, JsonTokenType.StartArray, container.GetType(), state.Path);
+                        ValidateType(nextToken, JsonTokenType.StartArray, container.GetType());
 
-                        state.Path.Push(nextToken.PropertyName);
-                        container.Skip = DeserializeRunnablesList(ref state);
-                        state.Path.Pop();
+                        _path.Push(nextToken.PropertyName);
+                        container.Skip = DeserializeRunnablesList(ref reader);
+                        _path.Pop();
                         break;
 
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
 
@@ -239,53 +233,53 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return String.IsNullOrWhiteSpace(nextToken.PropertyName) == false && nextToken.TokenType != JsonTokenType.Null;
         }
 
-        private List<TestRunnable> DeserializeRunnablesList(ref TokenParseState state)
+        private List<TestRunnable> DeserializeRunnablesList(ref Utf8JsonReader reader)
         {
             List<TestRunnable> runnables = new List<TestRunnable>();
 
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
             int objCounter = 0;
             while (nextToken.TokenType != JsonTokenType.EndArray && nextToken.TokenType != JsonTokenType.None)
             {
                 if (nextToken.TokenType == JsonTokenType.StartObject)
                 {
-                    state.Path.Push(objCounter.ToString());
-                    var dependency = DeserializeRunnable(ref state);
+                    _path.Push(objCounter.ToString());
+                    var dependency = DeserializeRunnable(ref reader);
                     if (dependency != null)
                     {
                         runnables.Add(dependency);
                     }
 
                     objCounter++;
-                    state.Path.Pop();
+                    _path.Pop();
                 }
                 else if (nextToken.TokenType == JsonTokenType.String)
                 {
-                    state.Path.Push(objCounter.ToString());
-                    var dependency = DeserializeRunnable(ref state);
+                    _path.Push(objCounter.ToString());
+                    var dependency = DeserializeRunnable(ref reader);
                     if (dependency != null)
                     {
                         runnables.Add(dependency);
                     }
 
                     objCounter++;
-                    state.Path.Pop();
+                    _path.Pop();
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
             return runnables;
         }
 
-        private TestRunnable DeserializeRunnable(ref TokenParseState state)
+        private TestRunnable DeserializeRunnable(ref Utf8JsonReader reader)
         {
             TestRunnable runnable = new TestRunnable();
 
-            if (state.Reader.TokenType == JsonTokenType.String)
+            if (reader.TokenType == JsonTokenType.String)
             {
                 runnable.Selector = new TestFileSelector();
-                runnable.Selector.Name = state.Reader.GetString();
+                runnable.Selector.Name = reader.GetString();
 
                 return runnable;
             }
@@ -293,18 +287,18 @@ namespace EventUITestFramework.TestModel2.Deserialization
             bool hasName = false;
             bool hasSelector = false;
 
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
                 if (IsTokenValid(nextToken) == false)
                 {
-                    nextToken = GetNextToken(ref state);
+                    nextToken = GetNextToken(ref reader);
                 }
 
                 switch (nextToken.PropertyName)
                 {
                     case "name":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestRunnable), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestRunnable));
 
                         hasName = true;
                         if (hasSelector == false)
@@ -321,12 +315,12 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                         break;
                     case "type":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestRunnable), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestRunnable));
 
                         string value = GetString(nextToken.ValueData).ToLower();
-                        if (value != "set" || value != "file")
+                        if (value != "set" && value != "file")
                         {
-                            throw new JSONParseException($"Invalid object - 'type' property value must be 'file' or 'set'.\nError at: {GetPath(state.Path)}");
+                            throw new JSONParseException($"Invalid object - 'type' property value must be 'file' or 'set'.\nError at: {GetPath(_path)}");
                         }
                         else
                         {
@@ -336,11 +330,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
                         break;
 
                     case "selector":
-                        ValidateType(nextToken, JsonTokenType.StartObject, typeof(TestRunnable), state.Path);
+                        ValidateType(nextToken, JsonTokenType.StartObject, typeof(TestRunnable));
 
-                        state.Path.Push(nextToken.PropertyName);
-                        TestFileSelector selector = DeserializeFileSelector(ref state);
-                        state.Path.Pop();
+                        _path.Push(nextToken.PropertyName);
+                        TestFileSelector selector = DeserializeFileSelector(ref reader);
+                        _path.Pop();
 
                         if (hasSelector == true && hasName == true) selector.Name = runnable.Selector.Name;                        
                         runnable.Selector = selector;
@@ -349,14 +343,14 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                     case "failureMode":
 
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestRunnable), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestRunnable));
 
                         string failureMode = GetString(nextToken.ValueData).ToLower();
 
                         var enumValue = Enum.Parse(typeof(TestFailureMode), failureMode, true);
                         if (enumValue == null)
                         {
-                            throw new JSONParseException($"Invalid failureMode - must be 'continue', 'abandon', or 'terminate'.\nError at: {GetPath(state.Path)}");
+                            throw new JSONParseException($"Invalid failureMode - must be 'continue', 'abandon', or 'terminate'.\nError at: {GetPath(_path)}");
                         }
                         else
                         {
@@ -366,112 +360,112 @@ namespace EventUITestFramework.TestModel2.Deserialization
                         break;
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
             return runnable;
         }
 
-        private TestRootDeclarationSet DeserializeDeclarationSet(ref TokenParseState state)
+        private TestRootDeclarationSet DeserializeDeclarationSet(ref Utf8JsonReader reader)
         {
             TestRootDeclarationSet declarationSet = new TestRootDeclarationSet();
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
 
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
                 if (IsTokenValid(nextToken) == false)
                 {
-                    nextToken = GetNextToken(ref state);
+                    nextToken = GetNextToken(ref reader);
                 }
 
                 switch (nextToken.PropertyName)
                 {
                     case "dependencies":
 
-                        ValidateType(nextToken, JsonTokenType.StartArray, typeof(TestRootDeclarationSet), state.Path);
+                        ValidateType(nextToken, JsonTokenType.StartArray, typeof(TestRootDeclarationSet));
 
-                        state.Path.Push(nextToken.PropertyName);
-                        declarationSet.Dependencies = DeserializeDependenciesList(ref state, false);
-                        state.Path.Pop();
+                        _path.Push(nextToken.PropertyName);
+                        declarationSet.Dependencies = DeserializeDependenciesList(ref reader, false);
+                        _path.Pop();
 
                         break;
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
             return declarationSet;
         }
 
-        private List<TestDependency> DeserializeDependenciesList(ref TokenParseState state, bool stringsAllowed)
+        private List<TestDependency> DeserializeDependenciesList(ref Utf8JsonReader reader, bool stringsAllowed)
         {
             List<TestDependency> dependencies = new List<TestDependency>();
 
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
             int objCounter = 0;
             while (nextToken.TokenType != JsonTokenType.EndArray && nextToken.TokenType != JsonTokenType.None)
             {
                 if (nextToken.TokenType == JsonTokenType.StartObject)
                 {
-                    state.Path.Push(objCounter.ToString());
-                    var dependency = DeserializeDependency(ref state);
+                    _path.Push(objCounter.ToString());
+                    var dependency = DeserializeDependency(ref reader);
                     if (dependency != null)
                     {
                         dependencies.Add(dependency);
                     }
 
                     objCounter++;
-                    state.Path.Pop();
+                    _path.Pop();
                 }
                 else if (nextToken.TokenType == JsonTokenType.String && stringsAllowed == true)
                 {
-                    state.Path.Push(objCounter.ToString());
-                    var dependency = DeserializeDependency(ref state);
+                    _path.Push(objCounter.ToString());
+                    var dependency = DeserializeDependency(ref reader);
                     if (dependency != null)
                     {
                         dependencies.Add(dependency);
                     }
 
                     objCounter++;
-                    state.Path.Pop();
+                    _path.Pop();
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
             return dependencies;
         }
 
-        private TestDependency DeserializeDependency(ref TokenParseState state)
+        private TestDependency DeserializeDependency(ref Utf8JsonReader reader)
         {
             TestDependency dependency = new TestDependency();
             bool hasSelector = false;
             bool hasPath = false;
-            if (state.Reader.TokenType == JsonTokenType.String)
+            if (reader.TokenType == JsonTokenType.String)
             {
                 dependency.Selector = new TestFileSelector();
-                dependency.Selector.Name = state.Reader.GetString();
+                dependency.Selector.Name = reader.GetString();
 
                 return dependency;
             }
 
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
                 if (IsTokenValid(nextToken) == false)
                 {
-                    nextToken = GetNextToken(ref state);
+                    nextToken = GetNextToken(ref reader);
                 }
 
                 switch (nextToken.PropertyName)
                 {
                     case "name":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
 
                         dependency.Name = GetString(nextToken.ValueData);
                         break;
                     case "path":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
 
                         hasPath = true;
 
@@ -488,16 +482,16 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                         break;
                     case "priority":
-                        ValidateType(nextToken, JsonTokenType.Number, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.Number, typeof(TestDependency));
 
-                        dependency.Priority = BitConverter.ToDouble(nextToken.ValueData);
+                        dependency.Priority = reader.GetDouble();
                         break;
                     case "selector":
-                        ValidateType(nextToken, JsonTokenType.StartObject, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.StartObject, typeof(TestDependency));
 
-                        state.Path.Push(nextToken.PropertyName);
-                        TestFileSelector selector = DeserializeFileSelector(ref state);
-                        state.Path.Pop();
+                        _path.Push(nextToken.PropertyName);
+                        TestFileSelector selector = DeserializeFileSelector(ref reader);
+                        _path.Pop();
 
                         if (selector != null)
                         {
@@ -518,43 +512,43 @@ namespace EventUITestFramework.TestModel2.Deserialization
                         break;
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
             return dependency;
         }
 
-        private TestFileSelector DeserializeFileSelector(ref TokenParseState state)
+        private TestFileSelector DeserializeFileSelector(ref Utf8JsonReader reader)
         {
             TestFileSelector selector = new TestFileSelector();
 
-            TokenResult nextToken = GetNextToken(ref state);
+            TokenResult nextToken = GetNextToken(ref reader);
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
                 if (IsTokenValid(nextToken) == false)
                 {
-                    nextToken = GetNextToken(ref state);
+                    nextToken = GetNextToken(ref reader);
                 }
 
                 switch (nextToken.PropertyName)
                 {
                     case "path":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
 
                         selector.Path = GetString(nextToken.ValueData);
                         break;
                     case "name":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
 
                         selector.Name = GetString(nextToken.ValueData);
                         break;
                     case "glob":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
 
                         selector.Glob = GetString(nextToken.ValueData);
                         break;
                     case "regex":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency), state.Path);
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
 
                         selector.Regex = GetString(nextToken.ValueData);
                         break;
@@ -562,20 +556,20 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                         if (nextToken.TokenType != JsonTokenType.True && nextToken.TokenType != JsonTokenType.False)
                         {
-                            ValidateType(nextToken, JsonTokenType.True, typeof(TestDependency), state.Path);
+                            ValidateType(nextToken, JsonTokenType.True, typeof(TestDependency));
                         }
 
                         selector.Recursive = BitConverter.ToBoolean(nextToken.ValueData);
                         break;
                 }
 
-                nextToken = GetNextToken(ref state);
+                nextToken = GetNextToken(ref reader);
             }
 
             return selector;
         }
 
-        private void ValidateType(TokenResult parseResult, JsonTokenType expectedType, Type objectType, Stack<string> path)
+        private void ValidateType(TokenResult parseResult, JsonTokenType expectedType, Type objectType)
         {
             if (parseResult.TokenType == expectedType)
             {
@@ -601,7 +595,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                 expectedTypeName = expectedType.ToString().ToLower();
             }
 
-            string pathStr = GetPath(path);
+            string pathStr = GetPath(_path);
 
             string message = $"Error parsing {itemName}: '{parseResult.PropertyName}' must be of type '{expectedTypeName}'.\nError at: {pathStr}";
 
@@ -624,11 +618,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
             }
 
             return pathStr;
-        }
-
-        private TokenResult GetNextToken(ref TokenParseState state)
+        }     
+        
+        private TokenResult GetNextToken(ref Utf8JsonReader reader)
         {
-            if (state.Reader.Read() == false)
+            if (reader.Read() == false)
             {
                 return new TokenResult()
                 {
@@ -637,26 +631,26 @@ namespace EventUITestFramework.TestModel2.Deserialization
                 };
             }
 
-            if (state.Reader.TokenType == JsonTokenType.StartObject || state.Reader.TokenType == JsonTokenType.StartArray)
+            if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
             {
                 return new TokenResult()
                 {
                     PropertyName = null,
-                    TokenType = state.Reader.TokenType
+                    TokenType = reader.TokenType
                 };
             }
-            else if (state.Reader.TokenType == JsonTokenType.PropertyName)
+            else if (reader.TokenType == JsonTokenType.PropertyName)
             {
-                string propertyName = state.Reader.GetString();
-                state.Reader.Read();
+                string propertyName = reader.GetString();
+                reader.Read();
 
-                if (_valueTypeTokens.Contains(state.Reader.TokenType))
+                if (_valueTypeTokens.Contains(reader.TokenType))
                 {
                     return new TokenResult()
                     {
                         PropertyName = propertyName,
-                        TokenType = state.Reader.TokenType,
-                        ValueData = state.Reader.ValueSpan
+                        TokenType = reader.TokenType,
+                        ValueData = reader.ValueSpan
                     };
                 }
                 else
@@ -664,24 +658,24 @@ namespace EventUITestFramework.TestModel2.Deserialization
                     return new TokenResult()
                     {
                         PropertyName = propertyName,
-                        TokenType = state.Reader.TokenType,
-                        ValueData = state.Reader.ValueSpan
+                        TokenType = reader.TokenType,
+                        ValueData = reader.ValueSpan
                     };
                 }
             }
-            else if (_valueTypeTokens.Contains(state.Reader.TokenType))
+            else if (_valueTypeTokens.Contains(reader.TokenType))
             {
                 return new TokenResult()
                 {
-                    TokenType = state.Reader.TokenType,
-                    ValueData = state.Reader.ValueSpan
+                    TokenType = reader.TokenType,
+                    ValueData = reader.ValueSpan
                 };
             }
             else
             {
                 return new TokenResult()
                 {
-                    TokenType = state.Reader.TokenType,
+                    TokenType = reader.TokenType,
                 };
             }
         }
@@ -700,12 +694,6 @@ namespace EventUITestFramework.TestModel2.Deserialization
             public ReadOnlySpan<byte> ValueData { get; init; }
         }
 
-        public ref struct TokenParseState
-        {
-            public Stack<string> Path { get; init; }
-
-            public Utf8JsonReader Reader { get; init; }
-        }
         public class JSONParseException : Exception
         {
             public JSONParsedProperty ParsedResult { get; } = null;
