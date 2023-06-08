@@ -46,7 +46,7 @@ namespace EventUITestFrameworkTests
                 }
                 """;
 
-            var deserializer = new JSONTestDeserializer2();
+            var deserializer = new JSONTestDeserializer();
             var result = deserializer.Deserialize(json);    
         }
     }

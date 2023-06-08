@@ -19,7 +19,7 @@ using System.Xml.Linq;
 
 namespace EventUITestFramework.TestModel2.Deserialization
 {
-    public class JSONTestDeserializer2
+    public class JSONTestDeserializer
     {
         private Stack<string> _path = new Stack<string>();
         private static HashSet<JsonTokenType> _valueTypeTokens = new HashSet<JsonTokenType>() { JsonTokenType.String, JsonTokenType.Number, JsonTokenType.True, JsonTokenType.False, JsonTokenType.Null };
