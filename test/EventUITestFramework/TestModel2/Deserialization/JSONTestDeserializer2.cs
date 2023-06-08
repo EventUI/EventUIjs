@@ -75,6 +75,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
             bool isRoot = false;
             string type = null;
 
+            TestRunnableType detectedType = TestRunnableType.None;
             TestSet set = (TestSet)container;
             TestRoot root = null;
 
@@ -131,6 +132,18 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                         type = GetString(nextToken.ValueData).ToLower();
                         if (type != "set" && type != "root") throw new JSONParseException($"Invalid object - 'type' property value must be 'root' or 'set'.\nError at: {GetPath(_path)}");
+
+                        if (detectedType == TestRunnableType.None)
+                        {
+                            if (type == "set")
+                            {
+                                detectedType = TestRunnableType.Set;
+                            }
+                            else if (type == "root")
+                            {
+                                detectedType = TestRunnableType.Root;
+                            }
+                        }
 
                         if (isRoot == true && type != "root")
                         {
@@ -224,6 +237,8 @@ namespace EventUITestFramework.TestModel2.Deserialization
                 nextToken = GetNextToken(ref reader);
             }
 
+            //if we never ran into a valid "type" property, this isn't one of our objects.
+            if (detectedType == TestRunnableType.None) return null;
 
             return container;
         }
@@ -696,8 +711,6 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
         public class JSONParseException : Exception
         {
-            public JSONParsedProperty ParsedResult { get; } = null;
-
             public JSONParseException(string message)
                 : base(message)
             {
