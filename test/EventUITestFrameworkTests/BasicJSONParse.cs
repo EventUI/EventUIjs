@@ -18,6 +18,7 @@ namespace EventUITestFrameworkTests
                   "type": "root",
                   "name": "EVUI Test Suite",
                   "description": "Root test runner for all of the tests for EVUI and its associated testing library.",
+                  "recursive": true,
                   "dependencies": [
                     {
                       "selector": {
