@@ -3,7 +3,7 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-using EventUITestFramework.TestModel2.Interfaces;
+using EventUITestFramework.TestModel.Interfaces;
 /**Copyright (c) 2023 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
@@ -15,7 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventUITestFramework.TestModel2.Deserialization
+namespace EventUITestFramework.TestModel.Deserialization
 {
     /// <summary>
     /// Represents a segment of code from a TestFile to execute as its own test in isolation.

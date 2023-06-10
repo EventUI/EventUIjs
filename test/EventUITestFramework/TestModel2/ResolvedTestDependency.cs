@@ -3,9 +3,9 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-using EventUITestFramework.TestModel2.Deserialization;
+using EventUITestFramework.TestModel.Deserialization;
 
-namespace EventUITestFramework.TestModel2
+namespace EventUITestFramework.TestModel
 {
     /// <summary>
     /// Represents a dependency that has been resolved.

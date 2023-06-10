@@ -4,7 +4,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
 
-using EventUITestFramework.TestModel2.Interfaces;
+using EventUITestFramework.TestModel.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventUITestFramework.TestModel2.Deserialization
+namespace EventUITestFramework.TestModel.Deserialization
 {
     /// <summary>
     /// The root of a test hierarchy, represents a new hierarchy if it is nested within another root's hierarchy.

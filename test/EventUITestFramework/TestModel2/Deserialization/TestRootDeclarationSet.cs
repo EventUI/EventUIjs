@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventUITestFramework.TestModel2.Deserialization
+namespace EventUITestFramework.TestModel.Deserialization
 {
     /// <summary>
     /// Represents a set of declarations where items are mapped to aliases.

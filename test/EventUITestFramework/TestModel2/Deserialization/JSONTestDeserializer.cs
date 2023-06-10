@@ -3,7 +3,7 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-using EventUITestFramework.TestModel2.Interfaces;
+using EventUITestFramework.TestModel.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,39 +17,55 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace EventUITestFramework.TestModel2.Deserialization
+namespace EventUITestFramework.TestModel.Deserialization
 {
+    /// <summary>
+    /// Utility class designed to deserialize JSON files that contain TestRoot and TestSet objects.
+    /// </summary>
     public class JSONTestDeserializer
     {
-        private Stack<string> _path = new Stack<string>();
+        private Stack<string> _path = new Stack<string>(new string[] {"<root>"}); //used for keeping track of the "path" from the root of the json object to a property (used in error reporting)
         private static HashSet<JsonTokenType> _valueTypeTokens = new HashSet<JsonTokenType>() { JsonTokenType.String, JsonTokenType.Number, JsonTokenType.True, JsonTokenType.False, JsonTokenType.Null };
 
+        /// <summary>
+        /// Deserializes a JSON string into a list of ITestHierarchyContainer-implementing types.
+        /// </summary>
+        /// <param name="json">The JSON string to deserialize.</param>
+        /// <returns></returns>
         public List<ITestHierarchyContainer> Deserialize(string json)
         {
             return Deserialize(new Span<byte>(Encoding.UTF8.GetBytes(json)));
         }
 
+        /// <summary>
+        /// Deserializes a buffer containing a UTF8 JSON string into a list of ITestHierarchyContainer-implementing types.
+        /// </summary>
+        /// <param name="json">The JSON buffer to deserialize.</param>
+        /// <returns></returns>
         public List<ITestHierarchyContainer> Deserialize(Span<byte> utf8Json)
         {
             Utf8JsonReader reader = new Utf8JsonReader(utf8Json, new JsonReaderOptions() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
 
+            //get the first token and make sure that it signals the start of an object or an array (of objects). If it's anything else the JSON is invalid.
             var firstToken = GetNextToken(ref reader);
             if (firstToken.TokenType != JsonTokenType.StartObject && firstToken.TokenType != JsonTokenType.StartArray) throw new Exception("Invalid JSON - must be a single object or an array.");
 
             List<ITestHierarchyContainer> containers = new List<ITestHierarchyContainer>();
 
-            if (firstToken.TokenType == JsonTokenType.StartObject)
+           
+            if (firstToken.TokenType == JsonTokenType.StartObject) //we have just one item
             {
                 var deserialized = DeserializeHierarchyContainer(ref reader);
                 if (deserialized != null) containers.Add(deserialized);
             }
-            else if (firstToken.TokenType == JsonTokenType.StartArray)
+            else if (firstToken.TokenType == JsonTokenType.StartArray) //we have an array of items. Get tokens until we get to the end of the array.
             {
                 TokenResult nextContainerStart = GetNextToken(ref reader);
+
                 int objCtr = 0;
                 while (nextContainerStart.TokenType != JsonTokenType.EndArray && nextContainerStart.TokenType != JsonTokenType.None)
                 {
-                    if (nextContainerStart.TokenType == JsonTokenType.StartObject)
+                    if (nextContainerStart.TokenType == JsonTokenType.StartObject) //only objects are relevant, so anything else in the array is discardrd
                     {
                         _path.Push(objCtr.ToString());
                         var deserialized = DeserializeHierarchyContainer(ref reader);
@@ -69,11 +85,20 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return containers;
         }
 
+        /// <summary>
+        /// Deserializes an unknown JSON stream into either a TestSet or a TestRoot
+        /// </summary>
+        /// <param name="reader">The JSON reader seeked to the "BeginObject" token of a TestSet or TestRoot object.</param>
+        /// <returns></returns>
+        /// <exception cref="JSONParseException"></exception>
         private ITestHierarchyContainer DeserializeHierarchyContainer(ref Utf8JsonReader reader)
         {
-            ITestHierarchyContainer container = new TestSet(); //in general we will be making more test sets than test roots, so we start with a TestSet and will change to a
+            //basically in the code below we have to populate a TestSet or a TestRoot - the problem is we don't know which we are using until we either get to a key property found in one but not the other
+            //type, so we default to a TestSet and transform the object to a TestRoot if needed (there SHOULD be more sets than roots in any given hierarchy).
+            ITestHierarchyContainer container = new TestSet(); 
             bool isRoot = false;
             string type = null;
+
 
             TestRunnableType detectedType = TestRunnableType.None;
             TestSet set = (TestSet)container;
@@ -82,7 +107,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
             TokenResult nextToken = GetNextToken(ref reader);
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
-                if (IsTokenValid(nextToken) == false)
+                if (IsTokenValid(nextToken) == false) //token had no value or no property name, skip
                 {
                     nextToken = GetNextToken(ref reader);
                 }
@@ -133,6 +158,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                         type = GetString(nextToken.ValueData).ToLower();
                         if (type != "set" && type != "root") throw new JSONParseException($"Invalid object - 'type' property value must be 'root' or 'set'.\nError at: {GetPath(_path)}");
 
+                        //validate that a "type" property was present and it was one of our values. If not, we're deserialzing some unknown object.
                         if (detectedType == TestRunnableType.None)
                         {
                             if (type == "set")
@@ -243,11 +269,21 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return container;
         }
 
-        private bool IsTokenValid(TokenResult nextToken)
+        /// <summary>
+        /// Determines if a token is "valid" by means of having both a property name and value.
+        /// </summary>
+        /// <param name="token">The token to check for validity.</param>
+        /// <returns></returns>
+        private bool IsTokenValid(TokenResult token)
         {
-            return String.IsNullOrWhiteSpace(nextToken.PropertyName) == false && nextToken.TokenType != JsonTokenType.Null;
+            return String.IsNullOrWhiteSpace(token.PropertyName) == false && token.TokenType != JsonTokenType.Null;
         }
 
+        /// <summary>
+        /// Deserializes a list of TestRunnable objects.
+        /// </summary>
+        /// <param name="reader">The reader that is advanced to a position of "BeginArray" or "BeginObject" of a TestRunnables list.</param>
+        /// <returns></returns>
         private List<TestRunnable> DeserializeRunnablesList(ref Utf8JsonReader reader)
         {
             List<TestRunnable> runnables = new List<TestRunnable>();
@@ -287,11 +323,17 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return runnables;
         }
 
+        /// <summary>
+        /// Deserializes a TestRunnable object.
+        /// </summary>
+        /// <param name="reader">The reader to deserialize the Runnable from.</param>
+        /// <returns></returns>
+        /// <exception cref="JSONParseException"></exception>
         private TestRunnable DeserializeRunnable(ref Utf8JsonReader reader)
         {
             TestRunnable runnable = new TestRunnable();
 
-            if (reader.TokenType == JsonTokenType.String)
+            if (reader.TokenType == JsonTokenType.String) //if the reader is at a string, we have the "name" of a runnable to use but nothing more
             {
                 runnable.Selector = new TestFileSelector();
                 runnable.Selector.Name = reader.GetString();
@@ -302,6 +344,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
             bool hasName = false;
             bool hasSelector = false;
 
+            //if we weren't at a string, try and build a runnable object.
             TokenResult nextToken = GetNextToken(ref reader);
             while (nextToken.TokenType != JsonTokenType.EndObject && nextToken.TokenType != JsonTokenType.None)
             {
@@ -381,6 +424,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return runnable;
         }
 
+        /// <summary>
+        /// Deserializes a DeclarationSet of items found in a TestRoot.
+        /// </summary>
+        /// <param name="reader">THe JSON reader advanced to BeginObject.</param>
+        /// <returns></returns>
         private TestRootDeclarationSet DeserializeDeclarationSet(ref Utf8JsonReader reader)
         {
             TestRootDeclarationSet declarationSet = new TestRootDeclarationSet();
@@ -412,6 +460,12 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return declarationSet;
         }
 
+        /// <summary>
+        /// Deserializes a list of TestDependency objects.
+        /// </summary>
+        /// <param name="reader">The JSON reader advanced to a StartArray position.</param>
+        /// <param name="stringsAllowed">Whether or not a dependency can be referenced by string name along in this array (rather than be an object).</param>
+        /// <returns></returns>
         private List<TestDependency> DeserializeDependenciesList(ref Utf8JsonReader reader, bool stringsAllowed)
         {
             List<TestDependency> dependencies = new List<TestDependency>();
@@ -451,6 +505,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return dependencies;
         }
 
+        /// <summary>
+        /// Deserializes a TestDependency object.
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
         private TestDependency DeserializeDependency(ref Utf8JsonReader reader)
         {
             TestDependency dependency = new TestDependency();
@@ -533,6 +592,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return dependency;
         }
 
+        /// <summary>
+        /// Deserializes a TestFileSelector object.
+        /// </summary>
+        /// <param name="reader">A JSON reader advanced to BeginObject.</param>
+        /// <returns></returns>
         private TestFileSelector DeserializeFileSelector(ref Utf8JsonReader reader)
         {
             TestFileSelector selector = new TestFileSelector();
@@ -548,22 +612,22 @@ namespace EventUITestFramework.TestModel2.Deserialization
                 switch (nextToken.PropertyName)
                 {
                     case "path":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestFileSelector));
 
                         selector.Path = GetString(nextToken.ValueData);
                         break;
                     case "name":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestFileSelector));
 
                         selector.Name = GetString(nextToken.ValueData);
                         break;
                     case "glob":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestFileSelector));
 
                         selector.Glob = GetString(nextToken.ValueData);
                         break;
                     case "regex":
-                        ValidateType(nextToken, JsonTokenType.String, typeof(TestDependency));
+                        ValidateType(nextToken, JsonTokenType.String, typeof(TestFileSelector));
 
                         selector.Regex = GetString(nextToken.ValueData);
                         break;
@@ -571,7 +635,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
 
                         if (nextToken.TokenType != JsonTokenType.True && nextToken.TokenType != JsonTokenType.False)
                         {
-                            ValidateType(nextToken, JsonTokenType.True, typeof(TestDependency));
+                            ValidateType(nextToken, JsonTokenType.True, typeof(TestFileSelector));
                         }
 
                         selector.Recursive = BitConverter.ToBoolean(nextToken.ValueData);
@@ -584,6 +648,13 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return selector;
         }
 
+        /// <summary>
+        /// Validates that a TokenResult contains a value of the expected token type.
+        /// </summary>
+        /// <param name="parseResult"></param>
+        /// <param name="expectedType"></param>
+        /// <param name="objectType"></param>
+        /// <exception cref="JSONParseException"></exception>
         private void ValidateType(TokenResult parseResult, JsonTokenType expectedType, Type objectType)
         {
             if (parseResult.TokenType == expectedType)
@@ -635,9 +706,14 @@ namespace EventUITestFramework.TestModel2.Deserialization
             return pathStr;
         }     
         
+        /// <summary>
+        /// Gets the next "Token" from the JSON reader by advancing to a property name, then advancing to the position afterwards to get the value type and (if not an object) the value span.
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
         private TokenResult GetNextToken(ref Utf8JsonReader reader)
         {
-            if (reader.Read() == false)
+            if (reader.Read() == false) //ran out of stuff to read, all done
             {
                 return new TokenResult()
                 {
@@ -646,7 +722,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                 };
             }
 
-            if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
+            if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray) //reader came to a start object/array before coming to a property name, its likely a root object or an array member
             {
                 return new TokenResult()
                 {
@@ -654,7 +730,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                     TokenType = reader.TokenType
                 };
             }
-            else if (reader.TokenType == JsonTokenType.PropertyName)
+            else if (reader.TokenType == JsonTokenType.PropertyName) //we have a property - get its name, advance one token, and get its value/value token type
             {
                 string propertyName = reader.GetString();
                 reader.Read();
@@ -673,12 +749,11 @@ namespace EventUITestFramework.TestModel2.Deserialization
                     return new TokenResult()
                     {
                         PropertyName = propertyName,
-                        TokenType = reader.TokenType,
-                        ValueData = reader.ValueSpan
+                        TokenType = reader.TokenType
                     };
                 }
             }
-            else if (_valueTypeTokens.Contains(reader.TokenType))
+            else if (_valueTypeTokens.Contains(reader.TokenType)) //if the token was just a value, it's a member of an array
             {
                 return new TokenResult()
                 {
@@ -686,7 +761,7 @@ namespace EventUITestFramework.TestModel2.Deserialization
                     ValueData = reader.ValueSpan
                 };
             }
-            else
+            else //otherwise just return the token type
             {
                 return new TokenResult()
                 {
@@ -695,20 +770,40 @@ namespace EventUITestFramework.TestModel2.Deserialization
             }
         }
 
+        /// <summary>
+        /// Gets a string from a ReadOnlySpan of UTF-8 bytes.
+        /// </summary>
+        /// <param name="utf8String"></param>
+        /// <returns></returns>
         private string GetString(ReadOnlySpan<byte> utf8String)
         {
             return System.Text.Encoding.UTF8.GetString(utf8String);
         }
 
+        /// <summary>
+        /// Special struct for extracting the values from the JSON reader more easily.
+        /// </summary>
         public readonly ref struct TokenResult
         {
+            /// <summary>
+            /// If this result represents a property, this is the property's name.
+            /// </summary>
             public string PropertyName { get; init; }
 
+            /// <summary>
+            /// This is the type of token the reader was advanced to.
+            /// </summary>
             public JsonTokenType TokenType { get; init; }
 
+            /// <summary>
+            /// If this was a property with a non-object value, this is the value of the data.
+            /// </summary>
             public ReadOnlySpan<byte> ValueData { get; init; }
         }
 
+        /// <summary>
+        /// Exception thrown when the JSONTestDeserializer encounters an error in the JSON being parsed.
+        /// </summary>
         public class JSONParseException : Exception
         {
             public JSONParseException(string message)

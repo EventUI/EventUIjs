@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventUITestFramework.TestModel2.Interfaces
+namespace EventUITestFramework.TestModel.Interfaces
 {
     /// <summary>
     /// Represents the base interface for all items in the test model.

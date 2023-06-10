@@ -1,4 +1,4 @@
-﻿using EventUITestFramework.TestModel2.Deserialization;
+﻿using EventUITestFramework.TestModel.Deserialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;

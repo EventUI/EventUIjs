@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventUITestFramework.TestModel2
+namespace EventUITestFramework.TestModel
 {
     /// <summary>
     /// Represents a mapping of a path alias to include static content to the asp application to its actual full path on disk.

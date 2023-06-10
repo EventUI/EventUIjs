@@ -3,9 +3,9 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-using EventUITestFramework.TestModel2.Interfaces;
+using EventUITestFramework.TestModel.Interfaces;
 
-namespace EventUITestFramework.TestModel2
+namespace EventUITestFramework.TestModel
 {
     /// <summary>
     /// Wrapper for an runnable test root, test set, test file, or test code.

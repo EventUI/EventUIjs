@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EventUITestFramework.TestModel2
+namespace EventUITestFramework.TestModel
 {
 
     /// <summary>
