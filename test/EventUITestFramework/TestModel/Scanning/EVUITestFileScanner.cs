@@ -24,16 +24,12 @@ namespace EventUITestFramework.TestModel.Scanning
 
             ScanDirectory(rootDirectoryPath, state);
 
-            List<Task> readTasks = new List<Task>();
-
-            readTasks.Add(ReadFiles(state, ParseType.JSON));
+            await ReadFiles(state, ParseType.JSON);
 
             if (options.ScanJavaScriptFiles)
             {
-                readTasks.Add(ReadFiles(state, ParseType.JavaScript));
+                await ReadFiles(state, ParseType.JavaScript);
             }
-            
-            await Task.WhenAll(readTasks);
         }
 
         private static void ScanDirectory(string directoryPath, TestScanState state)
@@ -43,6 +39,7 @@ namespace EventUITestFramework.TestModel.Scanning
             var allItems = dir.GetFileSystemInfos("*.js*", SearchOption.AllDirectories);
 
             Regex endsWithJS = new Regex("[^min]\\.js$", RegexOptions.IgnoreCase); //get all non-minified JS files (minified ones won't have tests in them)
+            Regex minified = new Regex("\\.min\\.js$", RegexOptions.IgnoreCase);
             Regex endsWithJSON = new Regex("\\.h\\.json$", RegexOptions.IgnoreCase); //get all of our JSON files used to organize the tests in the JS files.
 
             foreach (var item in allItems)
@@ -57,6 +54,10 @@ namespace EventUITestFramework.TestModel.Scanning
                     {
                         if (state.Options.JavaScriptFileFilter(item) == true) state.JavaScriptFiles.Add(item);
                     }
+                }
+                else if (minified.IsMatch(item.Extension))
+                {
+                    state.MinifiedJavaScriptFiles.Add(item);
                 }
                 else if (endsWithJSON.IsMatch(item.Extension))
                 {
@@ -77,7 +78,7 @@ namespace EventUITestFramework.TestModel.Scanning
             var batchTasks = new List<Task<ConcurrentBag<FileReadResult>>>();
             List<FileSystemInfo> currentBatch = new List<FileSystemInfo>();
 
-            List<FileSystemInfo> filesList = null
+            List<FileSystemInfo> filesList = null;
 
             if (parseType == ParseType.JSON)
             {
@@ -98,32 +99,24 @@ namespace EventUITestFramework.TestModel.Scanning
             {
                 currentBatch.Add(filesList[x]);
 
-                if (x != 0 && x % state.Options.FileBatchSize == 0)
+                if ((x != 0 && x % state.Options.FileBatchSize == 0) || (x == filesList.Count - 1))
                 {
-                    batchTasks.Add(ReadFiles(currentBatch, parseType));
+                    var readResults = await ReadFiles(currentBatch, parseType);
+                    foreach (var item in readResults)
+                    {
+                        if (item.Error != null)
+                        {
+                            state.FileReadResults.Add(item);
+                        }
+                        else
+                        {
+                            state.FailedReadResults.Add(item);
+                        }
+                    }
+
                     currentBatch = new List<FileSystemInfo>();
                 }
-                else if (x == filesList.Count - 1)
-                {
-                    batchTasks.Add(ReadFiles(currentBatch, parseType);
-                }
-            }
-
-            var results = await Task.WhenAll(batchTasks);
-            foreach (var set in results)
-            {
-                foreach (var item in set)
-                {
-                    if (item.Error != null)
-                    {
-                        state.FileReadResults.Add(item);
-                    }
-                    else
-                    {
-                        state.FailedReadResults.Add(item);
-                    }
-                }
-            }
+            }            
         }
 
         private static async Task<ConcurrentBag<FileReadResult>> ReadFiles(List<FileSystemInfo> fileSystemInfos, ParseType parseType)
@@ -201,9 +194,14 @@ namespace EventUITestFramework.TestModel.Scanning
             public TestScanOptions Options { get; set; } = null;
 
             /// <summary>
-            /// All of the JS files found under the root.
+            /// All of the JS files found under the root that will be scanned for tests.
             /// </summary>
             public List<FileSystemInfo> JavaScriptFiles { get; set; } = null;
+
+            /// <summary>
+            /// JavaScript files that were found that are minified and not going to be scanned for tests.
+            /// </summary>
+            public List<FileSystemInfo> MinifiedJavaScriptFiles { get; set; } = null;
 
             /// <summary>
             /// All of the JSON files found under the root.

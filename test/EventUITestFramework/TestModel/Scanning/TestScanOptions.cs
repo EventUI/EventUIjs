@@ -17,6 +17,8 @@ namespace EventUITestFramework.TestModel.Scanning
 
         public Predicate<FileSystemInfo> JsonFileFilter { get; init; } = null;
 
-        public int FileBatchSize { get; init; } = 25;
+        /// <summary>
+        /// The maximum number of concurrent files that will be opened during the scan. Beware of making this a large number, there is an OS limit on the number of available file handles available to the computer. Default is 100.        /// </summary>
+        public int FileBatchSize { get; init; } = 100;
     }
 }
