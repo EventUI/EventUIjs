@@ -17,6 +17,12 @@ namespace EventUITestFramework.TestModel
     public class RootPathMapping
     {
         /// <summary>
+        /// The type of item being pointed to by name.
+        /// </summary>
+        public TestRunnableType RunnableType { get; set; } = TestRunnableType.None;
+
+
+        /// <summary>
         /// The alias that was registered with the application at startup as a source of static content.
         /// </summary>
         public string StaticContentAlias { get; set; } = null;

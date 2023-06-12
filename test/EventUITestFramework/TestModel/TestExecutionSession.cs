@@ -42,5 +42,10 @@ namespace EventUITestFramework.TestModel
         /// The TestRoot executable wrapper.
         /// </summary>
         public TestRunnableWrapper Root { get; set; } = null;
+
+        internal TestExecutionSession(string rootFilePath)
+        {
+            RootFilePath = rootFilePath;
+        }
     }
 }
