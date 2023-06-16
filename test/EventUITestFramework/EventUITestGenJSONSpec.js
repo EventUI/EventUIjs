@@ -1,3 +1,8 @@
+/**Copyright (c) 2023 Richard H Stannard
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.*/
+
 /**Object that defines the start of a new hierarchy of tests that is not impacted by parent TestRoots or TestSet inheritance.
 @class*/
 TestRoot = function ()

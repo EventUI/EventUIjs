@@ -1,4 +1,4 @@
-using EventUITestFramework.ParseModel.Contexts;
+using EventUITestFramework.Model.Parsing.Contexts;
 using YoggTree;
 
 namespace EventUITestFrameworkTests
