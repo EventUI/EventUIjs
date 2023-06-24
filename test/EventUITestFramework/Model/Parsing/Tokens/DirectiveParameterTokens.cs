@@ -122,7 +122,7 @@ namespace EventUITestFramework.Model.Parsing.Tokens
 
         public override TokenContextDefinition GetNewContextDefinition(TokenInstance start)
         {
-            return EventUITestContexts.StringContext;
+            return EventUITestContexts.ParameterStringContext;
         }
     }
 }

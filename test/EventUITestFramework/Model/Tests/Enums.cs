@@ -55,4 +55,11 @@ namespace EventUITestFramework.Model.Tests
         /// </summary>
         Terminate = 2
     }
+
+    public enum TestDependencyMode
+    {
+        None = 0,
+        Add = 1,
+        Remove = 2,
+    }
 }

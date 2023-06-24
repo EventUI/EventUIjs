@@ -3,6 +3,13 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
+
+
+using YoggTree.Core.Tokens;
+/**Copyright (c) 2023 Richard H Stannard
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.*/
 namespace EventUITestFramework.Model.Parsing.Contexts
 {
     /// <summary>
@@ -15,6 +22,8 @@ namespace EventUITestFramework.Model.Parsing.Contexts
         {
             AddToken<EventUITestDirectiveStartToken>();
             AddToken<EventUITestDirectiveEndToken>();
+            AddToken<EventUIRawStringToken>();
+            AddToken<EventUISingleLineCommentToken>();
         }
     }
 }

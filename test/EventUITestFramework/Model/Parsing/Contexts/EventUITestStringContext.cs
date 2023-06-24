@@ -8,12 +8,12 @@ namespace EventUITestFramework.Model.Parsing.Contexts
     /// <summary>
     /// Represents a run of literal text (between two double-quotes) that should not have any other tokens processed in it.
     /// </summary>
-    public class EventUITestDirectiveStringContext : TokenContextDefinition
+    public class EventUITestStringContext : TokenContextDefinition
     {
-        public EventUITestDirectiveStringContext()
-            : base("EventUITestDirectiveStringContext")
+        public EventUITestStringContext()
+            : base("StringContext")
         {
-            AddToken<DirectiveParameterStringToken>();
+            AddToken<EventUIRawStringToken>();
             AddToken<BackslashToken>();
         }
 
@@ -21,8 +21,9 @@ namespace EventUITestFramework.Model.Parsing.Contexts
         {
             if (base.EndsCurrentContext(tokenInstance) == true)
             {
-                var previous = tokenInstance.GetPreviousToken();
-                if (previous.Is<BackslashToken>()) return false;
+                if (tokenInstance.Contents.Span.SequenceEqual(tokenInstance.Context.StartToken.Contents.Span) == false) return false; //make sure it matches the start token
+                if (tokenInstance.GetPreviousToken().Is<BackslashToken>()) return false; //if it's escaped, we don't end the context.
+
                 return true;
             }
 

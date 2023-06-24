@@ -1,3 +1,4 @@
+using EventUITestFramework.Model.Parsing;
 using EventUITestFramework.Model.Parsing.Contexts;
 using YoggTree;
 
@@ -80,12 +81,13 @@ namespace EventUITestFrameworkTests
             var parser = new TokenParser();
             var result = parser.Parse<EventUITestFileContext>(content);
 
-            Assert.Equal(3, result.ChildContexts.Count); //should have 2 child contexts - one for each directive
+            Assert.Equal(4, result.ChildContexts.Count); //should have 2 child contexts - one for each directive
             Assert.True(result.ChildContexts[0].Is<EventUITestDirectiveContext>());
             Assert.True(result.ChildContexts[1].Is<EventUITestDirectiveContext>());
             Assert.True(result.ChildContexts[2].Is<EventUITestDirectiveContext>());
+            Assert.True(result.ChildContexts[3].Is<EventUITestStringContext>());
 
-            Assert.Equal(6, result.Tokens.Count);
+            Assert.Equal(8, result.Tokens.Count);
 
             Assert.True(result.Tokens[0].TokenInstanceType == TokenInstanceType.ContextPlaceholder);
             Assert.True(result.Tokens[0].GetChildContext() == result.ChildContexts[0]);
@@ -104,6 +106,12 @@ namespace EventUITestFrameworkTests
 
             Assert.True(result.Tokens[5].TokenInstanceType == TokenInstanceType.TextPlaceholder);
             Assert.True(result.Tokens[5].Contents.Length > 0);
+
+            Assert.True(result.Tokens[6].TokenInstanceType == TokenInstanceType.ContextPlaceholder);
+            Assert.True(result.Tokens[6].GetChildContext() == result.ChildContexts[3]);
+
+            Assert.True(result.Tokens[7].TokenInstanceType == TokenInstanceType.TextPlaceholder);
+            Assert.True(result.Tokens[7].Contents.Length > 0);
         }
     }
 }

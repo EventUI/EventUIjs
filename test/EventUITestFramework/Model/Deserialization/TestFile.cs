@@ -19,6 +19,6 @@ namespace EventUITestFramework.Model.Deserialization
         /// <summary>
         /// The dependencies that are specific to this file.
         /// </summary>
-        public List<TestDependency> Dependency { get; } = new List<TestDependency>();
+        public List<TestDependency> Dependencies { get; } = new List<TestDependency>();
     }
 }

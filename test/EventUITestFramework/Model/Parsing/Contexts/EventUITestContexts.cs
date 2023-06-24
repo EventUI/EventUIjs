@@ -7,12 +7,17 @@ namespace EventUITestFramework.Model.Parsing.Contexts
 {
     public static class EventUITestContexts
     {
-        public static EventUITestDirectiveStringContext StringContext { get; } = new EventUITestDirectiveStringContext();
+        public static EventUITestStringContext StringContext { get; set; } = new EventUITestStringContext();
+
+        public static EventUITestDirectiveStringContext ParameterStringContext { get; } = new EventUITestDirectiveStringContext();
 
         public static EventUITestDirectiveContext DirectiveContext { get; } = new EventUITestDirectiveContext();
 
         public static EventUITestFileContext FileContext { get; } = new EventUITestFileContext();
 
         public static EventUITestParameterContext ParameterContext { get; } = new EventUITestParameterContext();
+
+        public static EventUISingleLineCommentContext SingleLineCommentContext { get; } = new EventUISingleLineCommentContext();
+
     }
 }

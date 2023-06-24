@@ -9,8 +9,19 @@ using System.Text;
 
 namespace EventUITestFramework.Scanning
 {
+    /// <summary>
+    /// Utility to scan a directory for files related to running tests.
+    /// </summary>
     public static class EVUITestFileScanner
     {
+        /// <summary>
+        /// Scans a directory for test JSON or JavaScript files.
+        /// </summary>
+        /// <param name="rootDirectoryPath">The root directory to scan under recursively.</param>
+        /// <param name="options">Any options to use to control the scan operation.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
         public static async Task<TestScanResult> ScanDirectory(string rootDirectoryPath, TestScanOptions options)
         {
             if (String.IsNullOrWhiteSpace(rootDirectoryPath) == true) throw new ArgumentNullException(nameof(rootDirectoryPath) + " must be a valid string.");
@@ -19,6 +30,7 @@ namespace EventUITestFramework.Scanning
             TestScanState result = new TestScanState();
             result.Options = (options != null) ? options : new TestScanOptions();
 
+            //get and sort all the relevant file info 
             ScanDirectory(rootDirectoryPath, result);
 
             await ReadFiles(result, ParseType.JSON);
@@ -113,10 +125,6 @@ namespace EventUITestFramework.Scanning
                     {
                         if (item.Error != null)
                         {
-                            state.FileReadResults.Add(item);
-                        }
-                        else
-                        {
                             state.FailedReadResults.Add(item);
                         }
                     }
@@ -150,8 +158,9 @@ namespace EventUITestFramework.Scanning
 
                         foreach (var container in containers)
                         {
-                            results.Add(new FileReadResult(parseType)
+                            results.Add(new FileReadResult()
                             {
+                                ParseType = parseType,
                                 FileInfo = source,
                                 JsonParseResult = container
                             });
@@ -159,11 +168,12 @@ namespace EventUITestFramework.Scanning
                     }
                     else if (parseType == ParseType.JavaScript)
                     {
-                        var parsed = EventUITestParseUtil.ParseFile(Encoding.UTF8.GetString(fileData.Span));
+                        var parsed = EventUITestFileParser.GetFileTokens(Encoding.UTF8.GetString(fileData.Span));
                         if (parsed != null)
                         {
-                            results.Add(new FileReadResult(parseType)
+                            results.Add(new FileReadResult()
                             {
+                                ParseType = parseType,
                                 FileInfo = source,
                                 JavaScriptParseResult = parsed,
                                 JsonParseResult = new TestFile()
@@ -173,8 +183,9 @@ namespace EventUITestFramework.Scanning
                 }
                 catch (Exception ex)
                 {
-                    results.Add(new FileReadResult(parseType)
+                    results.Add(new FileReadResult()
                     {
+                        ParseType = parseType,
                         FileInfo = source,
                         Error = ex
                     });
