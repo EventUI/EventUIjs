@@ -22,7 +22,7 @@ namespace EventUITestFramework.Model.Parsing.Contexts
             if (base.EndsCurrentContext(tokenInstance) == true)
             {
                 if (tokenInstance.Contents.Span.SequenceEqual(tokenInstance.Context.StartToken.Contents.Span) == false) return false; //make sure it matches the start token
-                if (tokenInstance.GetPreviousToken().Is<BackslashToken>()) return false; //if it's escaped, we don't end the context.
+                if (tokenInstance.PeekPreviousToken().Is<BackslashToken>()) return false; //if it's escaped, we don't end the context.
 
                 return true;
             }

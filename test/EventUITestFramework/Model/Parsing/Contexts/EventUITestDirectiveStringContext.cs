@@ -21,7 +21,7 @@ namespace EventUITestFramework.Model.Parsing.Contexts
         {
             if (base.EndsCurrentContext(tokenInstance) == true)
             {
-                var previous = tokenInstance.GetPreviousToken();
+                var previous = tokenInstance.PeekPreviousToken();
                 if (previous.Is<BackslashToken>()) return false;
                 return true;
             }

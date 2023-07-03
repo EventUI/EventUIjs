@@ -24,7 +24,7 @@ namespace EventUITestFramework.Model.Parsing.Tokens
         {
             if (nextToken.TokenInstanceType == TokenInstanceType.TextPlaceholder)
             {
-                if (nextToken.GetNextToken().Is<EventUITestDirectiveEndToken>())
+                if (nextToken.PeekNextToken().Is<EventUITestDirectiveEndToken>())
                 {
                     return true; //if this token is the start of a comment with random text in it, we still consider it valid if it ends with the ending token
                 }

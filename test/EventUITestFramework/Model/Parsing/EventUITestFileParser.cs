@@ -157,7 +157,7 @@ namespace EventUITestFramework.Model.Parsing
 
         private static void ReadTokens(TestFileParseState state, TokenContextInstance instance)
         {
-            TokenContextReader reader = instance.GetReader();
+            TokenReader reader = instance.GetReader();
             TokenContextInstance nextDirective = reader.GetNextContext<EventUITestDirectiveContext>();
         }
 

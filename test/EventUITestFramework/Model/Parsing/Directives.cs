@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using YoggTree;
-using YoggTree.Core.Tokens;
+using PogTree;
+using PogTree.Core.Tokens;
 
 namespace EventUITestFramework.Model.Parsing
 {
@@ -41,7 +41,7 @@ namespace EventUITestFramework.Model.Parsing
 
         internal static TestFileDirective ReadTestFileDirective(TokenContextInstance context)
         {
-            TokenContextReader reader = context.GetReader();
+            TokenReader reader = context.GetReader();
 
             var nameParameter = reader.GetNextContext<EventUITestParameterContext>(true);
             if (nameParameter == null)
@@ -64,7 +64,7 @@ namespace EventUITestFramework.Model.Parsing
 
         internal static TestStartDirective ReadTestStartDirective(TokenContextInstance context)
         {
-            TokenContextReader reader = context.GetReader();
+            TokenReader reader = context.GetReader();
             var nameParameter = reader.GetNextContext<EventUITestParameterContext>(true);
             if (nameParameter == null)
             {
@@ -85,7 +85,7 @@ namespace EventUITestFramework.Model.Parsing
 
         internal static TestDependencyDirective ReadTestDependencyDirective(TokenContextInstance context)
         {
-            TokenContextReader reader = context.GetReader();
+            TokenReader reader = context.GetReader();
             var nameParameter = reader.GetNextContext<EventUITestParameterContext>(true);
             if (nameParameter == null) return null;
 
