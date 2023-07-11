@@ -2,13 +2,12 @@
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-
 /*#INCLUDES#*/
 
 /*#BEGINWRAP(EVUI.Modules.DomEvents|DomEvents)#*/
 /*#REPLACE(EVUI.Modules.DomEvents|DomEvents)#*/
 
-/**Module for adding event listeners to EventTargets that are designed to more gracefully handle multiple async-function listeners that go in sequence isntead of racing each other.
+/**Module for adding event listeners to EventTargets that are designed to more gracefully handle multiple async-function listeners that go in sequence instead of racing each other.
 @module*/
 EVUI.Modules.DomEvents = {};
 
@@ -63,7 +62,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     @type {String}*/
     var _eventKey = EVUI.Modules.Core.Utils.getHashCode(EVUI.Modules.Core.Utils.makeGuid()).toString(36).replace(".", ""); //a hidden hash value that is used to look up information about objects or nodes that will never occur in a user's code.
 
-    /**The base36 string that is the property on an artificial event that carrys the callback for a manual async event dispatch.
+    /**The base36 string that is the property on an artificial event that carries the callback for a manual async event dispatch.
     @type {String}*/
     var _callbackKey = EVUI.Modules.Core.Utils.getHashCode(EVUI.Modules.Core.Utils.makeGuid()).toString(36).replace(".", ""); //a hidden hash value that is used to look up information about objects or nodes that will never occur in a user's code.
 
@@ -78,11 +77,11 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         _callbackKey = Symbol(_callbackKey);
     }
 
-    /**Unique ID counter that identifes an event handler that has been bound to an EventTarget.
+    /**Unique ID counter that identifies an event handler that has been bound to an EventTarget.
     @type {Number}*/
     var _handlerId = 0;
 
-    /**Unique ID counter that identifes an EventTarget's AsyncDomEventerHandle.
+    /**Unique ID counter that identifies an EventTarget's AsyncDomEventerHandle.
     @type {Number}*/
     var _targetEventerId = 0;
 
@@ -90,7 +89,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     @type {Number}*/
     var _queuedEventId = 0;
 
-    /**Unique ID counter that identifes a bubbling sequence of events that is shared by all members of a composed path.
+    /**Unique ID counter that identifies a bubbling sequence of events that is shared by all members of a composed path.
     @type {Number}*/
     var _eventSequenceId = 0;
 
@@ -124,7 +123,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         /**Removes an event listener from the stack of managed async event handlers. 
         @param {String} type The type of event that the listener is listening for.
         @param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that was listening for the event.
-        @param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listneer.
+        @param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listener.
         @returns {Boolean}*/
         this.removeAsyncEventListener = function (type, listener, options)
         {
@@ -139,7 +138,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         @returns {Promise}*/
         this.dispatchAsyncEvent = function (dispatchArgs)
         {
-            if (EVUI.Modules.Core.Utils.instanceOf(dispatchArgs, Event) === false) throw Error("Event object expected.");        
+            if (EVUI.Modules.Core.Utils.instanceOf(dispatchArgs, Event) === false) throw Error("Event object expected.");
 
             return new Promise(function (resolve, reject)
             {
@@ -161,8 +160,8 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
             if (index === -1) return;
 
             session.composedPathHandles[index] = _handle;
-        };        
-     };
+        };
+    };
 
     /**Internal carrier of state information about the EventTarget that it is attached to - instantiated inside of a AsyncDomEventer and is passed into the internal implementation of the AsyncDomEventManager.
     @class*/
@@ -188,7 +187,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         @type {EVUI.Modules.EventStream.BubblingEventManager()}*/
         this.bubbler = new EVUI.Modules.EventStream.BubblingEventManager();
 
-        /**Object. Dictioary of all the events attached to the EventTarget that is keyed by the event's type.
+        /**Object. Dictionary of all the events attached to the EventTarget that is keyed by the event's type.
         @type {{}}*/
         this.registeredEvents = {};
 
@@ -289,7 +288,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         return null;
     };
 
-    /**Returns whether or not a BoundHandler has been removed by a user during executuion.
+    /**Returns whether or not a BoundHandler has been removed by a user during execution.
     @param {BoundEventHandler} boundHandler The bound handler to check against the pendingRemovals dictionary.
     @returns {Boolean}*/
     RegisteredEvent.prototype.isPendingRemoval = function (boundHandler)
@@ -347,11 +346,11 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     @class*/
     var AsyncEventSession = function ()
     {
-        /**Numnber. The unqiue sequential ID of the event sequence session.
+        /**Number. The unique sequential ID of the event sequence session.
         @type {Number}*/
         this.eventSequenceId = -1;
 
-        /**String. The unqiue ID of this session and key of the session in the _sessions object.
+        /**String. The unique ID of this session and key of the session in the _sessions object.
         @type {String}*/
         this.sessionId = null;
 
@@ -392,16 +391,16 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     @class*/
     var AsyncEventMetadata = function ()
     {
-        /**Numnber. The unqiue sequential ID of the event sequence.
+        /**Number. The unique sequential ID of the event sequence.
         @type {Number}*/
         this.eventSequenceId = -1;
 
-        /**String. The unqiue ID of the session this event is associated with ans is the key of the session in the _sessions object.
+        /**String. The unique ID of the session this event is associated with ans is the key of the session in the _sessions object.
         @type {String}*/
         this.sessionId = null;
-    }; 
+    };
 
-    /**Adds an event listneer to the AsyncDomEventerHandle's collection of managed handlers.
+    /**Adds an event listener to the AsyncDomEventerHandle's collection of managed handlers.
     @param {AsyncDomEventerHandle} handle The internal state of the event target's async event stack.
     @param {String} type The type of event being listened for.
     @param {Function} listener The function to fire.
@@ -457,7 +456,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         return true;
     };
 
-    /**Determins whether or not an event is a valid event type (i.e. a non whitespace string).
+    /**Determines whether or not an event is a valid event type (i.e. a non whitespace string).
     @param {String} type The string to validate.
     @returns {Boolean}*/
     var isValidEventType = function (type)
@@ -476,8 +475,8 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     };
 
     /**Adds the handler to the EventTarget that will kick off the execution of the stack of async events managed by the eventer handle.
-    @param {AsyncDomEventerHandle} handle The AsyncDomEventerHandle assoicated with the EventTarget.
-    @param {String} type The type of event being listned for.
+    @param {AsyncDomEventerHandle} handle The AsyncDomEventerHandle associated with the EventTarget.
+    @param {String} type The type of event being listed for.
     @param {EVUI.Modules.DomEvents.EventOptions} options Configuration options for the listener.
     @returns {Function}*/
     var addTriggeringHandler = function (handle, type, options)
@@ -488,7 +487,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
             {
                 //check and see if any of the handlers attached for this event has autoPreventDefault to true - if one of them does, stop the default action.
                 if (hasAutoPreventDefault(handle, type) === true) eventArgs.preventDefault();
-                
+
                 //make a copy of the event args object so we can store its current state (which changes as it bubbles)
                 var composedPath = eventArgs.composedPath();
                 var argsClone = EVUI.Modules.Core.Utils.shallowExtend({}, eventArgs, function (propName, source) { if (typeof source[propName] === "function") return false; });
@@ -514,12 +513,8 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
                 asyncEvent.type = type;
                 asyncEvent.composedPath = truePath;
 
-                var eventMetadata = null;
-                if (eventArgs.currentTarget !== truePath[0]) //if the current event target is NOT the originator of the event, it's part of the composed path and just needs to know what sessionID it is a part of
-                {
-                    eventMetadata = eventArgs[_eventKey];
-                }
-                else //if the current target IS the originator for the event, we need to store some metadata in the Event object to pass to the other events in the bubbling sequence
+                var eventMetadata = eventArgs[_eventKey];
+                if (eventMetadata == null) //if the current target IS the originator for the event, we need to store some metadata in the Event object to pass to the other events in the bubbling sequence
                 {
                     var sequenceId = _eventSequenceId++;
                     var sessionId = getEventSessionId(handle, sequenceId);
@@ -530,11 +525,11 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
 
                     eventMetadata = new AsyncEventMetadata();
                     eventMetadata.eventSequenceId = sequenceId;
-                    eventMetadata.sessionId = sessionId;  
+                    eventMetadata.sessionId = sessionId;
 
                     var session = new AsyncEventSession();
                     session.eventSequenceId = sequenceId;
-                    session.currentTarget = truePath[0];
+                    session.currentTarget = eventArgs.currentTarget;
                     session.eventType = asyncEvent.type;
                     session.target = eventArgs.target;
                     session.sessionId = sessionId;
@@ -557,12 +552,12 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
 
                 asyncEvent.sessionId = eventMetadata.sessionId;
 
-                //kick off or queue exection of the event
+                //kick off or queue execution of the event
                 triggerExecution(handle, asyncEvent);
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.log("DomEvents: Error triggering async handlers for event \""+ eventArgs.type +"\": " + ex.stack);
+                EVUI.Modules.Core.Utils.log("DomEvents: Error triggering async handlers for event \"" + eventArgs.type + "\": " + ex.stack);
             }
         };
 
@@ -608,15 +603,15 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         else 
         {
             executeEvent(handle, asyncEvent, session);
-        }        
+        }
     };
 
     /**Builds the EventStream that will execute the event handlers that belong to the EventTarget for the given event type.
     @param {AsyncDomEventerHandle} handle The handle of the event target being executed.
     @param {AsyncEvent} asyncEvent The event being executed.
-    @param {AsyncEventSession} session The exection session of the event.*/
+    @param {AsyncEventSession} session The execution session of the event.*/
     var executeEvent = function (handle, asyncEvent, session)
-    {       
+    {
         var eventType = handle.getRegisteredEvent(asyncEvent.type);
 
         handle.executing = true;
@@ -659,9 +654,9 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
 
         es.onComplete = function (eventArgs)
         {
-            handle.executing = false; 
+            handle.executing = false;
 
-            //remove all the events that were flagged for removal during exection.
+            //remove all the events that were flagged for removal during execution.
             if (eventType != null && eventType.pendingRemovals != null)
             {
                 var removals = EVUI.Modules.Core.Utils.getProperties(eventType.pendingRemovals);
@@ -692,7 +687,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
             {
                 nextIndex++;
                 nextHandle = session.composedPathHandles[nextIndex];
-            }          
+            }
 
             //if we have another handle above the current one in the composed path
             if (nextHandle != null)
@@ -743,7 +738,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
             if (nextEvent != null)
             {
                 triggerExecution(handle, nextEvent);
-            }  
+            }
         };
 
         es.execute();
@@ -799,11 +794,11 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         return eventer;
     };
 
-    /**Removes an event listner from the managed stack of async events.
+    /**Removes an event listener from the managed stack of async events.
     @param {AsyncDomEventerHandle} handle The internal state of the EventTarget
     @param {String|RegisteredEvent} type The type of event being removed.
-    @param {Function|BoundEventHandler} listener The function to stop listneing with.
-    @param {EVUI.Modules.DomEvents.EventOptions} options The options for how the listner was set up. Only here because the signature in the DOM also takes an options object - not sure what for.
+    @param {Function|BoundEventHandler} listener The function to stop listening with.
+    @param {EVUI.Modules.DomEvents.EventOptions} options The options for how the listener was set up. Only here because the signature in the DOM also takes an options object - not sure what for.
     @returns {Boolean} */
     var removeEventListener = function (handle, type, listener, options)
     {
@@ -850,12 +845,12 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
                 eventType.boundHandlers.splice(index, 1);
                 eventType.numHandlers--;
 
-                if (eventType.numHandlers === 0) //if we run out of handlers for a given event type, remove that event's record from the handle and the listner thats in the DOM.
+                if (eventType.numHandlers === 0) //if we run out of handlers for a given event type, remove that event's record from the handle and the listener thats in the DOM.
                 {
                     handle.target.removeEventListener(eventType.eventType, eventType.triggeringHandler, options);
                     eventType.triggeringHandler = null;
 
-                    delete handle.registeredEvents[eventType.eventType]; 
+                    delete handle.registeredEvents[eventType.eventType];
                 }
 
                 return true;
@@ -875,7 +870,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         handle.target.dispatchEvent(dispatchArgs);
     };
 
-    /**Manager for attaching async event listners to EventTargets.
+    /**Manager for attaching async event listeners to EventTargets.
     @class*/
     var AsyncDomEventManager = function ()
     {
@@ -898,7 +893,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     @param {EventTarget} eventTarget The target to remove the event from.
     @param {String} type The type of event that the listener is listening for.
     @param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that was listening for the event.
-    @param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listneer.
+    @param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listener.
     @returns {Boolean}*/
     AsyncDomEventManager.prototype.removeAsyncEventListener = function (eventTarget, type, listener, options)
     {
@@ -934,7 +929,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
     /**Removes an event listener from the stack of managed async event handlers.
     @param {String} type The type of event that the listener is listening for.
     @param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that was listening for the event.
-    @param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listneer.
+    @param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listener.
     @returns {Boolean}*/
     EventTarget.prototype.removeAsyncEventListener = function (type, listener, options)
     {
@@ -964,7 +959,7 @@ EVUI.Modules.DomEvents.EventOptions = function ()
     @type {Boolean}*/
     this.capture = false;
 
-    /**Boolean. Whether or not this event listner will automatically stop the browser's default action by invoking preventDefault() on the browser's Event argument. 
+    /**Boolean. Whether or not this event listener will automatically stop the browser's default action by invoking preventDefault() on the browser's Event argument. 
     If any listener for a given event type on the EventTarget has this set to true, the default action will be prevented.
     @type {Boolean}*/
     this.autoPreventDefault = false;
@@ -1017,7 +1012,7 @@ $evui.addAsyncEventListener = function (eventTarget, type, listener, options)
 @param {EventTarget} eventTarget The target to remove the event from.
 @param {String} type The type of event that the listener is listening for.
 @param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that was listening for the event.
-@param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listneer.
+@param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listener.
 @returns {Boolean}*/
 $evui.removeAsyncEventListener = function (eventTarget, type, listener, options)
 {
