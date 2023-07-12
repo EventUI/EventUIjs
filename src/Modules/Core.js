@@ -1990,12 +1990,15 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
     if (typeof str !== "string") throw Error("String expected.");
     var strLen = str.length;
 
+    var charRatio = 0;
     var sum = 0;
+    var sumMod1 = 0;
     var sumMod2 = 0;
     var sumMod3 = 0;
     var sumMod4 = 0;
     var sumMod5 = 0;
     var curCode = 0;
+    var previousCode = 1;
 
     for (var x = 0; x < strLen; x++)
     {
@@ -2006,37 +2009,41 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
             continue;
         }
 
+        charRatio = curCode - (x / previousCode);
+
         sum -= curCode;
         if (sum < 0) sum *= -8.1373;
 
-        if (curCode % 2 === 0)
+        if (curCode % 5 === 0)
         {
-            sumMod2 -= curCode;
+            sumMod5 -= charRatio;
+            if (sumMod5 < 0) sumMod5 *= -112.69
+        }
+        else if (curCode % 4 === 0)
+        {
+            sumMod4 -= charRatio;
+            if (sumMod4 < 0) sumMod4 = (sumMod4 * -918.07);
+        }
+        else if (curCode % 3 === 0)
+        {
+            sumMod3 -= charRatio;
+            if (sumMod3 < 0) sumMod3 *= -213.7;
+        }
+        else if (curCode % 2 === 0)
+        {
+            sumMod2 -= charRatio;
             if (sumMod2 < 0) sumMod2 *= -8.1471
-
-            if (curCode % 4 === 0)
-            {
-                sumMod4 -= curCode;
-                if (sumMod4 < 0) sumMod4 = (sumMod4 * -918.07);
-            }
         }
         else
         {
-            if (curCode % 3 === 0)
-            {
-                sumMod3 -= curCode;
-                if (sumMod3 < 0) sumMod3 *= -213.7;
-            }
-
-            if (curCode % 5 === 0)
-            {
-                sumMod5 -= curCode;
-                if (sumMod5 < 0) sumMod5 *= -112.69
-            }
+            sumMod1 -= charRatio;
+            if (sumMod1 < 0) sumMod1 *= -42.069
         }
+
+        previousCode = curCode;
     }
 
-    var final = sumMod5 - sumMod4 - sumMod3 - sumMod2 - sum;
+    var final = (sumMod5 - sumMod4 - sumMod3 - sumMod2 - sumMod1 - sum) * (charRatio / previousCode);
     if (final < 0) final *= -1;
 
     if (sum !== 0)
