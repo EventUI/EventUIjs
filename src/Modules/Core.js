@@ -2005,8 +2005,11 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
         curCode = str.charCodeAt(x);
         if (curCode === 0)
         {
-            sum -= 10.1667;
-            continue;
+            curCode = 10.1667;
+        }
+        else if (curCode === 1)
+        {
+            curCode = 26.567;
         }
 
         charRatio = curCode - (x / previousCode);
@@ -2037,13 +2040,13 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
         else
         {
             sumMod1 -= charRatio;
-            if (sumMod1 < 0) sumMod1 *= -42.069
+            if (sumMod1 < 0) sumMod1 *= -10.912
         }
 
         previousCode = curCode;
     }
 
-    var final = (sumMod5 - sumMod4 - sumMod3 - sumMod2 - sumMod1 - sum) * (charRatio / previousCode);
+    var final = (sumMod5 - sumMod4 - sumMod3 - sumMod2 - sumMod1 - sum) / (strLen / charRatio);
     if (final < 0) final *= -1;
 
     if (sum !== 0)
@@ -2058,10 +2061,11 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
         }
     }
 
+    if (sumMod1 !== 0 && final !== sumMod1) final *= sumMod1;
     if (sumMod2 !== 0 && final !== sumMod2) final /= sumMod2;
-    if (sumMod3 !== 0 && final !== sumMod3) final /= sumMod3;
+    if (sumMod3 !== 0 && final !== sumMod3) final *= sumMod3;
     if (sumMod4 !== 0 && final !== sumMod4) final /= sumMod4;
-    if (sumMod5 !== 0 && final !== sumMod5) final /= sumMod5;
+    if (sumMod5 !== 0 && final !== sumMod5) final *= sumMod5;
     if (curCode !== 0 && final !== curCode) final /= curCode;
     if (final < 1 && final !== 0) final = 1 / final;
     if (final > Number.MAX_SAFE_INTEGER) final = Math.sqrt(final);
