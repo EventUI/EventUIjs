@@ -3,7 +3,7 @@ var getNextCharacter = function(str, depth, chars)
     if (depth <= 0) return;
     if (chars == null) chars = [];
 
-    for (var x = 0; x < 255; x++)
+    for (var x = 32; x < 137; x++)
     {
         var curStr = str + String.fromCharCode(x);
         chars.push(curStr);
@@ -14,7 +14,7 @@ var getNextCharacter = function(str, depth, chars)
     return chars;
 };
 
-var result = getNextCharacter("", 2);
+var result = getNextCharacter("", 3);
 
 var numResult = result.length;
 
@@ -31,11 +31,14 @@ for (var x = 0; x < numResult; x++)
     var curStr = result[x];
     var curHash = $evui.getHashCode(curStr);
 
-    var existing = null;
-    for (var y = 0; y < numDictionaries; y++)
+    var existing = hashes[curHash];
+    if (existing == null)
     {
-        existing = hashDictionaries[y][curHash];
-        if (existing != null) break;
+        for (var y = 0; y < numDictionaries; y++)
+        {
+            existing = hashDictionaries[y][curHash];
+            if (existing != null) break;
+        }
     }
 
     if (existing != null)
