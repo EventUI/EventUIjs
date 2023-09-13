@@ -1,4 +1,4 @@
-using EventUITestFramework.Utils;
+using EventUITest.Utils;
 using Microsoft.Extensions.FileProviders;
 
 namespace EventUITest
