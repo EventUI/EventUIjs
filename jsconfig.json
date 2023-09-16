@@ -1,7 +1,7 @@
 ﻿{
   "include": [
-    "src/EventUI.js",
-    "src/Modules/*.js",
+    "src/raw/**/**.js",
+    "src/test/**/**.js",
     "test/test_src/**/**.js"
   ]
 }
