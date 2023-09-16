@@ -39,8 +39,8 @@ namespace EventUITest
         {
             DirectoryInfo rootContentPath = RootDirectoryFinder.GetRootRepositoryDirectory(new string[] { "license", "test", "src", "build" }, true);
 
-            string rootSrcPath = Path.Combine(rootContentPath.FullName, "src");
-            string rootTestPath = Path.Combine(rootContentPath.FullName, "test", "test_src");
+            string rootSrcPath = Path.Combine(rootContentPath.FullName, "src\\raw");
+            string rootTestPath = Path.Combine(rootContentPath.FullName, "src\\test", "test_src");
 
             if (Directory.Exists(rootSrcPath) == false)
             {
