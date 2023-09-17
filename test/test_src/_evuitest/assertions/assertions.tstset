@@ -1,3 +1,0 @@
-/*#TEST_SET("Assertions")#*/
-
-/*#RUN_FILE(@name, "BasicAssertions")#*/
