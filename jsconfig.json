@@ -2,6 +2,7 @@
   "include": [
     "src/raw/**/**.js",
     "src/test/**/**.js",
-    "test/test_src/**/**.js"
+    "test/test_src/**/**.js",
+    "doc/code/*.js"
   ]
 }
