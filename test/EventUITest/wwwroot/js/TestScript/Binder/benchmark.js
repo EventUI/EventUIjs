@@ -1,4 +1,6 @@
-﻿$evui.init(function ()
+﻿
+
+$evui.init(function ()
 {
     var BindingBenchmarkController = function ()
     {

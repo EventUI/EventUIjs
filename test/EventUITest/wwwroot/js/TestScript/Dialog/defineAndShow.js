@@ -17,6 +17,7 @@
 
     var dialog = $evui.addDialog({
         id: "test",
+        myProp: 1,
         loadSettings:
         {
             element: d
@@ -30,6 +31,15 @@
         autoCloseSettings:
         {
             autoCloseKeys: ["Ctrl"]
+        },
+        onShow: function ()
+        {
+            console.log(this.myProp);
         }
     });
+
+    $evui.dialogs.onInitialize = function ()
+    {
+        console.log(this);
+    }
 });

@@ -847,6 +847,7 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
     _settings.buildEventArgs = buildEventArgs;
     _settings.interpretBrowserEvent = interpretBrowserEvent;
     _settings.hookUpEventHandlers = hookUpEventHandlers
+    _settings.manager = _self;
 
     if (services == null || typeof services !== "object") services = new EVUI.Modules.Dialogs.DialogControllerServices();
     if (services.paneManager == null || typeof services.paneManager !== "object")

@@ -27,6 +27,9 @@
         {
 
             console.log(args);
+            console.log(this);
+
+            this.asdf = "the binding worked";
         },
         onBound: function (args)
         {
@@ -34,7 +37,7 @@
         }
     }, function (binding)
     {
-        console.log("#2" + binding);
+        console.log("#2", binding);
 
     });
 

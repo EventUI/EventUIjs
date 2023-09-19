@@ -617,6 +617,7 @@ EVUI.Modules.DomEvents.AsyncDomEventManager = (function ()
         handle.executing = true;
 
         var es = new EVUI.Modules.EventStream.EventStream();
+        es.context = asyncEvent.clonedEventArgs.currentTarget;
         es.bubblingEvents = handle.bubbler;
 
         es.processInjectedEventArgs = function (eventStreamArgs)

@@ -1656,7 +1656,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         var result = new PaneExtensionResult();
         var id = yoloPane.id;
-
+        var eventStream = null;
         var paneToExtend = null;
         var existing = getInternalPaneEntry(id);
         if (existing != null)
@@ -1665,6 +1665,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             result.entry = existing;
             result.pane = existing.link.pane;
 
+            eventStream = existing.link.eventStream;
             paneToExtend = existing.link.pane;
             if (yoloPane === paneToExtend) return result;
         }
@@ -1672,6 +1673,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         {
             var link = new PaneLink();
             link.eventStream = new EVUI.Modules.EventStream.EventStream();
+            eventStream = link.eventStream;
+
             link.manager = _self;
             link.paneCSSName = getClassName(id);
 
@@ -1682,6 +1685,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             paneToExtend = new EVUI.Modules.Panes.Pane(id, options);
 
             link.pane = paneToExtend;
+
 
             var entry = new EVUI.Modules.Panes.PaneEntry(link);
             var innerEntry = new InternalPaneEntry();
@@ -2103,6 +2107,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var buildEventStream = function (actionSequence, opSession)
     {
         var eventStream = new EVUI.Modules.EventStream.EventStream();
+        eventStream.context = opSession.entry.link.wrapper;
+        if (eventStream.context == null) eventStream.context = opSession.entry.link.pane;
+
         configureEventStream(eventStream, opSession); //set the settings for the event stream to get it configured to behave properly
 
         var numSteps = actionSequence.length;
@@ -2257,7 +2264,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof opSession.entry.link.pane.onLoad === "function")
                 {
-                    return opSession.entry.link.pane.onLoad(eventArgs)
+                    return opSession.entry.link.pane.onLoad.call(this, eventArgs)
                 }
             }
         });
@@ -2272,7 +2279,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onLoad === "function")
                 {
-                    return _self.onLoad(eventArgs)
+                    return _self.onLoad.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -2328,7 +2335,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof opSession.entry.link.pane.onLoaded === "function")
                 {
-                    return opSession.entry.link.pane.onLoaded(eventArgs)
+                    return opSession.entry.link.pane.onLoaded.call(this, eventArgs)
                 }
             }
         });
@@ -2343,7 +2350,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onLoaded === "function")
                 {
-                    return _self.onLoaded(eventArgs)
+                    return _self.onLoaded.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -2366,7 +2373,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                 if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Initialized) === true) return;
                 if (typeof opSession.entry.link.pane.onInitialize === "function")
                 {
-                    return opSession.entry.link.pane.onInitialize(eventArgs)
+                    return opSession.entry.link.pane.onInitialize.call(this, eventArgs);
                 }
             }
         });
@@ -2381,7 +2388,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onInitialize === "function")
                 {
-                    return _self.onInitialize(eventArgs)
+                    return _self.onInitialize.call(_settings.manager, eventArgs);
                 }
             }
         });
@@ -2414,7 +2421,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                 
                 if (typeof opSession.entry.link.pane.onShow === "function")
                 {
-                    return opSession.entry.link.pane.onShow(eventArgs)
+                    return opSession.entry.link.pane.onShow.call(this, eventArgs)
                 }
             }
         });
@@ -2427,7 +2434,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             {
                 if (typeof _self.onShow === "function")
                 {
-                    return _self.onShow(eventArgs)
+                    return _self.onShow.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -2442,7 +2449,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             {
                 if (typeof opSession.entry.link.pane.onShown === "function")
                 {
-                    return opSession.entry.link.pane.onShown(eventArgs)
+                    return opSession.entry.link.pane.onShown.call(this, eventArgs)
                 }
             }
         });
@@ -2455,7 +2462,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             {
                 if (typeof _self.onShown === "function")
                 {
-                    return _self.onShown(eventArgs)
+                    return _self.onShown.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -2484,7 +2491,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof opSession.entry.link.pane.onHide === "function")
                 {
-                    return opSession.entry.link.pane.onHide(eventArgs)
+                    return opSession.entry.link.pane.onHide.call(this, eventArgs)
                 }
             }
         });
@@ -2499,7 +2506,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onHide === "function")
                 {
-                    return _self.onHide(eventArgs);
+                    return _self.onHide.call(_settings.manager, eventArgs);
                 }
             }
         });
@@ -2547,7 +2554,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof opSession.entry.link.pane.onHidden === "function")
                 {
-                    return opSession.entry.link.pane.onHidden(eventArgs)
+                    return opSession.entry.link.pane.onHidden.call(this, eventArgs)
                 }
             }
         });
@@ -2562,7 +2569,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onShown === "function")
                 {
-                    return _self.onShown(eventArgs)
+                    return _self.onShown.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -2602,7 +2609,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             {
                 if (typeof opSession.entry.link.pane.onPosition === "function")
                 {
-                    return opSession.entry.link.pane.onPosition(eventArgs)
+                    return opSession.entry.link.pane.onPosition.call(this, eventArgs)
                 }
             }
         });
@@ -2615,7 +2622,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             {
                 if (typeof _self.onPosition === "function")
                 {
-                    return _self.onPosition(eventArgs)
+                    return _self.onPosition.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -2745,7 +2752,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof opSession.entry.link.pane.onUnload === "function")
                 {
-                    return opSession.entry.link.pane.onUnload(eventArgs)
+                    return opSession.entry.link.pane.onUnload.call(this, eventArgs)
                 }
             }
         });
@@ -2760,7 +2767,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onUnload === "function")
                 {
-                    return _self.onUnload(eventArgs);
+                    return _self.onUnload.call(_settings.manager, eventArgs);
                 }
             }
         });
@@ -2798,7 +2805,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof opSession.entry.link.pane.onUnloaded === "function")
                 {
-                    return opSession.entry.link.pane.onUnloaded(eventArgs)
+                    return opSession.entry.link.pane.onUnloaded.call(this, eventArgs)
                 }
             }
         });
@@ -2813,7 +2820,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onUnloaded === "function")
                 {
-                    return _self.onUnloaded(eventArgs)
+                    return _self.onUnloaded.call(_settings.manager, eventArgs)
                 }
             }
         });
@@ -3092,7 +3099,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (ex)
         {
-            if (ex != null) EVUI.Modules.Core.Utils.log(ex);
+            if (ex != null && ex.length > 0) EVUI.Modules.Core.Utils.log(ex);
             callback(true);
         });
     };
@@ -6034,6 +6041,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                 enumerable: true
             });
         }
+
+        if (_settings.manager == null) _settings.manager = _self;
     };
 
     /**Attaches all global references to the PaneManagerSettings object so that they can be shared by instances 
@@ -6109,6 +6118,10 @@ EVUI.Modules.Panes.PaneManagerSettings = function ()
     /**Object. An instance of the Styles module's StylesheetManager object.
     @type {EVUI.Modules.Styles.StyleSheetManager}*/
     this.stylesheetManager = null;
+
+    /**Object. The manager of the Pane derived type being manipulated.
+    @type {EVUI.Modules.Panes.PaneManager}*/
+    this.manager = null;
 
     /**Gets the PaneEventArgs created by the PaneManager and transforms them into a more specific type of event arguments.
     @param {EVUI.Modules.Panes.PaneArgsPackage} argsPackage The object representing the Pane's current operation.

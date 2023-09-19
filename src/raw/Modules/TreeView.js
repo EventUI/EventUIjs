@@ -805,6 +805,8 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
     var buildEventStream = function (opSession, actionSequence)
     {
         opSession.eventStream = new EVUI.Modules.EventStream.EventStream();
+        opSession.eventStream.context = opSession.nodeEntry.node;
+
         opSession.eventStream.onCancel = function ()
         {
             opSession.canceled = true;

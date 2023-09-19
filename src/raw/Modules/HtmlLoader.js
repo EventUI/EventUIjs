@@ -329,6 +329,8 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         //make the "master" event stream that'll organize the flow for all the parallel event streams it will spawn.
         var es = new EVUI.Modules.EventStream.EventStream();
+        es.context = placeholderLoadArgs;
+
         es.canSeek = false; //no seeking allowed in this case, will cause issues.
 
         var loaded = []; //all the loaded HtmlPartialLoadResults from the top level of the document
@@ -790,6 +792,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     {
         var eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream = eventStream;
+        session.eventStream.context = session.placeholderArgs;
 
         //set basic event stream properties
         setUpEventStream(session, callback);

@@ -1148,6 +1148,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         session.eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream.eventState = session.context;
         session.eventStream.bubblingEvents = _bubblingEvents;
+        session.eventStream.context = session.bindingHandle.binding;
 
         //set up the factory to create the biding event args
         session.eventStream.processInjectedEventArgs = function (eventStreamArgs)

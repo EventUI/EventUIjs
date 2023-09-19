@@ -1001,6 +1001,8 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     var configureEventStream = function (messageSession, receiving)
     {
         var es = new EVUI.Modules.EventStream.EventStream();
+        es.context = messageSession.entry.iFrame;
+
         es.processInjectedEventArgs = function (eventArgs)
         {
             var message = makeMessageFromWrapper(messageSession.messageWapper, messageSession.entry.handle.windowType);

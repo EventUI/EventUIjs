@@ -197,6 +197,7 @@ EVUI.Modules.Http.HttpManager = function ()
     {
         var entry = new RequestInstance();
         entry.eventStream = new EVUI.Modules.EventStream.EventStream();
+        entry.eventStream.context = requestArgs;
         entry.httpRequestArgs = requestArgs;
         entry.requestID = EVUI.Modules.Core.Utils.makeGuid();
         entry.xmlHttpRequest = new XMLHttpRequest();

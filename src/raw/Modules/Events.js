@@ -407,6 +407,7 @@ EVUI.Modules.Events.EventManager = function ()
         var numEvents = session.listeners.length;
 
         var es = new EVUI.Modules.EventStream.EventStream();
+
         es.processInjectedEventArgs = function (eventStreamArgs)
         {
             var eventManagerArgs = new EVUI.Modules.Events.EventManagerEventArgs(getNextListener(session, index), index + 1);
