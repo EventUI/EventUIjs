@@ -1,0 +1,22 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Window.windowLoadTestModel
+@{
+}
+
+@section Scripts
+{
+    <script src="~/js/TestScript/Window/windowLoadTest.js">
+
+    </script>
+}
+
+<button id="ref">Load via Reference</button>
+<button id="css">Load via CSS</button>
+<button id="http">Load via HTTP</button>
+<button id="placeholder">Load via Placeholder</button>
+
+<div style="display:none;">
+    <div id="direct" style="height: 150px; width: 200px; background-color:aqua;">I am already loaded.</div>
+    <div id="cssMode" style="height: 250px; width: 100px; background-color:coral;" >I am loaded via CSS.</div>
+    <div evui-loader-placeholder-id="testPlaceholder" evui-loader-placeholder-src="/Partials/Pane/Placeholder.html"></div>
+</div>

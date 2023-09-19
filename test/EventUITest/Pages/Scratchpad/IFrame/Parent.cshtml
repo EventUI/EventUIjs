@@ -1,0 +1,62 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.IFrame.ParentModel
+@{
+}
+
+@section Scripts
+{
+    <script>
+        $evui.init(function ()
+        {
+            var child = document.createElement("iframe");
+            child.src = "/Scratchpad/IFrame/Child";
+
+            document.documentElement.append(child);
+
+            var childHandle = $evui.iframes.addIFrame({
+                element: child,
+                onMessage: function (args)
+                {
+                    console.log("Parent got message from Child.");
+                    console.log(args);
+                },
+                onSend: function (args)
+                {
+                    console.log("Parent sent message to Child.");
+                    console.log(args);
+                }
+            });
+
+            childHandle.addMessageHandler("test", function (eventArgs)
+            {
+                console.log("test handler");
+                console.log(eventArgs);
+            });
+
+            childHandle.addMessageHandler("ask", async function (eventArgs)
+            {
+                eventArgs.respond("response");
+            });
+
+            var parentHandle = $evui.iframes.addIFrame({
+                url: location.href.replace("Parent", "Grandparent"),
+                onMessage: function (args)
+                {
+                    console.log("Parent got message from Grandparent.");
+                    console.log(args);
+                },
+                onSend: function (args)
+                {
+                    console.log("Parent sent message to Grandparent.");
+                    console.log(args);
+                }
+            })
+
+            console.log("Parent - Child");
+            console.log(childHandle);
+
+            console.log("Parent - Parent");
+            console.log(parentHandle);            
+        });
+    </script>
+}

@@ -1,0 +1,20 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Dropdown.DropdownMarkupTestModel
+@{
+}
+
+<div style="height:750px; width: 1000px; background-color:gray;" evui-dd-selector="#first" oncontextmenu="$evui.showDropdown(event)">
+
+</div>
+
+<div id="first" style="height: 200px; width:150px; background-color:green; display:none;">
+    <span evui-dd-selector="#second" onclick="$evui.showDropdown(event)" style="width:100%; display:block;">Click Me</span>
+</div>
+
+<div id="second" style="height: 100px; width:150px; background-color:indianred; display:none;">
+    <span evui-dd-selector="#third" onclick="$evui.showDropdown(event)" style="width: 100%; display:block;">Click Me</span>
+</div>
+
+<div id="third" style="height: 250px; width:150px; background-color:blue; display:none;">
+    <span>I'm the 3rd!</span>
+</div>

@@ -1,0 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace EventUITest.Pages.Scratchpad.Diff
+{
+    public class SimpleDiffModel : PageModel
+    {
+        public void OnGet()
+        {
+        }
+    }
+}

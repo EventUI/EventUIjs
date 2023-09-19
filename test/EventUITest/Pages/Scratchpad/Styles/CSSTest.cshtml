@@ -1,0 +1,54 @@
+﻿@page
+@model EventUITest.Pages.Shared.Scratchpad.CSSTestModel
+@{
+}
+
+@section CSS
+{
+    <style>
+        .case1 {
+            background-color: red;
+        }
+
+        .CASE1 {
+            background-color: blue;
+        }
+
+        h1, h2 {
+            background-color: green;
+        }
+
+        H1, H2 {
+            background-color: aqua
+        }
+
+        #ddd {
+            background-color: chartreuse
+        }
+
+        #DDD {
+            background-color: crimson
+        }
+    </style>
+}
+
+@section Scripts
+{
+    <script src="~/js/TestScript/styleTest.js"></script>
+}
+
+<h1>assf</h1>
+
+<H1>defg</H1>
+<h2>h2</h2>
+<div style="height: 100px; width: 100px;" class="case1">
+</div>
+
+<div style="height: 100px; width: 100px;" class="CASE1">
+</div>
+
+<div id="ddd" style="height: 100px; width: 100px;" class="case1">
+</div>
+
+<div id="DDD" style="height: 100px; width: 100px;" class="CASE1">
+</div>

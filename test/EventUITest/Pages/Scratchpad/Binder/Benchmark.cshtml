@@ -1,0 +1,20 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Binder.BenchmarkModel
+@{
+}
+
+@section Scripts
+{
+    <script src="~/js/TestScript/Binder/benchmark.js"></script>
+}
+<button type='button' class='btn btn-primary btn-block' id='run'>Create 1,000 rows</button>
+<button type='button' class='btn btn-primary btn-block' id='runlots'>Create 10,000 rows</button>
+<button type='button' class='btn btn-primary btn-block' id='add'>Append 1,000 rows</button>
+<button type='button' class='btn btn-primary btn-block' id='update'>Update every 10th row</button>
+<button type='button' class='btn btn-primary btn-block' id='clear'>Clear</button>
+<button type='button' class='btn btn-primary btn-block' id='swaprows'>Swap Rows</button>
+
+<table>
+    <tbody id="tbody"> 
+    </tbody>
+</table>

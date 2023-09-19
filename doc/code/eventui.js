@@ -55,3 +55,34 @@
         await fetch(/*Some other web service call*/);
         console.log("Handler 2 Finish");
     });
+
+
+
+$evui.showModalAsync({
+    id: "someModal",
+    loadSettings:
+    {
+        selector: "#myModal"
+    },
+    onShow: async function (modalArgs)
+    {
+        var data = await fetch(/*A request to get data to bind in the modal*/);
+        if (data.ok === false)
+        {
+            modalArgs.cancel(); //request failed, don't show modal
+            return;
+        }
+
+        var dataToBind = await data.json();
+        var targetDataArea = $evui.dom(".dataArea", modalArgs.modal.element);
+
+        await $evui.bindAsync({
+            htmlContent: "<li>{{someProperty}}</li>",
+            source: dataToBind,
+            bindingTarget: targetDataArea.elements[0],
+
+        });
+
+        
+    }
+})

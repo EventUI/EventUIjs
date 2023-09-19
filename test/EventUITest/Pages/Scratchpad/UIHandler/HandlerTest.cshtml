@@ -1,0 +1,15 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.UIHandler.HandlerTestModel
+@{
+}
+
+@section Scripts
+{
+    <script src="~/js/TestScript/UIHandler/handlerTest.js"></script>
+}
+
+<div id="top" style="height:200px; width:400px; background: blue;" onclick="$evui.handle('test2', event, {abc: 'def'})">
+    <div style="height: 50px; width:50px; background: red;" onclick="$evui.handle('test', event, {asdf: 123})">
+
+    </div>
+</div>

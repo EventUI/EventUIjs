@@ -122,7 +122,6 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @type {Boolean}*/
     this.canSeek = true;
 
-
     /**Boolean. Whether or not a crash in an Event handler will cause the EventStream to stop executing. False by default.
     @type {Boolean}*/
     this.endExecutionOnEventHandlerCrash = false;
@@ -132,7 +131,6 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @type {Number}*/
     this.timeout = -1;
 
-
     /**Any. Any data to carry between Jobs in the EventStream. A plain object by default.
     @type {Any}*/
     this.jobState = {};
@@ -140,6 +138,10 @@ EVUI.Modules.EventStream.EventStream = function (config)
     /**Any. Any data to carry between Events in the EventStream. A plain object by default.
     @type {Any}*/
     this.eventState = {};
+
+    /**Any. The "this" context to execute job and event handlers under.
+    @type {Any}*/
+    this.context = null;
 
     /**Object. A BubblingEventsManager that bubbling events will be drawn from during the EventStream's execution.
     @type {EVUI.Modules.EventStream.BubblingEventManager}*/
@@ -708,7 +710,14 @@ EVUI.Modules.EventStream.EventStream = function (config)
             jobArgs.key = step.key;
             jobArgs.name = step.name;
 
-            step.handler(jobArgs); //pass in the current state data and the callback into the job
+            if (_self.context != null)
+            {
+                step.handler.call(_self.context, jobArgs)
+            }
+            else
+            {
+                step.handler(jobArgs); //pass in the current state data and the callback into the job
+            }
         }
         catch (ex) //job failed, end the process
         {
@@ -821,12 +830,13 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (numEvents === 0) return callback();
 
         var config = new EVUI.Modules.EventStream.EventStreamConfig();
+        config.context = _self.context;
         config.canSeek = _self.canSeek;
         config.endExecutionOnEventHandlerCrash = true;
         config.eventState = _self.eventState;
         config.processReturnedEventArgs = _self.processReturnedEventArgs;
         config.skipInterval = _self.skipInterval;
-        config.timeout = (typeof _self.timeout === "numiber") ? _self.timeout : -1;
+        config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
         config.onComplete = function () { callback(); } //call the callback in the complete handler, which will fire no matter what.
 
         var subStream = new EVUI.Modules.EventStream.EventStream(config);
@@ -1088,7 +1098,14 @@ EVUI.Modules.EventStream.EventStream = function (config)
         //try and execute the handler
         try
         {
-            handlerResult = step.handler(args);
+            if (_self.context != null)
+            {
+                handlerResult = step.handler.call(_self.context, args);
+            }
+            else
+            {
+                handlerResult = step.handler(args);
+            }
         }
         catch (ex) //failed, record the error
         {
@@ -1448,6 +1465,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (typeof config.processInjectedEventArgs === "function") _self.processInjectedEventArgs = config.processInjectedEventArgs;
         if (typeof config.processReturnedEventArgs === "function") _self.processReturnedEventArgs = config.processReturnedEventArgs;
         if (typeof config.getPromiseResolutionValue === "function") _self.getPromiseResolutionValue = config.getPromiseResolutionValue;
+        if (config.context != null) _self.context = config.context;
     };
 
     /**Wrapper object for when a Event step has returned a Promise.
@@ -1775,6 +1793,8 @@ EVUI.Modules.EventStream.EventStreamConfig = function ()
     /**Object. A BubblingEventManager used to supply bubbling events for the EventStream.
     @type {EVUI.Modules.EventStream.BubblingEventManager}*/
     this.bubblingEvents = null;
+
+    this.context = null;
 };
 
 /**An object that ties together an event name, its callback its priority (if there are other events with the same name) and the unique ID of it's handle.
