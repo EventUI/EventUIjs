@@ -2093,15 +2093,15 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
 
             var numNewContent = newContentTrees.length;
-            var dummyEle = new EVUI.Modules.DomTree.DomTreeElement();
-            EVUI.Modules.Core.Utils.cacheProperties(dummyEle, Object.keys(dummyEle));
-            EVUI.Modules.Core.Utils.cacheProperties(new EVUI.Modules.DomTree.DomTreeElementAttribute());
+
+            if (EVUI.Modules.DomTree.DomTreeElement[EVUI.Modules.Core.Constants.Symbol_ObjectProperties] == null)
+            {
+                EVUI.Modules.Core.Utils.cacheProperties(new EVUI.Modules.DomTree.DomTreeElement());
+                EVUI.Modules.Core.Utils.cacheProperties(new EVUI.Modules.DomTree.DomTreeElementAttribute());
+            }
 
             //diff the existing content with the new content to get the list of everything that is different in the markup of the two trees.
             var diff = _services.diffController.compare(existingContentTrees, newContentTrees, { compareValuesOnly: true });
-
-            EVUI.Modules.Core.Utils.uncacheProperties(new EVUI.Modules.DomTree.DomTreeElement());
-            EVUI.Modules.Core.Utils.uncacheProperties(new EVUI.Modules.DomTree.DomTreeElementAttribute());
 
             //process the diff and make any required changes to the DOM to bring things back in sync
             processDiffs(session, diff);

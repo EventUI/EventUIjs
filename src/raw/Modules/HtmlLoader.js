@@ -275,7 +275,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     /**Awaitable. Loads a placeholder and all of its children and injects them into the DOM.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderIDOrArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
     @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.
-    @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest[]>}*/
+    @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult>}*/
     this.loadPlaceholderAsync = function (placeholderIDOrArgs)
     {
         return new Promise(function (resolve)
@@ -533,8 +533,22 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
             ele = getPlaceholderElement(placeholderID, sourcePlaceholderLoadArgs.contextElement);
         }
 
-        //no element, nowhere to stick html, fail.
-        if (ele == null) return null;
+        //no element, nowhere to stick html - make a dummy div to load into if we have a valid URL to get HTML from.
+        if (ele == null)
+        {
+            if (sourcePlaceholderLoadArgs != null && sourcePlaceholderLoadArgs.httpArgs != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(sourcePlaceholderLoadArgs.httpArgs.url) === false)
+            {
+                var loadDiv = document.createElement("div");
+                loadDiv.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID, placeholderID);
+                loadDiv.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl, sourcePlaceholderLoadArgs.httpArgs.url);
+
+                ele = loadDiv;
+            }
+            else
+            {
+                return null;
+            }
+        }
 
         if (circularRef === true) //we had a circular reference - flag the element and move on without blowing up the browser. NOTE IT IS STILL POSSIBLE TO HAVE A CIRCULAR REFERENCE LOOP VIA URLS. The server may or may not return something different for the same url, so we can't use urls for this check. Also, the http event args lets the user change the url.
         {
