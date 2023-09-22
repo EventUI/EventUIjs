@@ -73,17 +73,17 @@ EVUI.Modules.Http.HttpManager = function ()
 
     var _self = this; //self-reference for closures
 
-    /** Internal array of all currently executing request instances.
+    /**Internal array of all currently executing request instances.
     @type {RequestInstance[]} */
     var _requests = [];
 
-    /** Internal array of all completed request instances since the last time the stack of requests was refreshed.
+    /**Internal array of all completed request instances since the last time the stack of requests was refreshed.
     @type {RequestInstance[]} */
     var _completedRequests = [];
 
-    /**Context manager for choosing different sets of global events.
-    @type {EVUI.Modules.EventStream.GlobalEventNamespaceManager}*/
-    var _globalEventNamespaces = new EVUI.Modules.EventStream.GlobalEventNamespaceManager(_self);
+    /**Bubbling event handler for collecting events with the same keys as the primary events in the handler.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubbler = new EVUI.Modules.EventStream.BubblingEventManager();
 
     /**Executes a HTTP request with the given arguments.
     @param {EVUI.Modules.Http.HttpRequestArgs} requestArgs A YOLO HttpRequestArgs that contains the information needed to run the Http request.
@@ -145,30 +145,17 @@ EVUI.Modules.Http.HttpManager = function ()
 
     /**Gets a copy of the internal array of all active HTTP requests.
     @returns {EVUI.Modules.Http.HttpRequestInstance[]}*/
-    this.getAllActiveRequests = function (namespace)
+    this.getAllActiveRequests = function ()
     {
         var copy = [];
 
         var numRequests = _requests.length;
         for (var x = 0; x < numRequests; x++)
         {
-            var curRequest = _requests[x];
-            if ((curRequest.namespace == null && namespace == null) || (typeof namespace === "string" && curRequest.namespace === namespace))
-            {
-                copy.push(new EVUI.Modules.Http.HttpRequestInstance(_requests[x]));
-            }
+            copy.push(new EVUI.Modules.Http.HttpRequestInstance(_requests[x]));            
         }
 
         return copy;
-    };
-
-    /**Adds a namespace to the manager.
-    @param {String} namespace The name to reference the context by.
-    @param {Object} events An object containing the global event handlers to call.
-    @returns {EVUI.Modules.EventStream.GlobalEventNamespace}*/
-    this.addEventNamespace = function (namespace, events)
-    {
-        return _globalEventNamespaces.addNamespace(namespace, events);
     };
 
     /**Add an event listener to fire after an event with the same name has been executed.
@@ -178,7 +165,7 @@ EVUI.Modules.Http.HttpManager = function ()
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
     this.addEventListener = function (eventName, handler, options)
     {
-        return _globalEventNamespaces.getNamespace().bubblingEvents.addEventListener(eventName, handler, options);
+        return _bubbler.addEventListener(eventName, handler, options);
     };
 
     /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
@@ -187,7 +174,7 @@ EVUI.Modules.Http.HttpManager = function ()
     @returns {Boolean}*/
     this.removeEventListener = function (eventNameOrId, handler)
     {
-        return _globalEventNamespaces.getNamespace().bubblingEvents.removeEventListener(eventNameOrId, handler);
+        return _bubbler.removeEventListener(eventNameOrId, handler);
     };
 
     /**Builds the internal RequestInstance object that manages the lifetime of the XMLHttpRequest. Sets up the EventStream's function and setting overrides.
@@ -203,13 +190,10 @@ EVUI.Modules.Http.HttpManager = function ()
         entry.xmlHttpRequest = new XMLHttpRequest();
         entry.requestStatus = RequestStatus.NotStarted;
 
-        entry.namespace = requestArgs.namespace;
-        delete requestArgs.namespace;
-
         entry.eventStream.canSeek = true; //we need to seek to fast forward to error handing events if something crashes
         entry.eventStream.endExecutionOnEventHandlerCrash = false; //user handler errors should never block execution of the event stream
         entry.eventStream.eventState = requestArgs.context == null ? {} : requestArgs.context; //set the internal state object to either be a blank object or whatever the user supplied
-        entry.eventStream.bubblingEvents = _globalEventNamespaces.getNamespace(entry.namespace).bubblingEvents; //attach the global context's bubbling events
+        entry.eventStream.bubblingEvents = _bubbler; //attach the bubbling events
 
         entry.eventStream.onError = function (args, error) //log any errors, but otherwise do nothing
         {
@@ -297,10 +281,9 @@ EVUI.Modules.Http.HttpManager = function ()
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
-                var context = _globalEventNamespaces.getNamespace(requestInstance.namespace).events;
-                if (context != null && typeof context.onBeforeSend === "function")
+                if (typeof _self.onBeforeSend === "function")
                 {
-                    return context.onBeforeSend(httpEventArgs);
+                    return _self.onBeforeSend(httpEventArgs);
                 }
             }
         });
@@ -490,10 +473,9 @@ EVUI.Modules.Http.HttpManager = function ()
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
-                var context = _globalEventNamespaces.getNamespace(requestInstance.namespace).events;
-                if (context != null && typeof context.onSuccess === "function")
+                if (_self.onSuccess === "function")
                 {
-                    return context.onSuccess(httpEventArgs);
+                    return _self.onSuccess(httpEventArgs);
                 }
             }
         });
@@ -531,10 +513,9 @@ EVUI.Modules.Http.HttpManager = function ()
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
-                var context = _globalEventNamespaces.getNamespace(requestInstance.namespace).events;
-                if (context != null && typeof context.onError === "function")
+                if (typeof _self.onError === "function")
                 {
-                    return context.onError(httpEventArgs);
+                    return _self.onError(httpEventArgs);
                 }
             }
         });
@@ -560,10 +541,9 @@ EVUI.Modules.Http.HttpManager = function ()
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
-                var context = _globalEventNamespaces.getNamespace(requestInstance.namespace).events;
-                if (context != null && typeof context.onComplete === "function")
+                if (typeof _self.onComplete === "function")
                 {
-                    return context.onComplete(httpEventArgs);
+                    return _self.onComplete(httpEventArgs);
                 }
             }
         });
@@ -602,37 +582,24 @@ EVUI.Modules.Http.HttpManager = function ()
     {
         var index = _requests.indexOf(requestInstance);
         if (index > -1) _requests.splice(index, 1);
-
+        
         var numCompletedRequests = _completedRequests.push(requestInstance);
-
-        var numRequestsWithSameContext = 0;
-
-        //get all the remaining requests with the same global event context
-        var numRequests = _requests.length;
-        for (var x = 0; x < numRequests; x++)
+        
+        if (_requests.length === 0)
         {
-            if (requestInstance.namespace === _requests[x].namespace) numRequestsWithSameContext++;
-        }
-
-        if (numRequestsWithSameContext === 0) //none left, context is done. Go collect and remove all the completed requests from the _com
-        {
-            var sameContextCompletedRequests = [];
+            var completedRequests = [];
             for (var x = 0; x < numCompletedRequests; x++)
             {
                 var curComplete = _completedRequests[x];
-                if (requestInstance.namespace === curComplete.namespace)
-                {
-                    sameContextCompletedRequests.push(buildCompletedRequest(curComplete));
-                    _completedRequests.splice(x, 1);
-                    numCompletedRequests--;
-                    x--;
-                }
+                completedRequests.push(buildCompletedRequest(curComplete));
+                _completedRequests.splice(x, 1);
+                numCompletedRequests--;
+                x--;
             }
 
-            var context = _globalEventNamespaces.getNamespace(requestInstance.namespace).events;
-            if (context != null && typeof context.onAllComplete === "function")
+            if (typeof _self.onAllComplete === "function")
             {
-                return context.onAllComplete(sameContextCompletedRequests);
+                return _self.onAllComplete(completedRequests);
             }
         }
     };
@@ -705,10 +672,6 @@ EVUI.Modules.Http.HttpManager = function ()
         /**Any. The parsed response from the XMLHttpRequest.
         @type {Any}*/
         this.response = null;
-
-        /**String. The name of the global event context to use to raise global events on the HttpManager.
-        @type {String}*/
-        this.namespace = null;
     };
 
     /**Enum for describing the status of the request in progress.*/
@@ -830,10 +793,6 @@ EVUI.Modules.Http.HttpRequestArgs = function ()
     /**Any. Any additional information to carry along between steps in the HttpManager.
     @type {Any}*/
     this.context = null;
-
-    /**String. The name of the event context to use for global events if the default context is not being used.
-    @type {String}*/
-    this.namespace = null;
 
     /**Event that fires before the XMLHttpRequest is created, gives the opportunity to manipulate anything about the HttpRequestArgs.
     @param {EVUI.Modules.Http.HttpEventArgs} httpEventArgs The event arguments containing the data and options for the request.*/
