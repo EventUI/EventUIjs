@@ -152,7 +152,8 @@ EVUI.Modules.Panes.Dependencies =
     Styles: Object.freeze({ version: "1.0", required: true }),
     Dom: Object.freeze({ version: "1.0", required: true }),
     Observers: Object.freeze({ version: "1.0", required: true}),
-    HtmlLoader: Object.freeze({ version: "1.0", required: false })
+    HtmlLoader: Object.freeze({ version: "1.0", required: false }),
+    Http: Object.freeze({ version: "1.0", required: false })
 };
 
 (function ()
@@ -1763,13 +1764,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         if (loadSettings.httpLoadArgs != null || yoloLoadSettings.httpLoadArgs != null)
         {
-            EVUI.Modules.Core.Utils.require("HtmlLoaderController", EVUI.Modules.Panes.Dependencies["HtmlLoader"].version, "Cannot use httpLoadArgs.");
+            EVUI.Modules.Core.Utils.require("Http", EVUI.Modules.Panes.Dependencies["Http"].version, "Cannot use httpLoadArgs.");
             copy.httpLoadArgs = makeOrExtendHttpArgs(loadSettings.httpLoadArgs, yoloLoadSettings.httpLoadArgs);
         }
 
         if (loadSettings.placeholderLoadArgs != null || yoloLoadSettings.placeholderLoadArgs != null)
         {
-            EVUI.Modules.Core.Utils.require("HtmlLoaderController", EVUI.Modules.Panes.Dependencies["HtmlLoader"].version, "Cannot use placeholderLoadArgs.");
+            EVUI.Modules.Core.Utils.require("HtmlLoader", EVUI.Modules.Panes.Dependencies["HtmlLoader"].version, "Cannot use placeholderLoadArgs.");
             copy.placeholderLoadArgs = EVUI.Modules.Core.Utils.makeOrExtendObject(new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs(), loadSettings.placeholderLoadArgs, yoloLoadSettings.placeholderLoadArgs);
             copy.placeholderLoadArgs.httpArgs = makeOrExtendHttpArgs((loadSettings.placeholderLoadArgs == null) ? null : loadSettings.placeholderLoadArgs.httpArgs, (yoloLoadSettings.placeholderLoadArgs == null) ? null : loadSettings.placeholderLoadArgs.httpArgs)
         }

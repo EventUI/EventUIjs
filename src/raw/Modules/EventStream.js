@@ -1098,7 +1098,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
         //try and execute the handler
         try
         {
-            if (_self.context != null)
+            if (_self.context != null && step.type !== EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent) //dont use the context if it's a global event
             {
                 handlerResult = step.handler.call(_self.context, args);
             }

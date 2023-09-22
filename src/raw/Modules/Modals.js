@@ -116,7 +116,7 @@ Object.freeze(EVUI.Modules.Modals.Constants);
 
 /**Class for managing Modal object.
 @class*/
-EVUI.Modules.Modals.ModalManager = function ()
+EVUI.Modules.Modals.ModalManager = function (services)
 {
     if (EVUI.Modules.Core == null) throw Error("Dependency missing: EVUI.Modules.Core is required.");
     EVUI.Modules.Core.Utils.requireAll(EVUI.Modules.Modals.Dependencies);

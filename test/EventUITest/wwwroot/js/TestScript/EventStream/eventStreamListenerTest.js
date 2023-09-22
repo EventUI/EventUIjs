@@ -1,6 +1,4 @@
-﻿const { Promise } = require("core-js");
-
-$evui.init(function ()
+﻿$evui.init(function ()
 {
     var es = $evui.eventStream();
     es.addStep({
