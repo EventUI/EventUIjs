@@ -503,7 +503,17 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     var makePlaceholderLoadSession = function (placeholderID, sourcePlaceholderLoadArgs, parentSession, callback)
     {
         //no placeholder ID means none of the below will work, just return null and fail the operation.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) throw Error("placeholderID must be a non-whitespace string.");
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true)
+        {
+            if (sourcePlaceholderLoadArgs != null && sourcePlaceholderLoadArgs.httpArgs != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(sourcePlaceholderLoadArgs.httpArgs.url) === false)
+            {
+                placeholderID = EVUI.Modules.Core.Utils.getHashCode(sourcePlaceholderLoadArgs.httpArgs.url).toString(36);
+            }
+            else
+            {
+                throw Error("placeholderID must be a non-whitespace string.");
+            }
+        }
 
         var circularRef = false;
         if (parentSession != null) //if we have a parent session we are the child of another session, make sure we don't have some infinite recursion going on
@@ -1345,7 +1355,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderControllerServices = function ()
 };
 
 /**Global instance of a EVUI.Modules.HtmlLoaderController.HtmlLoaderController.
- @type {EVUI.Modules.HtmlLoader.HtmlLoader}*/
+ @type {EVUI.Modules.HtmlLoader.HtmlLoaderController}*/
 EVUI.Modules.HtmlLoader.Manager = null;
 (function ()
 {
@@ -1420,7 +1430,7 @@ $evui.loadPlaceholder = function (placeholderIDOrArgs, callback)
 /**Awaitable. Loads a placeholder and all of its children and injects them into the DOM.
 @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderIDOrArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.
-@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest[]>}*/
+@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult>}*/
 $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 {
     return EVUI.Modules.HtmlLoader.Manager.loadPlaceholderAsync(placeholderIDOrArgs);

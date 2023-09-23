@@ -6212,7 +6212,7 @@ EVUI.Modules.Panes.Pane = function (id, options)
         {
             if (typeof value === "string")
             {
-                value = new EVUI.Modules.Dom.DomHelper(value);
+                value = new EVUI.Modules.Dom.DomHelper(value).first();
             }
 
             var setObject =
@@ -6484,6 +6484,11 @@ EVUI.Modules.Panes.PaneLoadSettings = function ()
         {
             if (value != null)
             {
+                if (typeof value === "string")
+                {
+                    value = new EVUI.Modules.Dom.DomHelper(value).first();
+                }
+
                 var ele = EVUI.Modules.Core.Utils.getValidElement(value);
                 if (ele == null) throw Error("Invalid input for PaneLoadSettings.element. Must be an object derived from Element.");
 
@@ -6515,6 +6520,11 @@ EVUI.Modules.Panes.PaneLoadSettings = function ()
         {
             if (value != null)
             {
+                if (typeof value === "string")
+                {
+                    value = new EVUI.Modules.Dom.DomHelper(value).first();
+                }
+
                 var ele = EVUI.Modules.Core.Utils.getValidElement(value);
                 if (ele == null) throw Error("Invalid input for PaneLoadSettings.element. Must be an object derived from Element.");
 

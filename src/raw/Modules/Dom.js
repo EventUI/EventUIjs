@@ -205,6 +205,13 @@ EVUI.Modules.Dom.DomHelper = function ()
         }
     };
 
+    /**Returns the first element in the DomHelper's elements array.
+    @returns {Element}*/
+    DomHelper.prototype.first = function ()
+    {
+        return this.elements[0];
+    }
+
     /**Hides all the Elements in the DomHelper by setting their style's display property to "none".
     @returns {EVUI.Modules.Dom.DomHelper}*/
     DomHelper.prototype.hide = function ()
@@ -965,6 +972,8 @@ EVUI.Modules.Dom.DomHelper = function ()
             {
             }
 
+            if (result == null) return [];
+
             elementsOrSelector = [];
             var numResult = result.length;
             for (var x = 0; x < numResult; x++)
@@ -977,7 +986,7 @@ EVUI.Modules.Dom.DomHelper = function ()
             elementsOrSelector = ambiguousContentToHtmlArray(elementsOrSelector);
         }
 
-        if (elementsOrSelector == null) return;
+        if (elementsOrSelector == null) return [];
 
         elementsOrSelector = elementsOrSelector.filter(function (ele) { return EVUI.Modules.Core.Utils.isElement(ele) || ele === window || ele === document || ele instanceof DocumentFragment });
 
