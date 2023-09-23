@@ -84,10 +84,6 @@ EVUI.Modules.Core.Settings.stepsBetweenWaits = 250;
 @type {Number}*/
 EVUI.Modules.Core.Settings.defaultMinimumZIndex = 100;
 
-/**Boolean. Whether or not the $evui.getValidElement function should look inside jQuery and DomHelper objects and pull out the first Element they find, or just return null in all cases where it was not handled an Element-derived object. False by default. Setting to true allows for flexibility of input, but can be confusing if the assignment a user just made is now a different object (an Element) than the one that was just assigned (i.e. a jQuery object).
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.extractElementWhenAmbigous = false;
-
 /**Boolean. Whether or not to normalize the case of strings when doing string comparisons. False by default. 
 @type {Boolean}*/
 EVUI.Modules.Core.Settings.normalizeStringCase = false;
@@ -1857,8 +1853,6 @@ $evui.waitAsync = function (duration)
 EVUI.Modules.Core.Utils.getValidElement = function (element)
 {
     if (EVUI.Modules.Core.Utils.isElement(element)) return element;
-    if (EVUI.Modules.Core.Utils.isSettingTrue("extractElementWhenAmbigous") === false) return null;
-
     if (EVUI.Modules.Core.Utils.isjQuery(element) === true && element.length > 0)
     {
         if (EVUI.Modules.Core.Utils.isElement(element[0]) === true) return element[0];

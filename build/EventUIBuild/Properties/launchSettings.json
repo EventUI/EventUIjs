@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "EventUIBuild": {
-      "commandName": "Project",
-      "commandLineArgs": "C:\\Git\\EventUI\\src\\raw\r\nC:\\Git\\EventUI\\src\\dist\r\nconcat"
-    }
-  }
-}

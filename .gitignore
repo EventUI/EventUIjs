@@ -403,3 +403,4 @@ src/dist/evui.min.js
 
 
 EventUIBuild/launchSettings.json
+/build/EventUIBuild/Properties/launchSettings.json

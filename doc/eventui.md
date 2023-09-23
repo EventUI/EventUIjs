@@ -1,9 +1,80 @@
 # EventUI
 
 ## Overview
-EventUI is a JavaScript library of UI components centered around an event-based strategy for managing asynchronous logic and preventing race condition related bugs.
+EventUI is a JavaScript library of UI components centered around an event-based strategy for managing asynchronous logic when performing common UI tasks in data-driven web applications.
 
-The core issue being addressed by EventUI is the extreme ease with which large single-page applications can accidentally spawn race conditions (and the hellishly difficult bugs to fix that ensue), especially when such applications have many authors who are often unaware of the asynchronous sequences the other authors have already folded into the application. Often, each developer writes their own little "island" in the application that just-so-happens to work (at the time of authoring) because it just-so-happens to execute at the right time in a sequence of asynchronous operations going on in the application at the time of invocation, but as soon as something changes the asynchronous flow in the application, foundational flaws appear in the application's architecture and very difficult bugs to reason about and fix occur that require major refactoring to properly address.
+The primary issue that EventUI addresses is a problem that arises when some part of a standard UI operation - like showing a modal - needs some asynchronous behavior to be displayed or populated (like hitting a server for data that the modal will display or to get the markup of the modal itself), but the library/framework being used to manage the displaying of the modal doesn't give an adequate "hook" to do asynchronous logic in the 'show modal' process, which commonly results in an inelegant solution that can cause a race condition, a jerky UI experience, or a code pattern that is difficult to maintain or extend. 
+
+EventUI addresses this problem by providing highly customizable UI components that come with built-in overridable event lifecycles where the events act as hooks where asynchronous code (or synchronous code - EventUI handles both cases) can be executed as part of the normal flow of a UI operation by blocking the progress of the operation until the event's code has completed. This makes it far easier to reason about doing things like show data driven modals with a consistent pattern that is easy for developers to implement.
+
+## An Event-Driven Example
+
+Compare, for instance, EventUI's modals with Bootstrap's modals. For a piece of static HTML that doesn't need to be populated with data from a server, Bootstrap is a fabulous choice because of it's simplicity. Showing a modal in this case is easy:
+
+	$("#myModal").modal("show");
+
+Boom. Done. Modal. 
+
+Now, if this modal needs some dynamic content, things start to get a little bit more tricky:
+
+	async function ShowMyModal()
+	{
+		var modalRoot = $("#myModal");
+		modalRoot.modal("show");
+
+		var response = await fetch(/*some request*/);
+
+		if (response.ok === true)
+		{
+			//populate the modal with data from the response
+		}
+		else
+		{
+			//request failed. Either show an error message or hide the modal.
+		}
+	};
+
+	await ShowMyModal();
+
+Getting data to show in the modal isn't hard, but this code will cause an empty modal to appear, sit there empty for a moment, then get populated with data. Or, if the request fails, one of several things might happen:
+1. The request could time out, in which case the error handler will not be fired for some time and the modal will sit there, empty, and the user will be confused.
+1. The request could fail quickly, in which case an error message can be put into the modal - this is probably the best idea, it leaves a disappointed user instead of a confused one. Or the modal could be immediately be hidden in the error handler, but this will cause the modal to flicker in and out of existence and confuse the user and make them think the site has glitched out.
+
+Or, the request could succeed, but bring with it a large amount of data that throws off the alignment of the modal (which is already visible by the time the request completes) in the center of the screen and look broken. It technically worked, but is a sub-par experience for the user.
+
+The easiest solution to making a smooth experience here is to do one of two things: either show the modal once the request completes so it's already populated when Bootstrap shows it, or just throw a loading spinner in the modal while the content loads. 
+
+Both of these solutions are well and good, but this means that each modal needs a hand-crafted "show" function to manage the showing and population of the modal, and knowing how every developer will probably have their own recipe for handling this use case (i.e. modal X has a loading spinner, modal Y waits the response to complete before being shown, or modal Z sits there blank until the response arrives), this will cause uneven UX or difficult maintenance by other programmers down the road. Worse yet, the same modal could have multiple functions that show it, and each behaves differently.
+
+What is needed is a little bit of structure to make the showing a data-driven modal a more uniform process. In EventUI, the modal could be declared and shown like so:
+
+    $evui.addModal({
+        id: "myModal",
+        element: "#myModal",
+        onShow: async function (eventArgs) //fires when the command to show the modal is issued and awaits the function before continuing to show the modal
+        {
+            var response = await fetch(/*some request*/)
+
+            if (response.ok === true)
+            {
+                //populate the modal with data 
+            }
+            else
+            {
+                //populate error message or call eventArgs.cancel() to prevent the modal from ever being seen
+            }
+        }
+    });
+
+    await $evui.showModalAsync("myModal");
+
+EventUI gives the programmer a hook (in this case, the first event in the 'show' process, which fires when the modal's root element is available in memory but before it is visible to the user) to get the data before the modal is ever shown that will block the showing of the modal before it is positioned and made visible to the user. 
+
+If the request is successful, the modal is populated with data before being positioned, so it will be in the center of the viewport no matter how big it gets. 
+
+If the request fails, the `eventArgs` object (a `ModalEventArgs` instance) passed into the event gives the option to cancel showing the modal, which will prevent it from ever being seen (although this doesn't fix the problem of confusing the user, it's better than a flickering modal). All of EventUI's event handlers use custom event argument objects that are not related to the DOM's native `Event` object.
+
+Finally, there is now one simple call to show this modal that can be used everywhere in the codebase: `await $evui.showModalAsync("myModal")`. The modal is declared once, then can be re-used infinitely. Other modals that are declared will all follow the same event-driven pattern (although the problem of uneven UX still exists if different programmers use loading spinners and such in uneven ways, but it will be easier to homogenize than hand-crafted show functions).
 
 ## Organization
 EventUI is organized as a collection JavaScript codefiles, each of which contains a module (note: not an ECMA module export, but rather just a vanilla codefile with a single piece of functionality - module exports are coming soon), and some modules are reliant on other modules to do their jobs. 
@@ -19,87 +90,3 @@ EventUI offers the following modules:
     1. **Pop-Ins**: These are 'banner-like' Panes that are anchored between other elements to form a 'bar' that is anchored in between other elements on the X and/or Y axes. The most common use case for these are things like horizontal or vertical navigation bars, or those annoying 'accept cookies' banners that pop up on most web sites (thank you EU bureaucrats for keeping us safe from fully functional websites).
 1. **Runtime CSS Classes**: Instead of in-lining style properties directly on HTML tags, or worse yet - making style tags and stuffing them with CSS strings at runtime - EventUI uses the browser's native CSSRule API to generate and edit CSS classes in memory without adding a style tag for every batch of changes - all that is needed is one style tag (that was not loaded via a cross-origin request, browser security prevents reading or writing CSSRules in that case) to hook into and manipulate CSS rules dynamically, including **removing** existing rules from existing selectors. 
 1. **Object Diffing**: A standalone utility for comparing two objects and quickly identifying the differences and similarities between both. The diffing algorithm can be configured so that deep objects graphs can be compared based on property values or by reference (i.e. answering the questions of "are these two object graphs equivalent?" versus "do both objects contain the same object instance?"). In addition, the diff module contains functionality for generating **value hash codes** for objects to easily determine object equality. The diff utility produces an object graph that enumerates all the properties in common, that are different, and all comparisons made total between two graphs that contain metadata on the comparison made and why the values were deemed to be different beyond a simple value equality comparison.
-
-
-
-### A Basic Use Case with Race Conditions
-
-#### The Problem
-One of the most common spawning grounds for the type of bug that EventUI was designed to work around is raising a normal DOM event, either via some user action (like a click) or via a custom event dispatch (usually done with a tool like jQuery). The eventing structure in the native DOM is a beautiful thing, but it predates async functions and doesn't work properly with them: when using an async function as an event handler, the DOM's bubbling process for events won't await the async function and will instead invoke the async function, then move on to the next function in the bubbling event 'stack' without awaiting the previous function. 
-
-Consider the following code:
-
-    addEventListener('click', async function (event)
-    {
-        console.log("Handler 1 Start");
-        await fetch(/*Some web service call*/);
-        console.log("Handler 1 Finish");
-    });
-
-    addEventListener('click', async function (event)
-    {
-        console.log("Handler 2 Start");
-        await fetch(/*Some other web service call*/);
-        console.log("Handler 2 Finish");
-    });
-
-The output from this code sample is predictable when run initially ("Handler 1 Start" then "Handler 2 Start" will be logged), but can finish in any order (depending on which web service call takes longer). If this code relies on the response from the first call being processed before the second call, problems will inevitably arise due to the race condition that was created: there's nothing forcing handler 2 to wait for handler 1 - they will race to completion. 
-
-If, at the time of authoring, web service call #1 is **always** faster than web service call #2, this code will behave predictably and correctly, and can likely sit there for years without issue. 
-
-***Then something changes:*** The browser could, for some reason, start aggressively caching response to the second web service call and not hit the server at all (and will finish almost instantly), the first web service call could have additional work added to it on the server that makes it run slower, or the second web service call could be optimized on the server to make it always run faster than the first - or even worse, *sometimes* run faster than the first. 
-
-#### A Bad Solution
-
-If any of these things happen, the application will become unstable and bugs/crashes will occur, and the more code that relies on handler 1 finishing before handler 2, the harder this will be to correctly fix. 
-
-This example happens to be done in such a way that a wait loop can fix the race, but it's starting to get messy and introduces issues and potential bugs of its own:
-
-    var fetch1Finished = false;
-
-    addEventListener('click', async function (event)
-    {
-        console.log("Handler 1 Start");
-        await fetch(/*Some web service call*/);
-        fetch1Finished = true;
-
-        console.log("Handler 1 Finish");
-    });
-
-    addEventListener('click', async function (event)
-    {
-        console.log("Handler 2 Start");
-
-        while (fetch1Finished === false)
-        {
-            await $evui.waitAsync(10); //wait in 10 millisecond increments in a async loop for the first call to signal that it's done
-        }
-
-        await fetch(/*Some other web service call*/);
-        console.log("Handler 2 Finish");
-    });
-
-If the two handlers are 'miles apart' in the codebase, this is much harder to fix (and is usually the case).
-
-#### A Better Solution
-
-Now, using some of EventUI's tooling, this problem can be fixed forever:
-
-    addAsyncEventListener('click', async function (event)
-    {
-        console.log("Handler 1 Start");
-        await fetch(/*Some web service call*/);
-        console.log("Handler 1 Finish");
-    });
-
-    addAsyncEventListener('click', async function (event)
-    {
-        console.log("Handler 2 Start");
-        await fetch(/*Some other web service call*/);
-        console.log("Handler 2 Finish");
-    });
-
-The use of EventUI's "addAsyncEventListener" (which has been appended to the EventTarget prototype, so all objects with `addEventListener` also have `addAsyncEventListener` attached to them by default) **does** respect 'awaiting' async functions, so handler 2 will **never** fire until handler 1 has finished completely. 
-
-This does come at a cost of losing the parallelism of running both requests at the same time and instead forcing them to waterfall, but sometimes performance must be sacrificed for stability (after all, what good is performance if the application doesn't work). There are some other caveats to using `addAsyncEventListener` vs `addEventListener`, but they are not relevant to this example.
-

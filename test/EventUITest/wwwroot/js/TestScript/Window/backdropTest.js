@@ -11,6 +11,9 @@
     div2.style.width = "300px";
     div2.style.background = "orange";
     div2.setAttribute(EVUI.Modules.Panes.Constants.Attribute_Drag, "");
+    div2.id = "div2";
+
+    document.body.append(div2);
 
     //$evui.css("@keyframes color-me-in { 0% { background: black; } 50% { background: orange; opacity: 50%} 100% { background: green; opacity: 0% }}");
 
@@ -20,10 +23,11 @@
 
     await $evui.showPaneAsync({
         id: "test",
-        loadSettings:
-        {
-            element: div
-        },
+        element: div,
+        //loadSettings:
+        //{
+        //    element: div
+        //},
         showSettings:
         {
             center: true,
@@ -48,10 +52,11 @@
 
     await $evui.showPaneAsync({
         id: "test2",
-        loadSettings:
-        {
-            element: div2
-        },
+        element: "#div2",
+        //loadSettings:
+        //{
+        //    element: div2
+        //},
         showSettings:
         {
             absolutePosition:

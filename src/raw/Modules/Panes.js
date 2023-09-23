@@ -6210,19 +6210,24 @@ EVUI.Modules.Panes.Pane = function (id, options)
         get: function () { return _element; },
         set: function (value)
         {
+            if (typeof value === "string")
+            {
+                value = new EVUI.Modules.Dom.DomHelper(value);
+            }
+
             var setObject =
             {
-                element: value,
+                element: EVUI.Modules.Core.Utils.getValidElement(value),
                 paneID: _id,
                 setSecret: _options.link.setSecret
             };
 
-            if (typeof _options == null || typeof _options.canSetElement !== "function") throw Error("Failed to set element: Permission denied. Missing internal elementSetter function.");
+            if (typeof _options == null || typeof _options.canSetElement !== "function") throw Error("Failed to set element.");
             if (_options.canSetElement(setObject) === _options.link.setSecret)
             {
-                _element = value;
+                _element = setObject.element;
 
-                if (value == null)
+                if (_element == null)
                 {
                     _helper = null;
                 }
@@ -6233,7 +6238,7 @@ EVUI.Modules.Panes.Pane = function (id, options)
             }
             else
             {
-                throw Error("Failed to set element: Permission denied. The provided value is invalid, the provided token is invalid, or the Pane is in an unstable state.");
+                throw Error("Failed to set element: The provided value is invalid or the Pane is in an unstable state.");
             }
         },
         configurable: false,
