@@ -907,7 +907,7 @@ EVUI.Modules.PopIns.PopIn = function (pane)
     /**Object. The root Element of the PopIn. Cannot be reset once it has been assigned to via initialization or a load operation, unload the PopIn to reset it.
     @type {Element}*/
     this.element = null;
-    EVUI.Modules.Core.Utils.wrapProperties(this, _window, { sourcePath: "element", targetPath: "element", settings: { set: false } });
+    EVUI.Modules.Core.Utils.wrapProperties(this, _window, { sourcePath: "element", targetPath: "element" });
 
     /**Boolean. Whether or not to unload the PopIn from the DOM when it is hidden (only applies to elements that were loaded via HTTP). False by default.
     @type {Boolean}*/
