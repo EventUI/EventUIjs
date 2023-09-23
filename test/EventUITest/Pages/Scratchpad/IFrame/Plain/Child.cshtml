@@ -1,0 +1,24 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.IFrame.Plain.ChildModel
+@{
+}
+
+@section Scripts
+{
+    <script>
+        $evui.init(function ()
+        {
+            addEventListener("message", function (messageArgs)
+            {
+                if (parent !== window)
+                {
+                    console.log("Child");
+                    console.log(messageArgs);
+                    console.log(messageArgs.source === parent);
+
+                    parent.postMessage("asdf", "*");
+                }
+            });
+        });
+    </script>
+}

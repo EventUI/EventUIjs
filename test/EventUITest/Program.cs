@@ -1,3 +1,13 @@
+/**Copyright (c) 2023 Richard H Stannard
+
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.*/
+
+
+
+using EventUITest.Utils;
+using Microsoft.Extensions.FileProviders;
+
 namespace EventUITest
 {
     public class Program
@@ -20,8 +30,9 @@ namespace EventUITest
             }
 
             app.UseHttpsRedirection();
-            app.UseStaticFiles();
 
+            AddStaticFiles(app);
+            
             app.UseRouting();
 
             app.UseAuthorization();
@@ -29,6 +40,38 @@ namespace EventUITest
             app.MapRazorPages();
 
             app.Run();
+        }
+
+        internal static void AddStaticFiles(WebApplication app)
+        {
+            DirectoryInfo rootContentPath = RootDirectoryFinder.GetRootRepositoryDirectory(new string[] { "license", "test", "src", "build" }, true);
+
+            string rootSrcPath = Path.Combine(rootContentPath.FullName, "src\\raw");
+            string rootTestPath = Path.Combine(rootContentPath.FullName, "test", "test_src");
+
+            if (Directory.Exists(rootSrcPath) == false)
+            {
+                throw new DirectoryNotFoundException("Could not locate root EventUI's raw source path. \"" + rootSrcPath + "\" did not exist.");
+            }
+
+            if (Directory.Exists(rootTestPath) == false)
+            {
+                throw new DirectoryNotFoundException("Could not locate root EventUI's test source path. \"" + rootTestPath + "\" did not exist.");
+            }
+
+            app.UseStaticFiles();
+
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = new PhysicalFileProvider(rootSrcPath),
+                RequestPath = "/evuisrc",
+            });
+
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = new PhysicalFileProvider(rootTestPath),
+                RequestPath = "/evuitest"
+            });
         }
     }
 }

@@ -1,0 +1,29 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.IFrame.ChildModel
+@{
+}
+
+@section Scripts
+{
+    <script>
+        $evui.init(function ()
+        {
+            var parentHandle = $evui.iframes.addIFrame({
+                url: location.href.replace("Child", "Parent"),
+                onMessage: function (args)
+                {
+                    console.log("Child got message from Parent.");
+                    console.log(args);
+                },
+                onSend: function (args)
+                {
+                    console.log("Child sent message to Parent.");
+                    console.log(args);
+                }
+            })
+
+            console.log("Child - Parent");
+            console.log(parentHandle);
+        });
+    </script>
+}

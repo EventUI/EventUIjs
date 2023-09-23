@@ -1,0 +1,17 @@
+﻿<div>
+    {{prop1}}{{prop2.b}}
+    <span>Some Value: {{prop2.a}}</span>
+    <div evui-binder-source='subObject' evui-binder-html-key='subContent'>
+    </div>
+    <br />
+    <br />
+    <span>SubArray</span>
+    <div evui-binder-source='subArray' evui-binder-html-key='arrayContent' btm-binder-mode="append">
+    </div>
+    <span>SubArray Again</span>
+    <div evui-binder-source='subArray' evui-binder-html-key='arrayContent' btm-binder-mode="append">
+    </div>
+    <span>Array within Array</span>
+    <ul evui-binder-source="subArray[3]" evui-binder-html-key='arraySubContent' btm-binder-mode="append">
+    </ul>
+</div>

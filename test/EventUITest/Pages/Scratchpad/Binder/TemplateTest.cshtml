@@ -1,0 +1,27 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Binder.TemplateTestModel
+@{
+}
+
+@section Scripts
+{
+    <script src="~/js/TestScript/Binder/binderTemplateTest.js"></script>
+}
+
+<div>
+    <span>No Child Events<input type="checkbox" id="noChildEvents" /></span>
+    <span>No Race Condition Checking<input type="checkbox" id="noRace" /></span>
+</div>
+
+<button id="test">Test Update via Bind</button>
+<button id="test2">Test Create</button>
+<button id="test3">Test Create Huge</button>
+<button id="test4">Test Update via Update </button>
+
+<div id="binding1"></div>
+
+<div id="binding2"></div>
+
+<div id="binding3"></div>
+
+<div id="binding4"></div>

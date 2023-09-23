@@ -396,3 +396,11 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Development Min Results
+src/dist/evui.js
+src/dist/evui.min.js
+
+
+EventUIBuild/launchSettings.json
+/build/EventUIBuild/Properties/launchSettings.json

@@ -1,0 +1,7 @@
+﻿{
+  "include": [
+    "test/EVUITest.js",
+    "raw/EventUI.js",
+    "raw/Modules/*.js"
+  ]
+}

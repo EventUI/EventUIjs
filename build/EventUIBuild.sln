@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUIBuild", "EventUIBuild\EventUIBuild.csproj", "{FF70F831-068E-48CE-8A6C-8969AA0AED5D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventUIBuildFramework", "EventUIBuildFramework\EventUIBuildFramework.csproj", "{FA28240A-0867-4AE3-AC62-9E82C0E01C11}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FF70F831-068E-48CE-8A6C-8969AA0AED5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF70F831-068E-48CE-8A6C-8969AA0AED5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF70F831-068E-48CE-8A6C-8969AA0AED5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF70F831-068E-48CE-8A6C-8969AA0AED5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA28240A-0867-4AE3-AC62-9E82C0E01C11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA28240A-0867-4AE3-AC62-9E82C0E01C11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA28240A-0867-4AE3-AC62-9E82C0E01C11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA28240A-0867-4AE3-AC62-9E82C0E01C11}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {39806B77-1401-43BE-B5EB-3B64F5DAA481}
+	EndGlobalSection
+EndGlobal
