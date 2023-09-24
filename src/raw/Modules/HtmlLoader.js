@@ -128,7 +128,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     };
 
     /**Awaitable. Makes a simple GET request to get html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
-    @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgs  The Url of the html or the arguments for getting the Html.
+    @param {String|EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl  The Url of the html or the arguments for getting the Html.
     @returns {Promise<String>}*/
     this.loadHtmlAsync = function (htmlRequestArgsOrUrl)
     {
@@ -1405,7 +1405,7 @@ EVUI.Modules.HtmlLoader.Manager = null;
 delete $evui.htmlLoader;
 
 /**Global instance of the HtmlLoaderController, used to load fragments of Html or inject Html into placeholders in other Html.
-@type {EVUI.Modules.HtmlLoader.HtmlLoader}*/
+@type {EVUI.Modules.HtmlLoader.HtmlLoaderController}*/
 $evui.htmlLoader = null;
 Object.defineProperty($evui, "htmlLoader",
 {
@@ -1421,7 +1421,7 @@ Object.defineProperty($evui, "htmlLoader",
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetHtml_Callback} getHmlCallback  A function to call once the server has completed the request, takes the string version of whatever was returned as a parameter. */
 $evui.loadHtml = function (htmlRequestArgsOrUrl, getHtmlCallback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadHtml(htmlRequestArgsOrUrl, getHtmlCallback);
+    return $evui.htmlLoader.loadHtml(htmlRequestArgsOrUrl, getHtmlCallback);
 };
 
 /**Awaitable. Makes a simple GET request to get html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
@@ -1429,7 +1429,7 @@ $evui.loadHtml = function (htmlRequestArgsOrUrl, getHtmlCallback)
 @returns {Promise<String>}*/
 $evui.loadHtmlAsync = function (htmlRequestArgsOrUrl)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadHtmlAsync(htmlRequestArgsOrUrl);
+    return $evui.htmlLoader.loadHtmlAsync(htmlRequestArgsOrUrl);
 };
 
 /**Loads an array of PartialLoadRequeusts either as a standalone array or as part of a HtmlPartalLoadArgs object.
@@ -1437,7 +1437,7 @@ $evui.loadHtmlAsync = function (htmlRequestArgsOrUrl)
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPartials_Callback} loadedCallback A callback that is fired once all the Html partials have been loaded.*/
 $evui.loadHtmlPartials = function (partialLoadArgsOrPartialRequests, loadedCallback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadAllPlacehoders(partialLoadArgsOrPartialRequests, loadedCallback);
+    return $evui.htmlLoader.loadAllPlacehoders(partialLoadArgsOrPartialRequests, loadedCallback);
 };
 
 /**Awaitable. Loads an array of PartialLoadRequeusts either as a standalone array or as part of a HtmlPartalLoadArgs object.
@@ -1445,7 +1445,7 @@ $evui.loadHtmlPartials = function (partialLoadArgsOrPartialRequests, loadedCallb
 @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest[]>}.*/
 $evui.loadHtmlPartialsAsync = function (partialLoadArgsOrPartialRequests)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadHtmlPartialsAsync(partialLoadArgsOrPartialRequests);
+    return $evui.htmlLoader.loadHtmlPartialsAsync(partialLoadArgsOrPartialRequests);
 };
 
 /**Loads a placeholder and all of its children and injects it into the DOM.
@@ -1453,7 +1453,7 @@ $evui.loadHtmlPartialsAsync = function (partialLoadArgsOrPartialRequests)
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.*/
 $evui.loadPlaceholder = function (placeholderIDOrArgs, callback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadPlaceholder(placeholderIDOrArgs, callback);
+    return $evui.htmlLoader.loadPlaceholder(placeholderIDOrArgs, callback);
 };
 
 /**Awaitable. Loads a placeholder and all of its children and injects them into the DOM.
@@ -1462,7 +1462,7 @@ $evui.loadPlaceholder = function (placeholderIDOrArgs, callback)
 @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult>}*/
 $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadPlaceholderAsync(placeholderIDOrArgs);
+    return $evui.htmlLoader.loadPlaceholderAsync(placeholderIDOrArgs);
 };
 
 /**Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
@@ -1470,7 +1470,7 @@ $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetAllPlaceholders_Callback} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
 $evui.loadAllPlacehoders = function (placehoderLoadArgs, callback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadAllPlacehoders(placehoderLoadArgs, callback);
+    return $evui.htmlLoader.loadAllPlacehoders(placehoderLoadArgs, callback);
 };
 
 /**Awaitable. Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
@@ -1478,7 +1478,7 @@ $evui.loadAllPlacehoders = function (placehoderLoadArgs, callback)
 @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]>} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
 $evui.loadAllPlacehodersAsync = function (placehoderLoadArgs)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadAllPlacehodersAsync(placehoderLoadArgs);
+    return $evui.htmlLoader.loadAllPlacehodersAsync(placehoderLoadArgs);
 };
 
 Object.freeze(EVUI.Modules.HtmlLoader);

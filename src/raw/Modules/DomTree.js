@@ -2510,7 +2510,7 @@ $evui.domTree = null;
 @returns {EVUI.Modules.DomTree.DomTreeElement} */
 $evui.toDomTreeElement = function (source, options)
 {
-    return EVUI.Modules.DomTree.Converter.toDomTreeElement(source, options);
+    return $evui.domTree.toDomTreeElement(source, options);
 };
 
 /**Converts a DomTreeElement hierarchy into a String, Document, Element, or DocumentFragment.
@@ -2522,11 +2522,11 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
 {
     if (toString === true)
     {
-        return EVUI.Modules.DomTree.Converter.fromDomTreeElementToString(domTreeElement, options);
+        return $evui.domTree.fromDomTreeElementToString(domTreeElement, options);
     }
     else
     {
-        return EVUI.Modules.DomTree.Converter.fromDomTreeElement(domTreeElement, options);
+        return $evui.domTree.fromDomTreeElement(domTreeElement, options);
     }
 };
 
@@ -2542,7 +2542,7 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
 @returns {DocumentFragment} */
 $evui.parseHtml = function (html, options)
 {
-    return EVUI.Modules.DomTree.Converter.htmlToDocumentFragment(html, options);
+    return $evui.domTree.htmlToDocumentFragment(html, options);
 };
 
 /**Converts a HTML string into a hierarchy of DomTreeElements representing a DocumentFragment containing the parsed HTML.
@@ -2551,7 +2551,7 @@ $evui.parseHtml = function (html, options)
 @returns {EVUI.Modules.DomTree.DomTreeElement}*/
 $evui.parseHtmlToDomTree = function (html, options)
 {
-    return EVUI.Modules.DomTree.Converter.htmlToDomTree(html, options);
+    return $evui.domTree.htmlToDomTree(html, options);
 };
 
 Object.freeze(EVUI.Modules.DomTree);

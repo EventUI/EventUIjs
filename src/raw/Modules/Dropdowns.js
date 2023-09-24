@@ -1441,7 +1441,7 @@ Object.defineProperty($evui, "dropdowns", {
 @returns {EVUI.Modules.Dropdowns.Dropdown}*/
 $evui.addDropdown = function (yoloDropdown)
 {
-    return EVUI.Modules.Dropdowns.Manager.addDropdown(yoloDropdown);
+    return $evui.dropdowns.addDropdown(yoloDropdown);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Dropdown asynchronously. Provides a callback that is called call once the Dropdown operation has completed successfully or otherwise.
@@ -1450,7 +1450,7 @@ $evui.addDropdown = function (yoloDropdown)
 @param {EVUI.Modules.Dropdowns.Constants.Fn_DropdownOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showDropdown = function (dropdownOrID, dropdownShowArgs, callback)
 {
-    return EVUI.Modules.Dropdowns.Manager.showDropdown(dropdownOrID, dropdownShowArgs, callback);
+    return $evui.dropdowns.showDropdown(dropdownOrID, dropdownShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Dropdown asynchronously.
@@ -1459,7 +1459,7 @@ $evui.showDropdown = function (dropdownOrID, dropdownShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showDropdownAsync = function (dropdownOrID, dropdownShowArgs)
 {
-    return EVUI.Modules.Dropdowns.Manager.showDropdownAsync(dropdownOrID, dropdownShowArgs);
+    return $evui.dropdowns.showDropdownAsync(dropdownOrID, dropdownShowArgs);
 };
 
 /**Hides (and unloads if requested) a Dropdown asynchronously. Provides a callback that is called call once the Dropdown operation has completed successfully or otherwise.
@@ -1468,7 +1468,7 @@ $evui.showDropdownAsync = function (dropdownOrID, dropdownShowArgs)
 @param {EVUI.Modules.Dropdowns.Constants.Fn_DropdownOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hideDropdown = function (dropdownOrID, dropdownHideArgs, callback)
 {
-    return EVUI.Modules.Dropdowns.Manager.hideDropdown(dropdownOrID, dropdownHideArgs, callback);
+    return $evui.dropdowns.hideDropdown(dropdownOrID, dropdownHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Dropdown asynchronously. Provides a callback that is called call once the Dropdown operation has completed successfully or otherwise.
@@ -1477,7 +1477,7 @@ $evui.hideDropdown = function (dropdownOrID, dropdownHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hideDropdownAsync = function (dropdownOrID, dropdownHideArgs)
 {
-    return EVUI.Modules.Dropdowns.Manager.hideDropdownAsync(dropdownOrID, dropdownHideArgs);
+    return $evui.dropdowns.hideDropdownAsync(dropdownOrID, dropdownHideArgs);
 };
 
 /*#ENDWRAP(Drop)#*/
