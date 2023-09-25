@@ -3,6 +3,7 @@
     "src/raw/**/**.js",
     "src/test/**/**.js",
     "test/test_src/**/**.js",
-    "doc/code/*.js"
+    "doc/code/*.js",
+    "test/EventUITest/wwwroot/js/TestScript/**/*.js"
   ]
 }

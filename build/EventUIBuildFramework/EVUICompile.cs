@@ -44,7 +44,13 @@ namespace EventUIBuildFramework
                 throw new Exception(minificationResult.Errors[0].ToString());
             }
 
-            return minificationResult.Code;
+            return """
+                /**Copyright (c) 2023 Richard H Stannard
+                
+                This source code is licensed under the MIT license found in the
+                LICENSE file in the root directory of this source tree.*/
+
+                """ + minificationResult.Code;
         }
 
         public static void WriteFile(string outputDirectory, string code, string extension)

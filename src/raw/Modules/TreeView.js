@@ -4021,7 +4021,7 @@ Object.defineProperty($evui, "treeViews", {
 @returns {EVUI.Modules.TreeView.TreeView} */
 $evui.addTreeView = function (makeTreeViewArgsOrId, rootNodeArgs)
 {
-    return EVUI.Modules.TreeView.Manager.addTreeView(makeTreeViewArgsOrId, rootNodeArgs);
+    return $evui.treeViews.addTreeView(makeTreeViewArgsOrId, rootNodeArgs);
 };
 
 /**Gets a TreeView or TreeViews from the TreeViewController.
@@ -4030,7 +4030,7 @@ $evui.addTreeView = function (makeTreeViewArgsOrId, rootNodeArgs)
 @returns {TreeView|TreeView[]} */
 $evui.getTreeView = function (treeViewIdOrPredicate, getAllMatches)
 {
-    return EVUI.Modules.TreeView.Manager.getTreeView(treeViewIdOrPredicate, getAllMatches)
+    return $evui.treeViews.getTreeView(treeViewIdOrPredicate, getAllMatches)
 };
 
 /**Removes and optionally disposes of one of the TreeViews being managed by this controller.
@@ -4039,7 +4039,7 @@ $evui.getTreeView = function (treeViewIdOrPredicate, getAllMatches)
 @returns {Boolean} */
 $evui.removeTreeView = function (treeViewId, dispose)
 {
-    return EVUI.Modules.TreeView.Manager.removeTreeView(treeViewId, dispose)
+    return $evui.treeViews.removeTreeView(treeViewId, dispose)
 };
 
 /*#ENDWRAP(TreeView)#*/

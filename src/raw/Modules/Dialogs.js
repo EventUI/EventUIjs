@@ -930,7 +930,7 @@ EVUI.Modules.Dialogs.Dialog = function (pane)
     /**Object. The root Element of the Dialog. Cannot be reset once it has been assigned to via initialization or a load operation, unload the Dialog to reset it.
     @type {Element}*/
     this.element = null;
-    EVUI.Modules.Core.Utils.wrapProperties(this, _pane, { sourcePath: "element", targetPath: "element");
+    EVUI.Modules.Core.Utils.wrapProperties(this, _pane, { sourcePath: "element", targetPath: "element" });
 
     /**Boolean. Whether or not to unload the Dialog from the DOM when it is hidden (only applies to elements that were loaded via HTTP). False by default.
     @type {Boolean}*/
@@ -1480,7 +1480,7 @@ Object.defineProperty($evui, "dialogs", {
 @returns {EVUI.Modules.Dialogs.Dialog}*/
 $evui.addDialog = function (yoloDialog)
 {
-    return EVUI.Modules.Dialogs.Manager.addDialog(yoloDialog);
+    return $evui.dialogs.addDialog(yoloDialog);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Dialog asynchronously. Provides a callback that is called call once the Dialog operation has completed successfully or otherwise.
@@ -1489,7 +1489,7 @@ $evui.addDialog = function (yoloDialog)
 @param {EVUI.Modules.Dialogs.Constants.Fn_DialogOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showDialog = function (dialogOrID, dialogShowArgs, callback)
 {
-    return EVUI.Modules.Dialogs.Manager.showDialog(dialogOrID, dialogShowArgs, callback);
+    return $evui.dialogs.showDialog(dialogOrID, dialogShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Dialog asynchronously.
@@ -1498,7 +1498,7 @@ $evui.showDialog = function (dialogOrID, dialogShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showDialogAsync = function (dialogOrID, dialogShowArgs)
 {
-    return EVUI.Modules.Dialogs.Manager.showDialogAsync(dialogOrID, dialogShowArgs);
+    return $evui.dialogs.showDialogAsync(dialogOrID, dialogShowArgs);
 };
 
 /**Hides (and unloads if requested) a Dialog asynchronously. Provides a callback that is called call once the Dialog operation has completed successfully or otherwise.
@@ -1507,7 +1507,7 @@ $evui.showDialogAsync = function (dialogOrID, dialogShowArgs)
 @param {EVUI.Modules.Dialogs.Constants.Fn_DialogOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hideDialog = function (dialogOrID, dialogHideArgs, callback)
 {
-    return EVUI.Modules.Dialogs.Manager.hideDialog(dialogOrID, dialogHideArgs, callback);
+    return $evui.dialogs.hideDialog(dialogOrID, dialogHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Dialog asynchronously. Provides a callback that is called call once the Dialog operation has completed successfully or otherwise.
@@ -1516,7 +1516,7 @@ $evui.hideDialog = function (dialogOrID, dialogHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hideDialogAsync = function (dialogOrID, dialogHideArgs)
 {
-    return EVUI.Modules.Dialogs.Manager.hideDialogAsync(dialogOrID, dialogHideArgs);
+    return $evui.dialogs.hideDialogAsync(dialogOrID, dialogHideArgs);
 };
 
 /*#ENDWRAP(Dialog)#*/
