@@ -1,4 +1,5 @@
-
+$evui.init(async function ()
+{
     $evui.addModal({
         id: "myModal",
         element: "#myModal",
@@ -18,3 +19,6 @@
     });
 
     await $evui.showModalAsync("myModal");
+
+
+});

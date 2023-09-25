@@ -827,7 +827,7 @@ Object.defineProperty($evui, "events", {
 @returns {EVUI.Modules.Events.EventListener}*/
 $evui.on = function (eventListenerOrName, handler, priority, handlerName)
 {
-    return EVUI.Modules.Events.Manager.on(eventListenerOrName, handler, priority, handlerName);
+    return $evui.events.on(eventListenerOrName, handler, priority, handlerName);
 };
 
 /**Adds a listener to the EventManager to be executed whenever trigger is called on an event with the same name and then is removed.
@@ -838,7 +838,7 @@ $evui.on = function (eventListenerOrName, handler, priority, handlerName)
 @returns {EVUI.Modules.Events.EventListener}*/
 $evui.once = function (eventListenerOrName, handler, priority, handlerName)
 {
-    return EVUI.Modules.Events.Manager.once(eventListenerOrName, handler, priority, handlerName);
+    return $evui.events.once(eventListenerOrName, handler, priority, handlerName);
 };
 
 /**Removes all the EventListeners with the given event name, callback function and/or exeuctingContext.
@@ -846,7 +846,7 @@ $evui.once = function (eventListenerOrName, handler, priority, handlerName)
 @param {EVUI.Modules.Events.Constants.Fn_Handler} handler The function that gets called when the event is invoked.*/
 $evui.off = function (eventNameOrID, handler)
 {
-    return EVUI.Modules.Events.Manager.off(eventNameOrID, handler);
+    return $evui.events.off(eventNameOrID, handler);
 };
 
 /**Calls all the event listeners with the given name.
@@ -855,7 +855,7 @@ $evui.off = function (eventNameOrID, handler)
 @param {String} triggerName The name to give the trigger for tracing purposes.*/
 $evui.trigger = function (eventNameOrTriggerArgs, data, triggerName)
 {
-    return EVUI.Modules.Events.Manager.trigger(eventNameOrTriggerArgs, data, triggerName);
+    return $evui.events.trigger(eventNameOrTriggerArgs, data, triggerName);
 }
 
 /**Calls all the event listeners with the given name and collects their responses and passes them into the callback function.
@@ -865,7 +865,7 @@ $evui.trigger = function (eventNameOrTriggerArgs, data, triggerName)
 @param {EVUI.Modules.Events.Constants.Fn_AskResultCallback} callback The callback function that will be passed the responses to the ask operation from each handler.*/
 $evui.ask = function (eventNameOrTriggerArgs, data, triggerName, callback)
 {
-    return EVUI.Modules.Events.Manager.ask(eventNameOrTriggerArgs, data, triggerName, callback)
+    return $evui.events.ask(eventNameOrTriggerArgs, data, triggerName, callback)
 };
 
 /**Awaitable. Calls all the event listeners with the given name and collects their responses and returns them as the promise resolution value.
@@ -875,7 +875,7 @@ $evui.ask = function (eventNameOrTriggerArgs, data, triggerName, callback)
 @returns {Promise<EVUI.Modules.Events.AskResult[]>}*/
 $evui.askAsync = function (eventNameOrTriggerArgs, data, triggerName)
 {
-    return EVUI.Modules.Events.Manager.askAsync(eventNameOrTriggerArgs, data, triggerName)
+    return $evui.events.askAsync(eventNameOrTriggerArgs, data, triggerName)
 };
 
 /*#ENDWRAP(Event)#*/

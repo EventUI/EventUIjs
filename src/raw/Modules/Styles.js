@@ -1684,7 +1684,7 @@ $evui.css = function (cssOrOptions)
     if (typeof cssOrOptions === "string")
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(cssOrOptions) === true) return;
-        return EVUI.Modules.Styles.Manager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, cssOrOptions);
+        return $evui.styles.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, cssOrOptions);
     }
     else if (typeof cssOrOptions === "object")
     {
@@ -1697,12 +1697,12 @@ $evui.css = function (cssOrOptions)
         {
             if (selector != null)
             {
-                return EVUI.Modules.Styles.Manager.removeRules(sheetName, selector);
+                return $evui.styles.removeRules(sheetName, selector);
             }
             else
             {
-                var existingRules = EVUI.Modules.Styles.Manager.getRules(sheetName);
-                var removed = EVUI.Modules.Styles.Manager.removeStyleSheet(sheetName);
+                var existingRules = $evui.styles.getRules(sheetName);
+                var removed = $evui.styles.removeStyleSheet(sheetName);
 
                 if (removed === true) return existingRules;
                 return null;
@@ -1713,11 +1713,11 @@ $evui.css = function (cssOrOptions)
         {
             if (rules != null)
             {
-                return EVUI.Modules.Styles.Manager.setRules(sheetName, rules);
+                return $evui.styles.setRules(sheetName, rules);
             }
             else
             {
-                return EVUI.Modules.Styles.Manager.getRules(sheetName);
+                return $evui.styles.getRules(sheetName);
             }
         }
         else
@@ -1726,20 +1726,20 @@ $evui.css = function (cssOrOptions)
             {
                 if (rules instanceof CSSStyleSheet)
                 {
-                    return EVUI.Modules.Styles.Manager.setRules(sheetName, rules);
+                    return $evui.styles.setRules(sheetName, rules);
                 }
                 else if (EVUI.Modules.Core.Utils.isArray(rules) === true && rules.length > 0 && rules[0].selector != null)
                 {
-                    return EVUI.Modules.Styles.Manager.setRules(sheetName, rules);
+                    return $evui.styles.setRules(sheetName, rules);
                 }
                 else
                 {
-                    return EVUI.Modules.Styles.Manager.setRules(sheetName, selector, rules);
+                    return $evui.styles.setRules(sheetName, selector, rules);
                 }                
             }
             else
             {
-                return EVUI.Modules.Styles.Manager.getRules(sheetName, selector);
+                return $evui.styles.getRules(sheetName, selector);
             }
         }
     }

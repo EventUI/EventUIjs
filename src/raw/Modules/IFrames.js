@@ -1584,7 +1584,7 @@ Object.defineProperty($evui, "iframes", {
 @returns {EVUI.Modules.IFrames.IFrame}*/
 $evui.addIFrame = function (addRequestOrIFrame)
 {
-    return EVUI.Modules.IFrames.Manager.addIFrame(addRequestOrIFrame);
+    return $evui.iframes.addIFrame(addRequestOrIFrame);
 };
 
 Object.freeze(EVUI.Modules.IFrames);

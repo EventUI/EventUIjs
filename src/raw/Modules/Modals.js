@@ -1351,7 +1351,7 @@ Object.defineProperty($evui, "modals", {
 @returns {EVUI.Modules.Modals.Modal}*/
 $evui.addModal = function (yoloModal)
 {
-    return EVUI.Modules.Modals.Manager.addModal(yoloModal);
+    return $evui.modals.addModal(yoloModal);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Modal asynchronously. Provides a callback that is called call once the Modal operation has completed successfully or otherwise.
@@ -1360,7 +1360,7 @@ $evui.addModal = function (yoloModal)
 @param {EVUI.Modules.Modals.Constants.Fn_ModalOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showModal = function (modalOrID, modalShowArgs, callback)
 {
-    return EVUI.Modules.Modals.Manager.showModal(modalOrID, modalShowArgs, callback);
+    return $evui.modals.showModal(modalOrID, modalShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Modal asynchronously.
@@ -1369,7 +1369,7 @@ $evui.showModal = function (modalOrID, modalShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showModalAsync = function (modalOrID, modalShowArgs)
 {
-    return EVUI.Modules.Modals.Manager.showModalAsync(modalOrID, modalShowArgs);
+    return $evui.modals.showModalAsync(modalOrID, modalShowArgs);
 };
 
 /**Hides (and unloads if requested) a Modal asynchronously. Provides a callback that is called call once the Modal operation has completed successfully or otherwise.
@@ -1378,7 +1378,7 @@ $evui.showModalAsync = function (modalOrID, modalShowArgs)
 @param {EVUI.Modules.Modals.Constants.Fn_ModalOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hideModal = function (modalOrID, modalHideArgs, callback)
 {
-    return EVUI.Modules.Modals.Manager.hideModal(modalOrID, modalHideArgs, callback);
+    return $evui.modals.hideModal(modalOrID, modalHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Modal asynchronously. Provides a callback that is called call once the Modal operation has completed successfully or otherwise.
@@ -1387,7 +1387,7 @@ $evui.hideModal = function (modalOrID, modalHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hideModalAsync = function (modalOrID, modalHideArgs)
 {
-    return EVUI.Modules.Modals.Manager.hideModalAsync(modalOrID, modalHideArgs);
+    return $evui.modals.hideModalAsync(modalOrID, modalHideArgs);
 };
 
 /*#ENDWRAP(Modal)#*/
