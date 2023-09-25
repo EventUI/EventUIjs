@@ -944,9 +944,13 @@ EVUI.Modules.Dom.DomHelper = function ()
 
                 if (context != null)
                 {
-                    if (EVUI.Modules.Core.Utils.isElement(context) || context instanceof Document || context instanceof DocumentFragment)
+                    if (EVUI.Modules.Core.Utils.isElement(context))
                     {
                         result = context.querySelectorAll(scopeSelectors(elementsOrSelector));
+                    }
+                    else if (context instanceof Document || context instanceof DocumentFragment)
+                    {
+                        result = context.querySelectorAll(elementsOrSelector);
                     }
                     else if (EVUI.Modules.Core.Utils.isjQuery(context) === true && context.length > 0)
                     {
