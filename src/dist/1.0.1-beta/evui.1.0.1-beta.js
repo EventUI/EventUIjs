@@ -7912,7 +7912,7 @@ Object.defineProperty($evui, "binder", {
 @param {EVUI.Modules.Binding.Constants.Fn_BindingCallback} callback A callback function that is fired when the Binding process completes.*/
 $evui.bind = function (bindingOrArgs, bindArgsOrSource, callback)
 {
-    return EVUI.Modules.Binding.Binder.bind(bindingOrArgs, bindArgsOrSource, callback);
+    return $evui.binder.bind(bindingOrArgs, bindArgsOrSource, callback);
 };
 
 /**Awaitable. Binds an object to the DOM using some Html content that is inserted relative to a target element.
@@ -7921,7 +7921,7 @@ $evui.bind = function (bindingOrArgs, bindArgsOrSource, callback)
 @returns {Promise<EVUI.Modules.Binding.Binding>}*/
 $evui.bindAsync = function (bindingOrArgs, bindArgsOrSource)
 {
-    return EVUI.Modules.Binding.Binder.bindAsync(bindingOrArgs, bindArgsOrSource);
+    return $evui.binder.bindAsync(bindingOrArgs, bindArgsOrSource);
 };
 
 /**Adds a set of pre-configured options for Bindings to use that can be referenced by name.
@@ -7929,7 +7929,7 @@ $evui.bindAsync = function (bindingOrArgs, bindArgsOrSource)
 @returns {EVUI.Modules.Binding.BindingTemplate}*/
 $evui.addBindingTemplate = function (bindingTemplate)
 {
-    return EVUI.Modules.Binding.Binder.addBindingTemplate(bindingTemplate);
+    return $evui.binder.addBindingTemplate(bindingTemplate);
 };
 
 /**Adds Html to the internal store of BindingHtmlContents that can be referenced in Bindings.
@@ -7939,7 +7939,7 @@ $evui.addBindingTemplate = function (bindingTemplate)
 @returns {EVUI.Modules.Binding.BindingHtmlContent}*/
 $evui.addBindingHtmlContent = function (key, content, url)
 {
-    return EVUI.Modules.Binding.Binder.addHtmlContent(key, content, url);
+    return $evui.binder.addHtmlContent(key, content, url);
 };
 
 /**Removes a BindingTemplate from the controller.
@@ -7947,7 +7947,7 @@ $evui.addBindingHtmlContent = function (key, content, url)
 @returns {Boolean} */
 $evui.removeBindingTemplate = function (templateName)
 {
-    return EVUI.Modules.Binding.Binder.removeBindingTemplate(templateName);
+    return $evui.binder.removeBindingTemplate(templateName);
 };
 
 /**Removes a BindingHtmlContent entry from the controller's internal store of BindingHtmlContents.
@@ -7955,7 +7955,7 @@ $evui.removeBindingTemplate = function (templateName)
 @returns {Boolean}*/
 $evui.removeBindingHtmlContent = function (key)
 {
-    return EVUI.Modules.Binding.Binder.removeHtmlContent(key)
+    return $evui.binder.removeHtmlContent(key)
 };
 
 
@@ -11157,7 +11157,7 @@ EVUI.Modules.Dialogs.Dialog = function (pane)
     /**Object. The root Element of the Dialog. Cannot be reset once it has been assigned to via initialization or a load operation, unload the Dialog to reset it.
     @type {Element}*/
     this.element = null;
-    EVUI.Modules.Core.Utils.wrapProperties(this, _pane, { sourcePath: "element", targetPath: "element");
+    EVUI.Modules.Core.Utils.wrapProperties(this, _pane, { sourcePath: "element", targetPath: "element" });
 
     /**Boolean. Whether or not to unload the Dialog from the DOM when it is hidden (only applies to elements that were loaded via HTTP). False by default.
     @type {Boolean}*/
@@ -11707,7 +11707,7 @@ Object.defineProperty($evui, "dialogs", {
 @returns {EVUI.Modules.Dialogs.Dialog}*/
 $evui.addDialog = function (yoloDialog)
 {
-    return EVUI.Modules.Dialogs.Manager.addDialog(yoloDialog);
+    return $evui.dialogs.addDialog(yoloDialog);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Dialog asynchronously. Provides a callback that is called call once the Dialog operation has completed successfully or otherwise.
@@ -11716,7 +11716,7 @@ $evui.addDialog = function (yoloDialog)
 @param {EVUI.Modules.Dialogs.Constants.Fn_DialogOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showDialog = function (dialogOrID, dialogShowArgs, callback)
 {
-    return EVUI.Modules.Dialogs.Manager.showDialog(dialogOrID, dialogShowArgs, callback);
+    return $evui.dialogs.showDialog(dialogOrID, dialogShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Dialog asynchronously.
@@ -11725,7 +11725,7 @@ $evui.showDialog = function (dialogOrID, dialogShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showDialogAsync = function (dialogOrID, dialogShowArgs)
 {
-    return EVUI.Modules.Dialogs.Manager.showDialogAsync(dialogOrID, dialogShowArgs);
+    return $evui.dialogs.showDialogAsync(dialogOrID, dialogShowArgs);
 };
 
 /**Hides (and unloads if requested) a Dialog asynchronously. Provides a callback that is called call once the Dialog operation has completed successfully or otherwise.
@@ -11734,7 +11734,7 @@ $evui.showDialogAsync = function (dialogOrID, dialogShowArgs)
 @param {EVUI.Modules.Dialogs.Constants.Fn_DialogOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hideDialog = function (dialogOrID, dialogHideArgs, callback)
 {
-    return EVUI.Modules.Dialogs.Manager.hideDialog(dialogOrID, dialogHideArgs, callback);
+    return $evui.dialogs.hideDialog(dialogOrID, dialogHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Dialog asynchronously. Provides a callback that is called call once the Dialog operation has completed successfully or otherwise.
@@ -11743,7 +11743,7 @@ $evui.hideDialog = function (dialogOrID, dialogHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hideDialogAsync = function (dialogOrID, dialogHideArgs)
 {
-    return EVUI.Modules.Dialogs.Manager.hideDialogAsync(dialogOrID, dialogHideArgs);
+    return $evui.dialogs.hideDialogAsync(dialogOrID, dialogHideArgs);
 };
 
 /*#ENDWRAP(Dialog)#*/
@@ -13178,6 +13178,13 @@ EVUI.Modules.Dom.DomHelper = function ()
         }
     };
 
+    /**Returns the first element in the DomHelper's elements array.
+    @returns {Element}*/
+    DomHelper.prototype.first = function ()
+    {
+        return this.elements[0];
+    }
+
     /**Hides all the Elements in the DomHelper by setting their style's display property to "none".
     @returns {EVUI.Modules.Dom.DomHelper}*/
     DomHelper.prototype.hide = function ()
@@ -13938,6 +13945,8 @@ EVUI.Modules.Dom.DomHelper = function ()
             {
             }
 
+            if (result == null) return [];
+
             elementsOrSelector = [];
             var numResult = result.length;
             for (var x = 0; x < numResult; x++)
@@ -13950,7 +13959,7 @@ EVUI.Modules.Dom.DomHelper = function ()
             elementsOrSelector = ambiguousContentToHtmlArray(elementsOrSelector);
         }
 
-        if (elementsOrSelector == null) return;
+        if (elementsOrSelector == null) return [];
 
         elementsOrSelector = elementsOrSelector.filter(function (ele) { return EVUI.Modules.Core.Utils.isElement(ele) || ele === window || ele === document || ele instanceof DocumentFragment });
 
@@ -17566,7 +17575,7 @@ $evui.domTree = null;
 @returns {EVUI.Modules.DomTree.DomTreeElement} */
 $evui.toDomTreeElement = function (source, options)
 {
-    return EVUI.Modules.DomTree.Converter.toDomTreeElement(source, options);
+    return $evui.domTree.toDomTreeElement(source, options);
 };
 
 /**Converts a DomTreeElement hierarchy into a String, Document, Element, or DocumentFragment.
@@ -17578,11 +17587,11 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
 {
     if (toString === true)
     {
-        return EVUI.Modules.DomTree.Converter.fromDomTreeElementToString(domTreeElement, options);
+        return $evui.domTree.fromDomTreeElementToString(domTreeElement, options);
     }
     else
     {
-        return EVUI.Modules.DomTree.Converter.fromDomTreeElement(domTreeElement, options);
+        return $evui.domTree.fromDomTreeElement(domTreeElement, options);
     }
 };
 
@@ -17598,7 +17607,7 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
 @returns {DocumentFragment} */
 $evui.parseHtml = function (html, options)
 {
-    return EVUI.Modules.DomTree.Converter.htmlToDocumentFragment(html, options);
+    return $evui.domTree.htmlToDocumentFragment(html, options);
 };
 
 /**Converts a HTML string into a hierarchy of DomTreeElements representing a DocumentFragment containing the parsed HTML.
@@ -17607,7 +17616,7 @@ $evui.parseHtml = function (html, options)
 @returns {EVUI.Modules.DomTree.DomTreeElement}*/
 $evui.parseHtmlToDomTree = function (html, options)
 {
-    return EVUI.Modules.DomTree.Converter.htmlToDomTree(html, options);
+    return $evui.domTree.htmlToDomTree(html, options);
 };
 
 Object.freeze(EVUI.Modules.DomTree);
@@ -18526,7 +18535,7 @@ EVUI.Modules.Dropdowns.Dropdown = function (bantmPane)
     /**Object. The root Element of the Dropdown. Cannot be reset once it has been assigned to via initialization or a load operation, unload the Dropdown to reset it.
     @type {Element}*/
     this.element = null;
-    EVUI.Modules.Core.Utils.wrapProperties(this, _pane, { sourcePath: "element", targetPath: "element"});
+    EVUI.Modules.Core.Utils.wrapProperties(this, _pane, { sourcePath: "element", targetPath: "element" });
 
     /**Boolean. Whether or not to unload the Dropdown from the DOM when it is hidden (only applies to elements that were loaded via HTTP). False by default.
     @type {Boolean}*/
@@ -19059,7 +19068,7 @@ Object.defineProperty($evui, "dropdowns", {
 @returns {EVUI.Modules.Dropdowns.Dropdown}*/
 $evui.addDropdown = function (yoloDropdown)
 {
-    return EVUI.Modules.Dropdowns.Manager.addDropdown(yoloDropdown);
+    return $evui.dropdowns.addDropdown(yoloDropdown);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Dropdown asynchronously. Provides a callback that is called call once the Dropdown operation has completed successfully or otherwise.
@@ -19068,7 +19077,7 @@ $evui.addDropdown = function (yoloDropdown)
 @param {EVUI.Modules.Dropdowns.Constants.Fn_DropdownOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showDropdown = function (dropdownOrID, dropdownShowArgs, callback)
 {
-    return EVUI.Modules.Dropdowns.Manager.showDropdown(dropdownOrID, dropdownShowArgs, callback);
+    return $evui.dropdowns.showDropdown(dropdownOrID, dropdownShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Dropdown asynchronously.
@@ -19077,7 +19086,7 @@ $evui.showDropdown = function (dropdownOrID, dropdownShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showDropdownAsync = function (dropdownOrID, dropdownShowArgs)
 {
-    return EVUI.Modules.Dropdowns.Manager.showDropdownAsync(dropdownOrID, dropdownShowArgs);
+    return $evui.dropdowns.showDropdownAsync(dropdownOrID, dropdownShowArgs);
 };
 
 /**Hides (and unloads if requested) a Dropdown asynchronously. Provides a callback that is called call once the Dropdown operation has completed successfully or otherwise.
@@ -19086,7 +19095,7 @@ $evui.showDropdownAsync = function (dropdownOrID, dropdownShowArgs)
 @param {EVUI.Modules.Dropdowns.Constants.Fn_DropdownOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hideDropdown = function (dropdownOrID, dropdownHideArgs, callback)
 {
-    return EVUI.Modules.Dropdowns.Manager.hideDropdown(dropdownOrID, dropdownHideArgs, callback);
+    return $evui.dropdowns.hideDropdown(dropdownOrID, dropdownHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Dropdown asynchronously. Provides a callback that is called call once the Dropdown operation has completed successfully or otherwise.
@@ -19095,7 +19104,7 @@ $evui.hideDropdown = function (dropdownOrID, dropdownHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hideDropdownAsync = function (dropdownOrID, dropdownHideArgs)
 {
-    return EVUI.Modules.Dropdowns.Manager.hideDropdownAsync(dropdownOrID, dropdownHideArgs);
+    return $evui.dropdowns.hideDropdownAsync(dropdownOrID, dropdownHideArgs);
 };
 
 /*#ENDWRAP(Drop)#*/
@@ -20530,7 +20539,7 @@ Object.defineProperty($evui, "events", {
 @returns {EVUI.Modules.Events.EventListener}*/
 $evui.on = function (eventListenerOrName, handler, priority, handlerName)
 {
-    return EVUI.Modules.Events.Manager.on(eventListenerOrName, handler, priority, handlerName);
+    return $evui.events.on(eventListenerOrName, handler, priority, handlerName);
 };
 
 /**Adds a listener to the EventManager to be executed whenever trigger is called on an event with the same name and then is removed.
@@ -20541,7 +20550,7 @@ $evui.on = function (eventListenerOrName, handler, priority, handlerName)
 @returns {EVUI.Modules.Events.EventListener}*/
 $evui.once = function (eventListenerOrName, handler, priority, handlerName)
 {
-    return EVUI.Modules.Events.Manager.once(eventListenerOrName, handler, priority, handlerName);
+    return $evui.events.once(eventListenerOrName, handler, priority, handlerName);
 };
 
 /**Removes all the EventListeners with the given event name, callback function and/or exeuctingContext.
@@ -20549,7 +20558,7 @@ $evui.once = function (eventListenerOrName, handler, priority, handlerName)
 @param {EVUI.Modules.Events.Constants.Fn_Handler} handler The function that gets called when the event is invoked.*/
 $evui.off = function (eventNameOrID, handler)
 {
-    return EVUI.Modules.Events.Manager.off(eventNameOrID, handler);
+    return $evui.events.off(eventNameOrID, handler);
 };
 
 /**Calls all the event listeners with the given name.
@@ -20558,7 +20567,7 @@ $evui.off = function (eventNameOrID, handler)
 @param {String} triggerName The name to give the trigger for tracing purposes.*/
 $evui.trigger = function (eventNameOrTriggerArgs, data, triggerName)
 {
-    return EVUI.Modules.Events.Manager.trigger(eventNameOrTriggerArgs, data, triggerName);
+    return $evui.events.trigger(eventNameOrTriggerArgs, data, triggerName);
 }
 
 /**Calls all the event listeners with the given name and collects their responses and passes them into the callback function.
@@ -20568,7 +20577,7 @@ $evui.trigger = function (eventNameOrTriggerArgs, data, triggerName)
 @param {EVUI.Modules.Events.Constants.Fn_AskResultCallback} callback The callback function that will be passed the responses to the ask operation from each handler.*/
 $evui.ask = function (eventNameOrTriggerArgs, data, triggerName, callback)
 {
-    return EVUI.Modules.Events.Manager.ask(eventNameOrTriggerArgs, data, triggerName, callback)
+    return $evui.events.ask(eventNameOrTriggerArgs, data, triggerName, callback)
 };
 
 /**Awaitable. Calls all the event listeners with the given name and collects their responses and returns them as the promise resolution value.
@@ -20578,7 +20587,7 @@ $evui.ask = function (eventNameOrTriggerArgs, data, triggerName, callback)
 @returns {Promise<EVUI.Modules.Events.AskResult[]>}*/
 $evui.askAsync = function (eventNameOrTriggerArgs, data, triggerName)
 {
-    return EVUI.Modules.Events.Manager.askAsync(eventNameOrTriggerArgs, data, triggerName)
+    return $evui.events.askAsync(eventNameOrTriggerArgs, data, triggerName)
 };
 
 /*#ENDWRAP(Event)#*/
@@ -22945,7 +22954,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     };
 
     /**Awaitable. Makes a simple GET request to get html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
-    @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgs  The Url of the html or the arguments for getting the Html.
+    @param {String|EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl  The Url of the html or the arguments for getting the Html.
     @returns {Promise<String>}*/
     this.loadHtmlAsync = function (htmlRequestArgsOrUrl)
     {
@@ -23156,7 +23165,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderLoadArgs.placeholderID) === false)
         {
-            elements = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "=" + placeholderLoadArgs.placeholderID + "]", null).elements;
+            elements = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "=\"" + placeholderLoadArgs.placeholderID + "\"]", null).elements;
         }
         else
         {
@@ -23187,7 +23196,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
                 if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) continue; //no placeholderID = no load
 
-                var childSession = makePlaceholderLoadSession(placeholderID, masterSession.placeholderArgs, masterSession, function (loadResult) //try and make a session, if something is wrong this will return null (like a circular reference)
+                var childSession = makePlaceholderLoadSession(curEle, masterSession.placeholderArgs, masterSession, function (loadResult) //try and make a session, if something is wrong this will return null (like a circular reference)
                 {
                     loaded.push(loadResult);
                     if (loaded.length === launched.length) //once our queued requests and returned requests arrays are the same length we are done.
@@ -23251,8 +23260,11 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @returns {Element}*/
     var getPlaceholderElement = function (placeholderID, contextElement)
     {
-        var elementHelper = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "=" + placeholderID + "]", contextElement);
-        return (elementHelper.elements.length > 0) ? elementHelper.elements[0] : null;
+        var byPlaceholderID = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "=\"" + placeholderID + "\"]", contextElement);
+        if (byPlaceholderID.first() != null) return byPlaceholderID.first();
+
+        var byUrl = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl + "=\"" + placeholderID + "\"]", contextElement);
+        return byUrl.first();
     };
 
     /**Takes the returned list of child placeholders from the event args and passes it back to the EventStream in progress.
@@ -23278,8 +23290,25 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @returns {Element[]}*/
     var getChildLoadElements = function (context)
     {
+        //first, get everything that has a placeholderID
         var eh = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "]", context);
-        return eh.elements;
+        var eles = eh.elements.slice();
+
+        //then get everything that has a url, and filter the list by the elements that don't have a placeholderID
+        //instead, their placeholderID becomes their resource URL.
+        var byUrl = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl + "]", context);
+        var numByUrl = byUrl.elements.length;
+        for (var x = 0; x < numByUrl; x++)
+        {
+            var curEle = byUrl.elements[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curEle.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID)) === true)
+            {
+                curEle.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID, curEle.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl))
+                eles.push(curEle);
+            }
+        }
+
+        return eles;
     };
 
     /**Gets all the elements that should be loaded beneath a given element.
@@ -23312,15 +23341,32 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     };
 
     /**Makes a container to hold the details of a recursive placeholder load session.
-    @param {String} placeholderID The ID of the placeholder to load.
+    @param {String|Element} placeholderID The ID of the placeholder to load or the resolved element to load.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} sourcePlaceholderLoadArgs The event args to clone and use for the load session.
     @param {PlaceholderLoadSession} parentSession The session that spawned this session.
     @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function to call once the placeholder has been fully loaded.
     @returns {PlaceholderLoadSession} */
     var makePlaceholderLoadSession = function (placeholderID, sourcePlaceholderLoadArgs, parentSession, callback)
     {
+        var ele = null;
+
         //no placeholder ID means none of the below will work, just return null and fail the operation.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) throw Error("placeholderID must be a non-whitespace string.");
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true)
+        {
+            if (EVUI.Modules.Core.Utils.isElement(placeholderID) === true)
+            {
+                ele = placeholderID;
+                placeholderID = ele.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID);
+            }
+            else if (sourcePlaceholderLoadArgs != null && sourcePlaceholderLoadArgs.httpArgs != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(sourcePlaceholderLoadArgs.httpArgs.url) === false)
+            {
+                placeholderID = sourcePlaceholderLoadArgs.httpArgs.url;
+            }
+            else
+            {
+                throw Error("placeholderID must be a non-whitespace string.");
+            }
+        }
 
         var circularRef = false;
         if (parentSession != null) //if we have a parent session we are the child of another session, make sure we don't have some infinite recursion going on
@@ -23340,14 +23386,16 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         }
 
         //get the element that we will be injecting html into.
-        var ele = null;
-        if (parentSession != null && parentSession.loadedFragment != null) //we have a parent session, so we have a recursive load happening, look inside the loaded fragment for the child node
+        if (ele == null)
         {
-            ele = getPlaceholderElement(placeholderID, parentSession.loadedFragment);
-        }
-        else //we do not have a child session (or a fragment), use the context node to narrow the search
-        {
-            ele = getPlaceholderElement(placeholderID, sourcePlaceholderLoadArgs.contextElement);
+            if (parentSession != null && parentSession.loadedFragment != null) //we have a parent session, so we have a recursive load happening, look inside the loaded fragment for the child node
+            {
+                ele = getPlaceholderElement(placeholderID, parentSession.loadedFragment);
+            }
+            else //we do not have a child session (or a fragment), use the context node to narrow the search
+            {
+                ele = getPlaceholderElement(placeholderID, sourcePlaceholderLoadArgs.contextElement);
+            }
         }
 
         //no element, nowhere to stick html - make a dummy div to load into if we have a valid URL to get HTML from.
@@ -23363,14 +23411,14 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
             }
             else
             {
-                return null;
+                throw Error("Cannot load placeholder - no placeholderID or loadable resource url present.")
             }
         }
 
         if (circularRef === true) //we had a circular reference - flag the element and move on without blowing up the browser. NOTE IT IS STILL POSSIBLE TO HAVE A CIRCULAR REFERENCE LOOP VIA URLS. The server may or may not return something different for the same url, so we can't use urls for this check. Also, the http event args lets the user change the url.
         {
             ele.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.CircularReference);
-            return null;
+            return callback(null);
         }
 
         //clone the arguments for this session.
@@ -23704,13 +23752,13 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
                         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) continue; //no placeholder ID, should not load child (we could, but we wont.)
 
-                        var childSession = makePlaceholderLoadSession(placeholderID, session.placeholderArgs, session, function (loadResult) //make a child session using this session's arguments
+                        var childSession = makePlaceholderLoadSession(curChild, session.placeholderArgs, session, function (loadResult) //make a child session using this session's arguments
                         {
                             session.loadResults.push(loadResult);
 
                             if (session.loadResults.length === session.childSessions.length) //the loaded results and the number of queued sessions is the same, we're done. This stream can move on to the next step.
                             {
-                                jobArgs.Resolve();
+                                jobArgs.resolve();
                             }
                         });
 
@@ -24162,7 +24210,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderControllerServices = function ()
 };
 
 /**Global instance of a EVUI.Modules.HtmlLoaderController.HtmlLoaderController.
- @type {EVUI.Modules.HtmlLoader.HtmlLoader}*/
+ @type {EVUI.Modules.HtmlLoader.HtmlLoaderController}*/
 EVUI.Modules.HtmlLoader.Manager = null;
 (function ()
 {
@@ -24183,7 +24231,7 @@ EVUI.Modules.HtmlLoader.Manager = null;
 delete $evui.htmlLoader;
 
 /**Global instance of the HtmlLoaderController, used to load fragments of Html or inject Html into placeholders in other Html.
-@type {EVUI.Modules.HtmlLoader.HtmlLoader}*/
+@type {EVUI.Modules.HtmlLoader.HtmlLoaderController}*/
 $evui.htmlLoader = null;
 Object.defineProperty($evui, "htmlLoader",
 {
@@ -24199,7 +24247,7 @@ Object.defineProperty($evui, "htmlLoader",
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetHtml_Callback} getHmlCallback  A function to call once the server has completed the request, takes the string version of whatever was returned as a parameter. */
 $evui.loadHtml = function (htmlRequestArgsOrUrl, getHtmlCallback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadHtml(htmlRequestArgsOrUrl, getHtmlCallback);
+    return $evui.htmlLoader.loadHtml(htmlRequestArgsOrUrl, getHtmlCallback);
 };
 
 /**Awaitable. Makes a simple GET request to get html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
@@ -24207,7 +24255,7 @@ $evui.loadHtml = function (htmlRequestArgsOrUrl, getHtmlCallback)
 @returns {Promise<String>}*/
 $evui.loadHtmlAsync = function (htmlRequestArgsOrUrl)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadHtmlAsync(htmlRequestArgsOrUrl);
+    return $evui.htmlLoader.loadHtmlAsync(htmlRequestArgsOrUrl);
 };
 
 /**Loads an array of PartialLoadRequeusts either as a standalone array or as part of a HtmlPartalLoadArgs object.
@@ -24215,7 +24263,7 @@ $evui.loadHtmlAsync = function (htmlRequestArgsOrUrl)
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPartials_Callback} loadedCallback A callback that is fired once all the Html partials have been loaded.*/
 $evui.loadHtmlPartials = function (partialLoadArgsOrPartialRequests, loadedCallback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadAllPlacehoders(partialLoadArgsOrPartialRequests, loadedCallback);
+    return $evui.htmlLoader.loadAllPlacehoders(partialLoadArgsOrPartialRequests, loadedCallback);
 };
 
 /**Awaitable. Loads an array of PartialLoadRequeusts either as a standalone array or as part of a HtmlPartalLoadArgs object.
@@ -24223,7 +24271,7 @@ $evui.loadHtmlPartials = function (partialLoadArgsOrPartialRequests, loadedCallb
 @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest[]>}.*/
 $evui.loadHtmlPartialsAsync = function (partialLoadArgsOrPartialRequests)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadHtmlPartialsAsync(partialLoadArgsOrPartialRequests);
+    return $evui.htmlLoader.loadHtmlPartialsAsync(partialLoadArgsOrPartialRequests);
 };
 
 /**Loads a placeholder and all of its children and injects it into the DOM.
@@ -24231,16 +24279,16 @@ $evui.loadHtmlPartialsAsync = function (partialLoadArgsOrPartialRequests)
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.*/
 $evui.loadPlaceholder = function (placeholderIDOrArgs, callback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadPlaceholder(placeholderIDOrArgs, callback);
+    return $evui.htmlLoader.loadPlaceholder(placeholderIDOrArgs, callback);
 };
 
 /**Awaitable. Loads a placeholder and all of its children and injects them into the DOM.
 @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderIDOrArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.
-@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest[]>}*/
+@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult>}*/
 $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadPlaceholderAsync(placeholderIDOrArgs);
+    return $evui.htmlLoader.loadPlaceholderAsync(placeholderIDOrArgs);
 };
 
 /**Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
@@ -24248,7 +24296,7 @@ $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetAllPlaceholders_Callback} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
 $evui.loadAllPlacehoders = function (placehoderLoadArgs, callback)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadAllPlacehoders(placehoderLoadArgs, callback);
+    return $evui.htmlLoader.loadAllPlacehoders(placehoderLoadArgs, callback);
 };
 
 /**Awaitable. Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
@@ -24256,7 +24304,7 @@ $evui.loadAllPlacehoders = function (placehoderLoadArgs, callback)
 @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]>} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
 $evui.loadAllPlacehodersAsync = function (placehoderLoadArgs)
 {
-    return EVUI.Modules.HtmlLoader.Manager.loadAllPlacehodersAsync(placehoderLoadArgs);
+    return $evui.htmlLoader.loadAllPlacehodersAsync(placehoderLoadArgs);
 };
 
 Object.freeze(EVUI.Modules.HtmlLoader);
@@ -25428,7 +25476,7 @@ Object.defineProperty($evui, "httpManager",
 @param {EVUI.Modules.Http.Constants.Fn_HttpCallback} callback A callback to call once the HTTP request completes**/
 $evui.http = function (requestArgs, callback)
 {
-    EVUI.Modules.Http.Http.executeRequest(requestArgs, callback);
+    $evui.httpManager.executeRequest(requestArgs, callback);
 };
 
 
@@ -25437,7 +25485,7 @@ $evui.http = function (requestArgs, callback)
 @returns {Promise<EVUI.Modules.Http.CompletedHttpRequest>} */
 $evui.httpAsync = function (requestArgs)
 {
-    return EVUI.Modules.Http.Http.executeRequestAsync(requestArgs);
+    return $evui.httpManager.executeRequestAsync(requestArgs);
 };
 
 /*#ENDWRAP(Http)#*/
@@ -27030,7 +27078,7 @@ Object.defineProperty($evui, "iframes", {
 @returns {EVUI.Modules.IFrames.IFrame}*/
 $evui.addIFrame = function (addRequestOrIFrame)
 {
-    return EVUI.Modules.IFrames.Manager.addIFrame(addRequestOrIFrame);
+    return $evui.iframes.addIFrame(addRequestOrIFrame);
 };
 
 Object.freeze(EVUI.Modules.IFrames);
@@ -28393,7 +28441,7 @@ Object.defineProperty($evui, "modals", {
 @returns {EVUI.Modules.Modals.Modal}*/
 $evui.addModal = function (yoloModal)
 {
-    return EVUI.Modules.Modals.Manager.addModal(yoloModal);
+    return $evui.modals.addModal(yoloModal);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Modal asynchronously. Provides a callback that is called call once the Modal operation has completed successfully or otherwise.
@@ -28402,7 +28450,7 @@ $evui.addModal = function (yoloModal)
 @param {EVUI.Modules.Modals.Constants.Fn_ModalOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showModal = function (modalOrID, modalShowArgs, callback)
 {
-    return EVUI.Modules.Modals.Manager.showModal(modalOrID, modalShowArgs, callback);
+    return $evui.modals.showModal(modalOrID, modalShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Modal asynchronously.
@@ -28411,7 +28459,7 @@ $evui.showModal = function (modalOrID, modalShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showModalAsync = function (modalOrID, modalShowArgs)
 {
-    return EVUI.Modules.Modals.Manager.showModalAsync(modalOrID, modalShowArgs);
+    return $evui.modals.showModalAsync(modalOrID, modalShowArgs);
 };
 
 /**Hides (and unloads if requested) a Modal asynchronously. Provides a callback that is called call once the Modal operation has completed successfully or otherwise.
@@ -28420,7 +28468,7 @@ $evui.showModalAsync = function (modalOrID, modalShowArgs)
 @param {EVUI.Modules.Modals.Constants.Fn_ModalOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hideModal = function (modalOrID, modalHideArgs, callback)
 {
-    return EVUI.Modules.Modals.Manager.hideModal(modalOrID, modalHideArgs, callback);
+    return $evui.modals.hideModal(modalOrID, modalHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Modal asynchronously. Provides a callback that is called call once the Modal operation has completed successfully or otherwise.
@@ -28429,7 +28477,7 @@ $evui.hideModal = function (modalOrID, modalHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hideModalAsync = function (modalOrID, modalHideArgs)
 {
-    return EVUI.Modules.Modals.Manager.hideModalAsync(modalOrID, modalHideArgs);
+    return $evui.modals.hideModalAsync(modalOrID, modalHideArgs);
 };
 
 /*#ENDWRAP(Modal)#*/
@@ -35666,7 +35714,7 @@ EVUI.Modules.Panes.Pane = function (id, options)
         {
             if (typeof value === "string")
             {
-                value = new EVUI.Modules.Dom.DomHelper(value);
+                value = new EVUI.Modules.Dom.DomHelper(value).first();
             }
 
             var setObject =
@@ -35938,6 +35986,11 @@ EVUI.Modules.Panes.PaneLoadSettings = function ()
         {
             if (value != null)
             {
+                if (typeof value === "string")
+                {
+                    value = new EVUI.Modules.Dom.DomHelper(value).first();
+                }
+
                 var ele = EVUI.Modules.Core.Utils.getValidElement(value);
                 if (ele == null) throw Error("Invalid input for PaneLoadSettings.element. Must be an object derived from Element.");
 
@@ -35969,6 +36022,11 @@ EVUI.Modules.Panes.PaneLoadSettings = function ()
         {
             if (value != null)
             {
+                if (typeof value === "string")
+                {
+                    value = new EVUI.Modules.Dom.DomHelper(value).first();
+                }
+
                 var ele = EVUI.Modules.Core.Utils.getValidElement(value);
                 if (ele == null) throw Error("Invalid input for PaneLoadSettings.element. Must be an object derived from Element.");
 
@@ -37295,7 +37353,7 @@ Object.freeze(EVUI.Modules.Panes);
 @returns {EVUI.Modules.Panes.Pane}*/
 $evui.addPane = function (yoloPane)
 {
-    return EVUI.Modules.Panes.Manager.addPane(yoloPane);
+    return $evui.panes.addPane(yoloPane);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Pane asynchronously. Provides a callback that is called call once the Pane operation has completed successfully or otherwise.
@@ -37304,7 +37362,7 @@ $evui.addPane = function (yoloPane)
 @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showPane = function (paneOrID, paneShowArgs, callback)
 {
-    return EVUI.Modules.Panes.Manager.showPane(paneOrID, paneShowArgs, callback);
+    return $evui.panes.showPane(paneOrID, paneShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Pane asynchronously.
@@ -37313,7 +37371,7 @@ $evui.showPane = function (paneOrID, paneShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showPaneAsync = function (paneOrID, paneShowArgs)
 {
-    return EVUI.Modules.Panes.Manager.showPaneAsync(paneOrID, paneShowArgs);
+    return $evui.panes.showPaneAsync(paneOrID, paneShowArgs);
 };
 
 /**Hides (and unloads if requested) a Pane asynchronously. Provides a callback that is called call once the Pane operation has completed successfully or otherwise.
@@ -37322,7 +37380,7 @@ $evui.showPaneAsync = function (paneOrID, paneShowArgs)
 @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optoinal. A callback that is called once the operation completes.*/
 $evui.hidePane = function (paneOrID, paneHideArgs, callback)
 {
-    return EVUI.Modules.Panes.Manager.hidePane(paneOrID, paneHideArgs, callback);
+    return $evui.panes.hidePane(paneOrID, paneHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Pane asynchronously. Provides a callback that is called call once the Pane operation has completed successfully or otherwise.
@@ -37331,7 +37389,7 @@ $evui.hidePane = function (paneOrID, paneHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hidePaneAsync = function (paneOrID, paneHideArgs)
 {
-    return EVUI.Modules.Panes.Manager.hidePaneAsync(paneOrID, paneHideArgs);
+    return $evui.panes.hidePaneAsync(paneOrID, paneHideArgs);
 };
 
 /*#ENDWRAP(Pane)#*/
@@ -38798,7 +38856,7 @@ Object.defineProperty($evui, "popIns", {
 @returns {EVUI.Modules.PopIns.PopIn}*/
 $evui.addPopIn = function (yoloPopIn)
 {
-    return EVUI.Modules.PopIns.Manager.addPopIn(yoloPopIn);
+    return $evui.popIns.addPopIn(yoloPopIn);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a PopIn asynchronously. Provides a callback that is called call once the PopIn operation has completed successfully or otherwise.
@@ -38807,7 +38865,7 @@ $evui.addPopIn = function (yoloPopIn)
 @param {EVUI.Modules.PopIns.Constants.Fn_PopInOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showPopIn = function (popInOrID, popInShowArgs, callback)
 {
-    return EVUI.Modules.PopIns.Manager.showPopIn(popInOrID, popInShowArgs, callback);
+    return $evui.popIns.showPopIn(popInOrID, popInShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a PopIn asynchronously.
@@ -38816,7 +38874,7 @@ $evui.showPopIn = function (popInOrID, popInShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showPopInAsync = function (popInOrID, popInShowArgs)
 {
-    return EVUI.Modules.PopIns.Manager.showPopInAsync(popInOrID, popInShowArgs);
+    return $evui.popIns.showPopInAsync(popInOrID, popInShowArgs);
 };
 
 /**Hides (and unloads if requested) a PopIn asynchronously. Provides a callback that is called call once the PopIn operation has completed successfully or otherwise.
@@ -38825,7 +38883,7 @@ $evui.showPopInAsync = function (popInOrID, popInShowArgs)
 @param {EVUI.Modules.PopIns.Constants.Fn_PopInOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hidePopIn = function (popInOrID, popInHideArgs, callback)
 {
-    return EVUI.Modules.PopIns.Manager.hidePopIn(popInOrID, popInHideArgs, callback);
+    return $evui.popIns.hidePopIn(popInOrID, popInHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a PopIn asynchronously. Provides a callback that is called call once the PopIn operation has completed successfully or otherwise.
@@ -38834,7 +38892,7 @@ $evui.hidePopIn = function (popInOrID, popInHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hidePopInAsync = function (popInOrID, popInHideArgs)
 {
-    return EVUI.Modules.PopIns.Manager.hidePopInAsync(popInOrID, popInHideArgs);
+    return $evui.popIns.hidePopInAsync(popInOrID, popInHideArgs);
 };
 
 /*#ENDWRAP(PopIn)#*/
@@ -40527,7 +40585,7 @@ $evui.css = function (cssOrOptions)
     if (typeof cssOrOptions === "string")
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(cssOrOptions) === true) return;
-        return EVUI.Modules.Styles.Manager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, cssOrOptions);
+        return $evui.styles.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, cssOrOptions);
     }
     else if (typeof cssOrOptions === "object")
     {
@@ -40540,12 +40598,12 @@ $evui.css = function (cssOrOptions)
         {
             if (selector != null)
             {
-                return EVUI.Modules.Styles.Manager.removeRules(sheetName, selector);
+                return $evui.styles.removeRules(sheetName, selector);
             }
             else
             {
-                var existingRules = EVUI.Modules.Styles.Manager.getRules(sheetName);
-                var removed = EVUI.Modules.Styles.Manager.removeStyleSheet(sheetName);
+                var existingRules = $evui.styles.getRules(sheetName);
+                var removed = $evui.styles.removeStyleSheet(sheetName);
 
                 if (removed === true) return existingRules;
                 return null;
@@ -40556,11 +40614,11 @@ $evui.css = function (cssOrOptions)
         {
             if (rules != null)
             {
-                return EVUI.Modules.Styles.Manager.setRules(sheetName, rules);
+                return $evui.styles.setRules(sheetName, rules);
             }
             else
             {
-                return EVUI.Modules.Styles.Manager.getRules(sheetName);
+                return $evui.styles.getRules(sheetName);
             }
         }
         else
@@ -40569,20 +40627,20 @@ $evui.css = function (cssOrOptions)
             {
                 if (rules instanceof CSSStyleSheet)
                 {
-                    return EVUI.Modules.Styles.Manager.setRules(sheetName, rules);
+                    return $evui.styles.setRules(sheetName, rules);
                 }
                 else if (EVUI.Modules.Core.Utils.isArray(rules) === true && rules.length > 0 && rules[0].selector != null)
                 {
-                    return EVUI.Modules.Styles.Manager.setRules(sheetName, rules);
+                    return $evui.styles.setRules(sheetName, rules);
                 }
                 else
                 {
-                    return EVUI.Modules.Styles.Manager.setRules(sheetName, selector, rules);
+                    return $evui.styles.setRules(sheetName, selector, rules);
                 }                
             }
             else
             {
-                return EVUI.Modules.Styles.Manager.getRules(sheetName, selector);
+                return $evui.styles.getRules(sheetName, selector);
             }
         }
     }
@@ -44618,7 +44676,7 @@ Object.defineProperty($evui, "treeViews", {
 @returns {EVUI.Modules.TreeView.TreeView} */
 $evui.addTreeView = function (makeTreeViewArgsOrId, rootNodeArgs)
 {
-    return EVUI.Modules.TreeView.Manager.addTreeView(makeTreeViewArgsOrId, rootNodeArgs);
+    return $evui.treeViews.addTreeView(makeTreeViewArgsOrId, rootNodeArgs);
 };
 
 /**Gets a TreeView or TreeViews from the TreeViewController.
@@ -44627,7 +44685,7 @@ $evui.addTreeView = function (makeTreeViewArgsOrId, rootNodeArgs)
 @returns {TreeView|TreeView[]} */
 $evui.getTreeView = function (treeViewIdOrPredicate, getAllMatches)
 {
-    return EVUI.Modules.TreeView.Manager.getTreeView(treeViewIdOrPredicate, getAllMatches)
+    return $evui.treeViews.getTreeView(treeViewIdOrPredicate, getAllMatches)
 };
 
 /**Removes and optionally disposes of one of the TreeViews being managed by this controller.
@@ -44636,7 +44694,7 @@ $evui.getTreeView = function (treeViewIdOrPredicate, getAllMatches)
 @returns {Boolean} */
 $evui.removeTreeView = function (treeViewId, dispose)
 {
-    return EVUI.Modules.TreeView.Manager.removeTreeView(treeViewId, dispose)
+    return $evui.treeViews.removeTreeView(treeViewId, dispose)
 };
 
 /*#ENDWRAP(TreeView)#*/
@@ -44976,7 +45034,7 @@ Object.defineProperty($evui, "uiHandler", {
 @param {Any} data Custom data to pass into the UIHandler's handle.*/
 $evui.handle = function (key, eventArgsOrData, data)
 {
-    return EVUI.Modules.UIHandler.Manager.handle(key, eventArgsOrData, data);
+    return $evui.uiHandler.handle(key, eventArgsOrData, data);
 };
 
 /**Adds a UIHandler to the manager.
@@ -44984,7 +45042,7 @@ $evui.handle = function (key, eventArgsOrData, data)
 @param {EVUI.Modules.UIHandler.Constants.Fn_Handle} handler The handling function that will be invoked with handle is called with the given key.*/
 $evui.addUIHandler = function (keyOrHandle, handler)
 {
-    return EVUI.Modules.UIHandler.Manager.addHandler(keyOrHandle, handler);
+    return $evui.uiHandler.addHandler(keyOrHandle, handler);
 };
 
 /**Removes a UIHandler from the manager.
@@ -44992,7 +45050,7 @@ $evui.addUIHandler = function (keyOrHandle, handler)
 @returns {Boolean}*/
 $evui.removeUIHandler = function (key)
 {
-    return EVUI.Modules.UIHandler.Manager.removeHandler(key);
+    return $evui.uiHandler.removeHandler(key);
 };
 
 Object.freeze(EVUI.Modules.UIHandler);

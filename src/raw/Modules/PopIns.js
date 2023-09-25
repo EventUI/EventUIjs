@@ -1458,7 +1458,7 @@ Object.defineProperty($evui, "popIns", {
 @returns {EVUI.Modules.PopIns.PopIn}*/
 $evui.addPopIn = function (yoloPopIn)
 {
-    return EVUI.Modules.PopIns.Manager.addPopIn(yoloPopIn);
+    return $evui.popIns.addPopIn(yoloPopIn);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a PopIn asynchronously. Provides a callback that is called call once the PopIn operation has completed successfully or otherwise.
@@ -1467,7 +1467,7 @@ $evui.addPopIn = function (yoloPopIn)
 @param {EVUI.Modules.PopIns.Constants.Fn_PopInOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showPopIn = function (popInOrID, popInShowArgs, callback)
 {
-    return EVUI.Modules.PopIns.Manager.showPopIn(popInOrID, popInShowArgs, callback);
+    return $evui.popIns.showPopIn(popInOrID, popInShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a PopIn asynchronously.
@@ -1476,7 +1476,7 @@ $evui.showPopIn = function (popInOrID, popInShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showPopInAsync = function (popInOrID, popInShowArgs)
 {
-    return EVUI.Modules.PopIns.Manager.showPopInAsync(popInOrID, popInShowArgs);
+    return $evui.popIns.showPopInAsync(popInOrID, popInShowArgs);
 };
 
 /**Hides (and unloads if requested) a PopIn asynchronously. Provides a callback that is called call once the PopIn operation has completed successfully or otherwise.
@@ -1485,7 +1485,7 @@ $evui.showPopInAsync = function (popInOrID, popInShowArgs)
 @param {EVUI.Modules.PopIns.Constants.Fn_PopInOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.hidePopIn = function (popInOrID, popInHideArgs, callback)
 {
-    return EVUI.Modules.PopIns.Manager.hidePopIn(popInOrID, popInHideArgs, callback);
+    return $evui.popIns.hidePopIn(popInOrID, popInHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a PopIn asynchronously. Provides a callback that is called call once the PopIn operation has completed successfully or otherwise.
@@ -1494,7 +1494,7 @@ $evui.hidePopIn = function (popInOrID, popInHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hidePopInAsync = function (popInOrID, popInHideArgs)
 {
-    return EVUI.Modules.PopIns.Manager.hidePopInAsync(popInOrID, popInHideArgs);
+    return $evui.popIns.hidePopInAsync(popInOrID, popInHideArgs);
 };
 
 /*#ENDWRAP(PopIn)#*/

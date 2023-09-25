@@ -1162,7 +1162,7 @@ Object.defineProperty($evui, "httpManager",
 @param {EVUI.Modules.Http.Constants.Fn_HttpCallback} callback A callback to call once the HTTP request completes**/
 $evui.http = function (requestArgs, callback)
 {
-    EVUI.Modules.Http.Http.executeRequest(requestArgs, callback);
+    $evui.httpManager.executeRequest(requestArgs, callback);
 };
 
 
@@ -1171,7 +1171,7 @@ $evui.http = function (requestArgs, callback)
 @returns {Promise<EVUI.Modules.Http.CompletedHttpRequest>} */
 $evui.httpAsync = function (requestArgs)
 {
-    return EVUI.Modules.Http.Http.executeRequestAsync(requestArgs);
+    return $evui.httpManager.executeRequestAsync(requestArgs);
 };
 
 /*#ENDWRAP(Http)#*/

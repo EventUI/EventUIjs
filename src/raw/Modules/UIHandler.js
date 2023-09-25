@@ -331,7 +331,7 @@ Object.defineProperty($evui, "uiHandler", {
 @param {Any} data Custom data to pass into the UIHandler's handle.*/
 $evui.handle = function (key, eventArgsOrData, data)
 {
-    return EVUI.Modules.UIHandler.Manager.handle(key, eventArgsOrData, data);
+    return $evui.uiHandler.handle(key, eventArgsOrData, data);
 };
 
 /**Adds a UIHandler to the manager.
@@ -339,7 +339,7 @@ $evui.handle = function (key, eventArgsOrData, data)
 @param {EVUI.Modules.UIHandler.Constants.Fn_Handle} handler The handling function that will be invoked with handle is called with the given key.*/
 $evui.addUIHandler = function (keyOrHandle, handler)
 {
-    return EVUI.Modules.UIHandler.Manager.addHandler(keyOrHandle, handler);
+    return $evui.uiHandler.addHandler(keyOrHandle, handler);
 };
 
 /**Removes a UIHandler from the manager.
@@ -347,7 +347,7 @@ $evui.addUIHandler = function (keyOrHandle, handler)
 @returns {Boolean}*/
 $evui.removeUIHandler = function (key)
 {
-    return EVUI.Modules.UIHandler.Manager.removeHandler(key);
+    return $evui.uiHandler.removeHandler(key);
 };
 
 Object.freeze(EVUI.Modules.UIHandler);

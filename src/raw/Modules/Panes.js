@@ -7851,7 +7851,7 @@ Object.freeze(EVUI.Modules.Panes);
 @returns {EVUI.Modules.Panes.Pane}*/
 $evui.addPane = function (yoloPane)
 {
-    return EVUI.Modules.Panes.Manager.addPane(yoloPane);
+    return $evui.panes.addPane(yoloPane);
 };
 
 /**Shows (and loads, if necessary or if a reload is requested) a Pane asynchronously. Provides a callback that is called call once the Pane operation has completed successfully or otherwise.
@@ -7860,7 +7860,7 @@ $evui.addPane = function (yoloPane)
 @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
 $evui.showPane = function (paneOrID, paneShowArgs, callback)
 {
-    return EVUI.Modules.Panes.Manager.showPane(paneOrID, paneShowArgs, callback);
+    return $evui.panes.showPane(paneOrID, paneShowArgs, callback);
 };
 
 /**Awaitable. (and loads, if necessary or if a reload is requested) a Pane asynchronously.
@@ -7869,7 +7869,7 @@ $evui.showPane = function (paneOrID, paneShowArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.showPaneAsync = function (paneOrID, paneShowArgs)
 {
-    return EVUI.Modules.Panes.Manager.showPaneAsync(paneOrID, paneShowArgs);
+    return $evui.panes.showPaneAsync(paneOrID, paneShowArgs);
 };
 
 /**Hides (and unloads if requested) a Pane asynchronously. Provides a callback that is called call once the Pane operation has completed successfully or otherwise.
@@ -7878,7 +7878,7 @@ $evui.showPaneAsync = function (paneOrID, paneShowArgs)
 @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optoinal. A callback that is called once the operation completes.*/
 $evui.hidePane = function (paneOrID, paneHideArgs, callback)
 {
-    return EVUI.Modules.Panes.Manager.hidePane(paneOrID, paneHideArgs, callback);
+    return $evui.panes.hidePane(paneOrID, paneHideArgs, callback);
 };
 
 /**Awaitable. Hides (and unloads if requested) a Pane asynchronously. Provides a callback that is called call once the Pane operation has completed successfully or otherwise.
@@ -7887,7 +7887,7 @@ $evui.hidePane = function (paneOrID, paneHideArgs, callback)
 @returns {Promise<Boolean>}*/
 $evui.hidePaneAsync = function (paneOrID, paneHideArgs)
 {
-    return EVUI.Modules.Panes.Manager.hidePaneAsync(paneOrID, paneHideArgs);
+    return $evui.panes.hidePaneAsync(paneOrID, paneHideArgs);
 };
 
 /*#ENDWRAP(Pane)#*/

@@ -7891,7 +7891,7 @@ Object.defineProperty($evui, "binder", {
 @param {EVUI.Modules.Binding.Constants.Fn_BindingCallback} callback A callback function that is fired when the Binding process completes.*/
 $evui.bind = function (bindingOrArgs, bindArgsOrSource, callback)
 {
-    return EVUI.Modules.Binding.Binder.bind(bindingOrArgs, bindArgsOrSource, callback);
+    return $evui.binder.bind(bindingOrArgs, bindArgsOrSource, callback);
 };
 
 /**Awaitable. Binds an object to the DOM using some Html content that is inserted relative to a target element.
@@ -7900,7 +7900,7 @@ $evui.bind = function (bindingOrArgs, bindArgsOrSource, callback)
 @returns {Promise<EVUI.Modules.Binding.Binding>}*/
 $evui.bindAsync = function (bindingOrArgs, bindArgsOrSource)
 {
-    return EVUI.Modules.Binding.Binder.bindAsync(bindingOrArgs, bindArgsOrSource);
+    return $evui.binder.bindAsync(bindingOrArgs, bindArgsOrSource);
 };
 
 /**Adds a set of pre-configured options for Bindings to use that can be referenced by name.
@@ -7908,7 +7908,7 @@ $evui.bindAsync = function (bindingOrArgs, bindArgsOrSource)
 @returns {EVUI.Modules.Binding.BindingTemplate}*/
 $evui.addBindingTemplate = function (bindingTemplate)
 {
-    return EVUI.Modules.Binding.Binder.addBindingTemplate(bindingTemplate);
+    return $evui.binder.addBindingTemplate(bindingTemplate);
 };
 
 /**Adds Html to the internal store of BindingHtmlContents that can be referenced in Bindings.
@@ -7918,7 +7918,7 @@ $evui.addBindingTemplate = function (bindingTemplate)
 @returns {EVUI.Modules.Binding.BindingHtmlContent}*/
 $evui.addBindingHtmlContent = function (key, content, url)
 {
-    return EVUI.Modules.Binding.Binder.addHtmlContent(key, content, url);
+    return $evui.binder.addHtmlContent(key, content, url);
 };
 
 /**Removes a BindingTemplate from the controller.
@@ -7926,7 +7926,7 @@ $evui.addBindingHtmlContent = function (key, content, url)
 @returns {Boolean} */
 $evui.removeBindingTemplate = function (templateName)
 {
-    return EVUI.Modules.Binding.Binder.removeBindingTemplate(templateName);
+    return $evui.binder.removeBindingTemplate(templateName);
 };
 
 /**Removes a BindingHtmlContent entry from the controller's internal store of BindingHtmlContents.
@@ -7934,7 +7934,7 @@ $evui.removeBindingTemplate = function (templateName)
 @returns {Boolean}*/
 $evui.removeBindingHtmlContent = function (key)
 {
-    return EVUI.Modules.Binding.Binder.removeHtmlContent(key)
+    return $evui.binder.removeHtmlContent(key)
 };
 
 
