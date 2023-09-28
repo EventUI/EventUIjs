@@ -4274,7 +4274,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 bindingHandle.currentState.parentBindingHandle = session.bindingHandle;
                 bindingHandle.currentState.normalizedPath = bindingHandle.currentState.getNormalizedPath();
 
-                if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(bindingHandle.currentState.htmlContent) === true)
+                if (bindingHandle.currentState.htmlContent == null)
                 {
                     bindingHandle.currentState.htmlContent = (session.bindingHandle.htmlContent != null && session.bindingHandle.htmlContent.content === session.bindingHandle.currentState.htmlContent) ?session.bindingHandle.htmlContent.key : session.bindingHandle.currentState.htmlContent;
                     bindingHandle.currentState.htmlContentSet = true;
@@ -5426,6 +5426,19 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
 
             attributeTemplate.htmlContent.url = src;
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attributeTemplate.htmlContent.key) === true)
+            {
+                var numHtml = _bindingHtmlContentEntries.length;
+                for (var x = 0; x < numHtml; x++)
+                {
+                    var curHtml = _bindingHtmlContentEntries[x];
+                    if (curHtml.url === src)
+                    {
+                        attributeTemplate.htmlContent = curHtml;
+                        break;
+                    }
+                }
+            }
         }
 
         return attributeTemplate;
@@ -5791,7 +5804,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         bindingHandle.binding = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Binding.Binding(bindingHandle), bindingArgs, ["templateName"]);
         bindingHandle.progressState = EVUI.Modules.Binding.BindingProgressStateFlags.Idle;
         bindingHandle.templateName = bindingArgs.templateName;
-        bindingHandle.htmlContent = (typeof bindingArgs.htmlContent === "object") ? bindingArgs.htmlContent : null;
+        bindingHandle.htmlContent = (typeof bindingArgs.htmlContent === "object") ? bindingArgs.htmlContent : bindingHandle.htmlContent;
 
         var ele = (ambiguousInput.bindingTarget == null) ? ambiguousInput.element : ambiguousInput.bindingTarget;
         var source = (ambiguousInput.bindingSource == null) ? ambiguousInput.source : ambiguousInput.bindingSource;
@@ -7128,8 +7141,9 @@ EVUI.Modules.Binding.Binding = function (handle)
 
             if (value != null && typeof value !== "string")
             {
-                if (value instanceof EVUI.Modules.Binding.BindingHtmlContent)
+                if (value instanceof EVUI.Modules.Binding.BindingHtmlContent || (value != null && typeof value === "object"))
                 {
+                    if (value.item != null) value = value.item;
                     stateToSet.htmlContent = value;
                     stateToSet.htmlContentSet = true;
                 }
