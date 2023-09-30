@@ -150,7 +150,7 @@ EVUI.Modules.Dom.DomHelper = function ()
         }
 
         /**The Elements contained within the DomHelper.
-        @type {Element[]}*/
+        @type {Node[]}*/
         this.elements = Object.freeze(processElements(elementsOrCssSelector, context));
     };
 

@@ -945,7 +945,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (session1.parentSession.isArray === false) return false;
             if (session1.parentSession.bindingHandle.oldStateBound === false) return false;
             if (session1.parentSession.bindingHandle.oldState.childBindingHandles.length === 0) return false;
-            if (session1.parentSession.bindingHandle.oldState.childBindingHandles[0].id === session2.bindingHandle.id)
+            if (session1.parentSession.bindingHandle.oldState.childBindingHandles[0].element === session2.bindingHandle.element)
             {
                 return true;
             }
@@ -954,7 +954,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         {
             if (session1.bindingHandle.oldStateBound === false) return false;
             if (session1.bindingHandle.oldState.childBindingHandles.length === 0) return false;
-            if (session1.bindingHandle.oldState.childBindingHandles[0].id === session2.bindingHandle.id)
+            if (session1.bindingHandle.oldState.childBindingHandles[0].element === session2.bindingHandle.element)
             {
                 return true;
             }
