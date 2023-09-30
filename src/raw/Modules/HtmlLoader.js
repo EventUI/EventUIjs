@@ -85,6 +85,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @type {EVUI.Modules.HtmlLoader.HtmlLoaderControllerServices}*/
     var _services = services;
 
+    /**A counter to generate ID's for each load session.
+    @type {Number}*/
+    var _sessionIdCtr = 0;
+
     /**Makes a simple GET request to get Html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
     @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl The Url of the html or the arguments for getting the Html.
     @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetHtml_Callback} getHtmlCallback  A function to call once the server has completed the request, takes the string version of whatever was returned as a parameter. */
@@ -461,21 +465,15 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     var getChildLoadElements = function (context)
     {
         //first, get everything that has a placeholderID
-        var eh = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "]", context);
+        var eh = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "],[" + EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl + "],[" + EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID + "][" + EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl + "]", context);
         var eles = eh.elements.slice();
 
-        //then get everything that has a url, and filter the list by the elements that don't have a placeholderID
-        //instead, their placeholderID becomes their resource URL.
-        var byUrl = new EVUI.Modules.Dom.DomHelper("[" + EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl + "]", context);
-        var numByUrl = byUrl.elements.length;
-        for (var x = 0; x < numByUrl; x++)
+        //make sure they all have placeholder ID attributes - if they don't just use the URL as the placeholderID.
+        var numEles = eles.length;
+        for (var x = 0; x < numEles; x++)
         {
-            var curEle = byUrl.elements[x];
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curEle.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID)) === true)
-            {
-                curEle.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID, curEle.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl))
-                eles.push(curEle);
-            }
+            var curEle = eles[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curEle.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID)) === true) curEle.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID, curEle.getAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl))
         }
 
         return eles;
@@ -522,6 +520,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     var makePlaceholderLoadSession = function (placeholderID, sourcePlaceholderLoadArgs, parentSession, callback)
     {
         var ele = null;
+        var anonymousPlaceholder = false;
 
         //no placeholder ID means none of the below will work, just return null and fail the operation.
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true)
@@ -534,6 +533,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
             else if (sourcePlaceholderLoadArgs != null && sourcePlaceholderLoadArgs.httpArgs != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(sourcePlaceholderLoadArgs.httpArgs.url) === false)
             {
                 placeholderID = sourcePlaceholderLoadArgs.httpArgs.url;
+                anonymousPlaceholder = true;
             }
             else
             {
@@ -565,7 +565,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
             {
                 ele = getPlaceholderElement(placeholderID, parentSession.loadedFragment);
             }
-            else //we do not have a child session (or a fragment), use the context node to narrow the search
+            else if (anonymousPlaceholder === false) //we do not have a child session (or a fragment), use the context node to narrow the search
             {
                 ele = getPlaceholderElement(placeholderID, sourcePlaceholderLoadArgs.contextElement);
             }
@@ -1058,6 +1058,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @class*/
     var PlaceholderLoadSession = function ()
     {
+        /**The unique ID of this placeholder load session.
+        @type {Number}*/
+        this.id = _sessionIdCtr++;
+
         /**Object. The public placeholder object.
         @type {EVUI.Modules.HtmlLoader.HtmlPlaceholder}*/
         this.placeholder = null;
@@ -1394,7 +1398,9 @@ EVUI.Modules.HtmlLoader.HtmlPlaceholder = function (session)
             if (_children != null) return _children;
             if (_session.childSessions != null && _session.childSessions.length)
             {
-                _children = _session.childSessions.map((session) => session.placeholder);
+                _children = _session.childSessions.slice();
+                _children.sort(function (sessionA, sessionB) { return sessionA.id - sessionB.id });
+                _children = _children.map(function (session) { return session.placeholder });
             }
 
             return _children;
