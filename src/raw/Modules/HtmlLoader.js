@@ -66,12 +66,8 @@ EVUI.Modules.HtmlLoader.Constants.Fn_GetHtml_Callback = function (html) { };
 EVUI.Modules.HtmlLoader.Constants.Fn_GetPartials_Callback = function (loadRequests) { };
 
 /**Callback function that is called when a html placeholder has been completely loaded and injected into the DOM.
- @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult} placeholderResult The details of the completed placeholder load.*/
+ @param {EVUI.Modules.HtmlLoader.HtmlPlaceholder} placeholderResult The details of the completed placeholder load.*/
 EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback = function (placeholderResult) { }
-
-/**Callback function that is called when a html placeholder has been completely loaded and injected into the DOM.
- @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]} placeholderResult The details of all the completed placeholder loads.*/
-EVUI.Modules.HtmlLoader.Constants.Fn_GetAllPlaceholders_Callback = function (placeholderResult) { }
 
 Object.freeze(EVUI.Modules.HtmlLoader.Constants)
 
@@ -112,11 +108,11 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         htmlArgs.httpArgs.method = "GET";
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(htmlArgs.url) === false) htmlArgs.httpArgs.url = htmlArgs.url;
 
-        EVUI.Modules.Http.Http.executeRequestAsync(htmlArgs.httpArgs).then(function (completedRequest)
+        EVUI.Modules.Http.Http.executeRequest(htmlArgs.httpArgs, function (completedRequest)
         {
             if (completedRequest.error != null)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.HtmlLoaderController.Manager", "GetHtml", completedRequest.error.getErrorMessage());
+                EVUI.Modules.Core.Utils.log(completedRequest.error.getErrorMessage());
                 return getHtmlCallback(null);
             }
 
@@ -204,7 +200,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
             totalRequests.push(httpArgs.context);
 
-            EVUI.Modules.Http.Http.executeRequestAsync(httpArgs).then(function (completedRequest)
+            EVUI.Modules.Http.Http.executeRequest(httpArgs, function (completedRequest)
             {
                 translateResponseToText(completedRequest.xmlHttpRequest, function (resultText)
                 {
@@ -274,8 +270,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
     /**Awaitable. Loads a placeholder and all of its children and injects them into the DOM.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderIDOrArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
-    @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.
-    @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult>}*/
+    @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholder>}*/
     this.loadPlaceholderAsync = function (placeholderIDOrArgs)
     {
         return new Promise(function (resolve)
@@ -289,16 +284,16 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
     /**Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} placehoderLoadArgs The arguments for loading all the placeholders currently in the document.
-    @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetAllPlaceholders_Callback} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
-    this.loadAllPlacehoders = function (placehoderLoadArgs, callback)
+    @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
+    this.loadAllPlaceholders = function (placehoderLoadArgs, callback)
     {
         loadAllPlaceholders(placehoderLoadArgs, callback);
     };
 
     /**Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} placehoderLoadArgs The arguments for loading all the placeholders currently in the document.
-    @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]>} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
-    this.loadAllPlacehodersAsync = function (placehoderLoadArgs)
+    @returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholder>} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
+    this.loadAllPlaceholdersAsync = function (placehoderLoadArgs)
     {
         return new Promise(function (resolve)
         {
@@ -350,10 +345,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         var masterSession = new PlaceholderLoadSession();
         masterSession.allChildPlaceholders = elements;
         masterSession.eventStream = es;
-        masterSession.loadResults = loaded;   
+        masterSession.loadResults = loaded;
         masterSession.placeholderArgs = placeholderLoadArgs;
         masterSession.placeholderID = "*"; //no placeholder ID as we are doing the whole document
-        masterSession.placeholderHtmlElement = document.documentElement; //no placeholder element as we have multiple root elements, so we just use the document to make the Html loader's event args constructor happy
+        masterSession.placeholderElement = placeholderLoadArgs.contextElement == null ? placeholderLoadArgs.contextElement : document.documentElement; //no placeholder element as we have multiple root elements, so we just use the document to make the Html loader's event args constructor happy
 
         //set the common properties on the event stream so it behaves like the normal one when it's raising events
         setUpEventStream(masterSession, callback);
@@ -382,6 +377,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 if (childSession == null) continue;
                 launched.push(curEle);
 
+                if (masterSession.childSessions == null) masterSession.childSessions = [];
                 masterSession.childSessions.push(childSession);
 
                 childSession.eventStream.execute(); //begin the loading process
@@ -506,7 +502,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 loadState = loadState.toLowerCase();
                 if (loadState === EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded && forceReload !== true) continue;
                 if (loadState === EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.OnDemand && ignoreOnDemand !== true) continue;
+                if (loadState === EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading || loadState === EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Pending) continue;
             }
+
+            curChild.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Pending);
 
             loadableEles.push(curChild);
         }
@@ -602,12 +601,20 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         newArgs.PlaceholderID = placeholderID;
 
         var session = new PlaceholderLoadSession();
+        session.placeholder = new EVUI.Modules.HtmlLoader.HtmlPlaceholder(session);
         session.parentSession = parentSession;
         session.placeholderArgs = newArgs;
-        session.placeholderHtmlElement = ele;
+        session.placeholderElement = ele;
         session.placeholderID = placeholderID;
         session.eventStream = buildEventStream(session, callback);
 
+        if (parentSession != null)
+        {
+            if (parentSession.childSessions == null) parentSession.childSessions = [];
+            parentSession.childSessions.push(session);
+        }
+
+        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Pending;
         return session;
     };
 
@@ -621,18 +628,14 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         //make a factory for creating the special event arguments for the partial loader.
         session.eventStream.processInjectedEventArgs = function (eventArgs)
         {
-            var htmlArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs(session.placeholderHtmlElement, session.placeholderArgs, session.placeholderID);
+            var htmlArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs();
             htmlArgs.cancel = eventArgs.cancel;
             htmlArgs.pause = eventArgs.pause;
             htmlArgs.resume = eventArgs.resume;
             htmlArgs.stopPropagation = eventArgs.stopPropagation;
             htmlArgs.context = eventArgs.state;
             htmlArgs.key = eventArgs.key + ((eventArgs.stepType === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent) ? ".global" : "");
-
-            if (session.selectedChildPlaceholders != null) htmlArgs.childPlaceholders = session.selectedChildPlaceholders.slice();
-            if (session.loadResults != null) htmlArgs.loadedChildResults = session.loadResults.map(function (item) { return EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult(), item) });
-            if (session.placeholderHtmlElement != null) htmlArgs.placeholderElement = session.placeholderHtmlElement;
-            if (session.loadedFragment != null) htmlArgs.placeholderContent = session.loadedFragment;
+            htmlArgs.placeholder = session.placeholder;
 
             return htmlArgs;
         };
@@ -642,24 +645,16 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         {
             if (step.key === EVUI.Modules.HtmlLoader.Constants.Event_OnBeforeLoadPlaceholderChildren)
             {
-                session.selectedChildPlaceholders = getSelectedChildPlaceholders(htmlArgs.childPlaceholders);
+                session.selectedChildPlaceholders = getSelectedChildPlaceholders(session.allChildPlaceholders);
             }
         };
 
         //set up the final callback
         session.eventStream.onComplete = function ()
         {
-            var completedLoad = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult();
-            completedLoad.htmlPlaceholderLoadArgs = session.placeholderArgs;
-            completedLoad.loadedChildResults = session.loadResults;
-            completedLoad.placeholder = session.placeholderHtmlElement;
-            completedLoad.placeholderID = session.placeholderID;
-            completedLoad.loadedContent = session.injectedContent;
-
-
             if (typeof callback === "function")
             {
-                return callback(completedLoad);
+                return callback(session.placeholder);
             }
         };
 
@@ -860,7 +855,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    var placeholderAttrs = EVUI.Modules.Core.Utils.getElementAttributes(session.placeholderHtmlElement);
+                    var placeholderAttrs = EVUI.Modules.Core.Utils.getElementAttributes(session.placeholderElement);
                     var loadState = placeholderAttrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState);
 
                     //check to make sure the load state isn't already "loaded" - only re-load it if ForceReload is true. Otherwise, just bail and go to the end of the event stream.
@@ -882,6 +877,8 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                         {
                             var docFrag = stringToDocFrag(html); //make  a document fragment out of the string
                             session.loadedFragment = docFrag;
+                            session.html = html;
+                            session.url = htmlArgs.url
 
                             if (session.placeholderArgs.recursive === true) //we're doing a recursive load, go get all the children flagged with a placeholder ID
                             {
@@ -917,20 +914,20 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                     }
 
                     var actualChildren = [];
+                    var numLoaded = 0;
 
                     for (var x = 0; x < numChildSessions; x++)
                     {
                         var curChild = session.selectedChildPlaceholders[x];
                         var attrs = EVUI.Modules.Core.Utils.getElementAttributes(curChild);
-                        var placeholderID = attrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID);
 
+                        var placeholderID = attrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID);
                         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) continue; //no placeholder ID, should not load child (we could, but we wont.)
 
                         var childSession = makePlaceholderLoadSession(curChild, session.placeholderArgs, session, function (loadResult) //make a child session using this session's arguments
                         {
-                            session.loadResults.push(loadResult);
-
-                            if (session.loadResults.length === session.childSessions.length) //the loaded results and the number of queued sessions is the same, we're done. This stream can move on to the next step.
+                            numLoaded++;
+                            if (numLoaded === session.childSessions.length) //the loaded results and the number of queued sessions is the same, we're done. This stream can move on to the next step.
                             {
                                 jobArgs.resolve();
                             }
@@ -938,9 +935,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
                         if (childSession == null) continue; //for some reason the child session was not created (usually a validation failure)
 
-                        session.childSessions.push(childSession);
                         actualChildren.push(curChild);
 
+                        curChild.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading);
+                        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading;
                         childSession.eventStream.execute(); //kick off the child load process.
                     }
 
@@ -964,16 +962,19 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 {
                     if (session.loadedFragment != null) //we have content, blow away old content and replace it with new content
                     {
-                        var eh = new EVUI.Modules.Dom.DomHelper(session.placeholderHtmlElement);
+                        var eh = new EVUI.Modules.Dom.DomHelper(session.placeholderElement);
                         eh.empty();
+
                         var injected = eh.append(session.loadedFragment);
-                        session.injectedContent = injected.elements;
+                        session.loadedContent = injected.elements;
 
                         eh.attr(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded); //set the load state so this placeholder isn't loaded again
+                        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded;
                     }
                     else //no content, flag it as failed
                     {
-                        session.placeholderHtmlElement.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed);
+                        session.placeholderElement.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed);
+                        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed;
                     }
 
                     jobArgs.resolve();
@@ -996,10 +997,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         var docFrag = document.createDocumentFragment();
 
-        while (div.children.length > 0)
+        while (div.childNodes.length > 0)
         {
-            var curChild = div.children[0];
-            docFrag.appendChild(curChild);
+            var curChild = div.childNodes[0];
+            docFrag.append(curChild);
         }
 
         return docFrag;
@@ -1057,11 +1058,15 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @class*/
     var PlaceholderLoadSession = function ()
     {
-        /**The session that initiated this session.
+        /**Object. The public placeholder object.
+        @type {EVUI.Modules.HtmlLoader.HtmlPlaceholder}*/
+        this.placeholder = null;
+
+        /**Object. The session that initiated this session.
         @type {PlaceholderLoadSession}*/
         this.parentSession = null;
 
-        /**The arguments for loading the placeholder.
+        /**Object. The arguments for loading the placeholder.
         @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} */
         this.placeholderArgs = null;
 
@@ -1070,12 +1075,16 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         this.eventStream = null;
 
         /**Array. All the child placeholders to load.
-        @type PlaceholderLoadSession[]*/
+        @type {PlaceholderLoadSession[]}*/
         this.childSessions = [];
 
-        /**Array. An array of all the children's load results.
-        @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]}*/
-        this.loadResults = [];
+        /**String. The Html that came back from the server.
+        @type {String}*/
+        this.html = null;
+
+        /**String. The Url that was used to make the request.
+        @type {String}*/
+        this.url = null;
 
         /**Object. The document fragment that contains the loaded Html.
         @type {DocumentFragment}*/
@@ -1083,11 +1092,11 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         /**Array. The content that was injected into the placeholder.
         @type {Element[]}*/
-        this.injectedContent = null;
+        this.loadedContent = null;
 
         /**Object. The Element that the placeholder will be injected into.
         @type {Element}*/
-        this.placeholderHtmlElement = null;
+        this.placeholderElement = null;
 
         /**Array. All the Dom that had the PlaceholderID attribute on them contained within the original html load result.
         @type {Element[]}*/
@@ -1097,9 +1106,13 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         @type {Element[]}*/
         this.selectedChildPlaceholders = null;
 
-        /**String. The PlacehodlerID of the root placeholder being loaded.
+        /**String. The PlaceholderID of the root placeholder being loaded.
         @type {String}*/
         this.placeholderID = null;
+
+        /**String. The current state of the load operation.
+        @type {String}*/
+        this.loadState = null;
     };
 
     ensureServices();
@@ -1163,42 +1176,11 @@ EVUI.Modules.HtmlLoader.HtmlPartialLoadArgs = function ()
 
 /**EventArguements object for loading placeholders.
 @class*/
-EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs = function (placeholderElement, loadArgs, placeholderID)
+EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs = function ()
 {
-    if (EVUI.Modules.Core.Utils.isElement(placeholderElement) === false && placeholderElement instanceof DocumentFragment === false) throw new Error("PlaceholderElement must be a valid DOM node.");
-    if (loadArgs instanceof EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs === false) throw new Error("PlaceholderLoadOptions must be an instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadArgs.");
-    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) throw new Error("PlaceholderID must be a valid, non-whitespace string.");
-
-    var _placeholderElement = placeholderElement;
-    var _loadArgs = loadArgs;
-    var _placeholderID = placeholderID;
-
     /**Object. The HtmlPlaceholderLoadArgs being used to load placeholders.
     @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
-    this.loadPlaceholderArgs = null;
-    Object.defineProperty(this, "loadPlaceholderArgs",
-        {
-            get: function () { return _loadArgs; },
-            enumerable: true,
-            configurable: false
-        });
-
-
-    /**String. The unique key of the event.
-    @type {String}*/
-    this.key = null;
-
-    /**Object. A document fragment containing the HTML that is to be injected.
-    @type {DocumentFragment}*/
-    this.placeholderContent = null;
-
-    /**Array. An array of Dom representing all of the placeholders that can be loaded that were included in the returned HTML.
-     @type {Element[]}*/
-    this.childPlaceholders = null;
-
-    /**Array. An array of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadResult representing all the children that have been loaded for this partial. 
-    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]}*/
-    this.loadedChildResults = null;
+    this.placeholder = null;
 
     /**Object. The context object for this event that gets passed between events. 
     @type {Any}*/
@@ -1216,46 +1198,6 @@ EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs = function (placeholderElem
     /**Prevents any further events with the same key from being executed.
     @method StopPropagation*/
     this.stopPropagation = function () { };
-
-    /**Object. Read-only. The Element that wraps the content to be injected based on the ResourceUrl.
-    @type {Element}*/
-    this.placeholderElement = null;
-    Object.defineProperty(this, "placeholderElement",
-        {
-            get: function () { return _placeholderElement; },
-            enumerable: false,
-            configurable: false
-        });
-
-    /**String. Read-only. The ID of the placeholder being loaded.
-    @type {String}*/
-    this.placeholderID = null;
-    Object.defineProperty(this, "placeholderID",
-        {
-            get: function () { return _placeholderID },
-            enumerable: true,
-            configurable: false
-        });
-
-    /**String. Read-only. The current value of the PlaceholderElement's EVUI.Constants.Attr_HtmlLoader_ContentLoadState value. Maps to a value in EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadStates.
-    @type {String}*/
-    this.contentLoadState = null;
-    Object.defineProperty(this, "contentLoadState",
-        {
-            get: function () { return EVUI.Modules.Core.Utils.getElementAttributes(_placeholderElement).GetValue(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState); },
-            enumerable: true,
-            configurable: false
-        });
-    
-    /**Object. Read-only. The instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadArgs that contains the settings for the current load operation.
-    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
-    this.htmlPlaceholderLoadArgs = null;
-    Object.defineProperty(this, "htmlPlaceholderLoadArgs",
-        {
-            get: function () { return _loadArgs; },
-            enumerable: true,
-            configurable: false
-        });
 };
 
 /**Container object for all the settings that can effect the behavior of a HtmlLoaderController operation.
@@ -1292,6 +1234,9 @@ EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs = function ()
             get: function () { return _contextNode; },
             set: function (value)
             {
+                var newValue = EVUI.Modules.Core.Utils.getValidElement(value);
+                if (newValue != null) value = newValue;
+
                 if (value != null && EVUI.Modules.Core.Utils.isElement(value) === false && value instanceof Document === false && value instanceof DocumentFragment === false) throw new Error("contextElement must be derived from Element.");
                 _contextNode = value;
             },
@@ -1336,27 +1281,139 @@ EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs = function ()
 
 /**Object representing the return value of a HtmlPlaceholder load operation. 
  @class*/
-EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult = function ()
+EVUI.Modules.HtmlLoader.HtmlPlaceholder = function (session)
 {
+    if (session == null) throw new Error("Object expected.");
+    var _session = session;
+    var _content = null;
+    var _children = null;
+
     /**String. The ID of the placeholder that was loaded.
     @type {String}*/
     this.placeholderID = null;
+    Object.defineProperty(this, "placeholderID", {
+        get: function ()
+        {
+            return _session.placeholderID;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
-    /**Object. The Element containing node of the injected content.
+    /**Object. The Element containing the injected content.
     @type {Element}*/
-    this.placeholder = null;
+    this.placeholderElement = null;
+    Object.defineProperty(this, "placeholderElement", {
+        get: function ()
+        {
+            return _session.placeholderElement;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**String. The raw Html returned from the server.
+    @type {String}*/
+    this.html = null;
+    Object.defineProperty(this, "html", {
+        get: function ()
+        {
+            return _session.html;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**String. The base url the request was made to.
+    @type {String}*/
+    this.url = null;
+    Object.defineProperty(this, "url", {
+        get: function ()
+        {
+            return _session.url;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**Object. If this was a recursive load, this will be the parent of the current placeholder if it is not the root placeholder.
+    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholder}*/
+    this.parentPlaceholder = null;
+    Object.defineProperty(this, "parentPlaceholder", {
+        get: function ()
+        {
+            if (_session.parentSession != null)
+            {
+                return _session.parentSession.placeholder;
+            }
+            else
+            {
+                return null;
+            }
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**Object. The Element that was injected into the Placeholder.
-    @type {Element[]}*/
+    @type {Node[]}*/
     this.loadedContent = null;
+    Object.defineProperty(this, "loadedContent", {
+        get: function ()
+        {
+            if (_content != null) return _content;
+            if (_session.loadedContent != null && _session.loadedContent.length > 0)
+            {
+                _content = Object.freeze(_session.loadedContent.slice());
+            }
+
+            return _content;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**Object. The instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadArgs used to load this placeholder.
     @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
-    this.htmlPlaceholderLoadArgs = null;
+    this.loadArgs = null;
+    Object.defineProperty(this, "loadArgs", {
+        get: function ()
+        {
+            return _session.placeholderArgs;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**Array. An array of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadResult representing the child placeholders loaded under this one.
-    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]}*/
-    this.loadedChildResults = null;
+    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholder[]}*/
+    this.children = null;
+    Object.defineProperty(this, "children", {
+        get: function ()
+        {
+            if (_children != null) return _children;
+            if (_session.childSessions != null && _session.childSessions.length)
+            {
+                _children = _session.childSessions.map((session) => session.placeholder);
+            }
+
+            return _children;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**String. A value from HtmlPlaceholderLoadState indicating the completion state of the HtmlPlaceholder's load operation.
+    @type {String}*/
+    this.loadState = null;
+    Object.defineProperty(this, "loadState", {
+        get: function ()
+        {
+            return _session.loadState;
+        },
+        configurable: false,
+        enumerable: true
+    });
 };
 
 /**The result state value of the evui-loader-contentLoadState attribute on an element which was the parent to a placeholder that was loaded.
@@ -1370,7 +1427,11 @@ EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState =
     /**Placeholder failed to load due to an error or Http error.*/
     Failed: "failed",
     /**Placeholder was the child of itself and created a circular reference.*/
-    CircularReference: "circularreference"
+    CircularReference: "circular",
+    /*Placeholder has been slated for loading.*/
+    Pending: "pending",
+    /*Placeholder is in the process of being loaded.*/
+    Loading: "loading"
 };
 Object.freeze(EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState);
 
@@ -1391,15 +1452,15 @@ EVUI.Modules.HtmlLoader.Manager = null;
     var loader = null;
 
     Object.defineProperty(EVUI.Modules.HtmlLoader, "Manager",
-    {
-        get: function ()
         {
-            if (loader == null) loader = new EVUI.Modules.HtmlLoader.HtmlLoaderController();
-            return loader;
-        },
-        configurable: false,
-        enumerable: true
-    });     
+            get: function ()
+            {
+                if (loader == null) loader = new EVUI.Modules.HtmlLoader.HtmlLoaderController();
+                return loader;
+            },
+            configurable: false,
+            enumerable: true
+        });
 })();
 
 delete $evui.htmlLoader;
@@ -1408,13 +1469,13 @@ delete $evui.htmlLoader;
 @type {EVUI.Modules.HtmlLoader.HtmlLoaderController}*/
 $evui.htmlLoader = null;
 Object.defineProperty($evui, "htmlLoader",
-{
-    get: function ()
     {
-        return EVUI.Modules.HtmlLoader.Manager;
-    },
-    enumerable: true
-});
+        get: function ()
+        {
+            return EVUI.Modules.HtmlLoader.Manager;
+        },
+        enumerable: true
+    });
 
 /**Makes a simple GET request to get Html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
 @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl The Url of the html or the arguments for getting the Html.
@@ -1459,7 +1520,7 @@ $evui.loadPlaceholder = function (placeholderIDOrArgs, callback)
 /**Awaitable. Loads a placeholder and all of its children and injects them into the DOM.
 @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderIDOrArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
 @param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is executed once the placeholder load operation is complete.
-@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult>}*/
+@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholder>}*/
 $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 {
     return $evui.htmlLoader.loadPlaceholderAsync(placeholderIDOrArgs);
@@ -1467,18 +1528,18 @@ $evui.loadPlaceholderAsync = function (placeholderIDOrArgs)
 
 /**Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
 @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} placehoderLoadArgs The arguments for loading all the placeholders currently in the document.
-@param {EVUI.Modules.HtmlLoader.Constants.Fn_GetAllPlaceholders_Callback} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
-$evui.loadAllPlacehoders = function (placehoderLoadArgs, callback)
+@param {EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
+$evui.loadAllPlaceholders = function (placehoderLoadArgs, callback)
 {
-    return $evui.htmlLoader.loadAllPlacehoders(placehoderLoadArgs, callback);
+    return $evui.htmlLoader.loadAllPlaceholders(placehoderLoadArgs, callback);
 };
 
 /**Awaitable. Loads all placeholders currently in the document (elements with the EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute present with a non-empty string value) in parallel, but excludes those that are flagged as being loaded upon on demand.
 @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} placehoderLoadArgs The arguments for loading all the placeholders currently in the document.
-@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadResult[]>} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
-$evui.loadAllPlacehodersAsync = function (placehoderLoadArgs)
+@returns {Promise<EVUI.Modules.HtmlLoader.HtmlPlaceholder>} callback A callback function that is called once all the placeholders in the document have been loaded and injected into the DOM.*/
+$evui.loadAllPlaceholdersAsync = function (placehoderLoadArgs)
 {
-    return $evui.htmlLoader.loadAllPlacehodersAsync(placehoderLoadArgs);
+    return $evui.htmlLoader.loadAllPlaceholdersAsync(placehoderLoadArgs);
 };
 
 Object.freeze(EVUI.Modules.HtmlLoader);
