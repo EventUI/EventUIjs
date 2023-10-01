@@ -112,7 +112,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         htmlArgs.httpArgs.method = "GET";
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(htmlArgs.url) === false) htmlArgs.httpArgs.url = htmlArgs.url;
 
-        EVUI.Modules.Http.Http.executeRequest(htmlArgs.httpArgs, function (completedRequest)
+        _services.httpManager.executeRequest(htmlArgs.httpArgs, function (completedRequest)
         {
             if (completedRequest.error != null)
             {
@@ -203,7 +203,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
             totalRequests.push(httpArgs.context);
 
-            EVUI.Modules.Http.Http.executeRequest(httpArgs, function (completedRequest)
+            _services.httpManager.executeRequest(httpArgs, function (completedRequest)
             {
                 translateResponseToText(completedRequest.xmlHttpRequest, function (resultText)
                 {
@@ -1014,7 +1014,14 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         if (_services.httpManager == null || typeof _services.httpManager !== "object")
         {
-            _services.httpManager = EVUI.Modules.Http.Http;
+            Object.defineProperty(_services, "httpManager", {
+                get: function ()
+                {
+                    return EVUI.Modules.Http.Http;
+                },
+                configurable: false,
+                enumerable: true
+            })
         }
     };
 
