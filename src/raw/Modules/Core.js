@@ -725,6 +725,7 @@ EVUI.Modules.Core.DeepExtender = function ()
 EVUI.Modules.Core.DeepExtender2 = (function ()
 {
     var _hiddenTag = false;
+    var _tagID = 0;
 
     try
     {
@@ -783,7 +784,7 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
         session.target = target;
         session.source = source;
         session.rootObj = target;
-        session.options = (typeof options !== "object" && options != null) ? options = new EVUI.Modules.Core.DeepExtenderOptions() : options;
+        session.options = (typeof options !== "object" || options == null) ? new EVUI.Modules.Core.DeepExtenderOptions() : options;
 
         return deepExtend(session);
     };
@@ -794,8 +795,6 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
     @returns {Object}*/
     var deepExtend = function (session)
     {
-        if (typeof source !== "object") throw Error("Object expected.");
-
         if (session.options.filter != null)
         {
             if (typeof filter === "function")
@@ -816,11 +815,11 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
             }
         }
 
-        addExistingObject(session, source, target, ""); //add the top level object to our list of existing objects so if another property points back to it, it will not get into an infinite loop
+        addExistingObject(session, session.source, session.target, ""); //add the top level object to our list of existing objects so if another property points back to it, it will not get into an infinite loop
         
-        var extended = extend(tsession);
+        var extended = extend(session.target, session.source, null, session);
 
-        removeAllTags();
+        removeAllTags(session);
 
         return extended;
     };
@@ -842,11 +841,11 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
             var prop = keys[x];
             var val = undefined;
 
-            if (_filterViaFn === true)
+            if (session.filterViaFn === true)
             {
                 if (session.filter(prop, session.source, target) === true) continue; //true means don't include
             }
-            else if (_filterViaArray === true)
+            else if (session.filterViaArray === true)
             {
                 if (session.filterLookup[prop] === true) continue; //was in the filter array, do not include
             }
@@ -902,7 +901,7 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
                             targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
                         }
 
-                        addExistingObject(val, source, targetObj, curPath);
+                        addExistingObject(session, val, targetObj, curPath);
 
                         
                         target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
@@ -928,10 +927,10 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
             if (existing != null) return existing;
         }
 
-        var numObjs = _existingObjects.length;
+        var numObjs = session.existingObjects.length;
         for (var x = 0; x < numObjs; x++)
         {
-            var curObj = _existingObjects[x];
+            var curObj = session.existingObjects[x];
             if (curObj.source === source) return curObj;
         }
 
@@ -949,12 +948,13 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
                 existing = new ExistingObject(source, clone);
                 existing.paths.push(path);
 
-                source[_hiddenTag] = Math.random();
+                var tag = _tagID++;
+                source[_hiddenTag] = tag;
                 var wasAdded = typeof (source[_hiddenTag]) === "number";
 
                 if (wasAdded === true)
                 {
-                    session.existingObjectsLookup[source[_hiddenTag]] = existing;
+                    session.existingObjectsLookup[tag] = existing;
                     return existing;
                 }
                 else
@@ -983,7 +983,7 @@ EVUI.Modules.Core.DeepExtender2 = (function ()
         var taggedKeys = Object.keys(session.existingObjectsLookup);
 
         var numKeys = taggedKeys.length;
-        for (var x = 0; x < taggedKeys; x++)
+        for (var x = 0; x < numKeys; x++)
         {
             var tagged = session.existingObjectsLookup[taggedKeys[x]];
             if (tagged != null) delete tagged.source[_hiddenTag];
@@ -1168,7 +1168,7 @@ EVUI.Modules.Core.Utils.deepExtend = function (target, source, filter)
 @param {Object} source The source object to extend.
 @param {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]} filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
 @returns {Object}*/
-EVUI.Modules.Core.Utils.deepExtend = function (target, source, options)
+EVUI.Modules.Core.Utils.deepExtend2 = function (target, source, options)
 {
     return new EVUI.Modules.Core.DeepExtender2.deepExtend(target, source, options);
 };
