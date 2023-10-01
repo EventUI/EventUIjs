@@ -838,7 +838,7 @@ EVUI.Modules.Http.HttpRequestHeader = function (key, value)
     /**String or Number. The name of the header. 
     @type {String|Number}*/
     this.key = null;
-    Object.defineProperty("key", this, {
+    Object.defineProperty(this, "key", {
         get: function () { return _key; },
         set: function (value)
         {
@@ -852,7 +852,7 @@ EVUI.Modules.Http.HttpRequestHeader = function (key, value)
     /**String, Boolean, or Number. The value of the header.
     @type {String|Number|Boolean}*/
     this.value = null;
-    Object.defineProperty("value", this, {
+    Object.defineProperty(this, "value", {
         get: function () { return _value; },
         set: function (value)
         {
@@ -963,6 +963,7 @@ EVUI.Modules.Http.CompletedHttpRequest = function (xhr)
 {
     var _self = this;
     var _xhr = xhr;
+    var _responseHeaders = null;
 
     /**String. The ID of the request. 
     @type {String}*/
@@ -1011,6 +1012,44 @@ EVUI.Modules.Http.CompletedHttpRequest = function (xhr)
     /**Number. The Http status code of the request.
     @type {Number}*/
     this.statusCode = 0;
+
+    /**Array. An array of HttpRequestHeaders representing the headers that came back with the response.
+    @type {EVUI.Modules.Http.HttpRequestHeader[]}*/
+    this.responseHeaders = null;
+    Object.defineProperty(this, "responseHeaders", {
+        get: function ()
+        {
+            if (_responseHeaders != null) return _responseHeaders;
+            if (_responseHeaders == null)
+            {
+                if (_xhr.readyState !== XMLHttpRequest.DONE) return null;
+                _responseHeaders = [];
+
+                var headerStr = _xhr.getAllResponseHeaders();
+                if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(headerStr) === true) return _responseHeaders;
+
+                var rawHeaders = headerStr.split(/\r\n/g);
+                var numHeaders = rawHeaders.length;
+                for (var x = 0; x < numHeaders; x++)
+                {
+                    var curHeader = rawHeaders[x];
+
+                    var keyEnd = curHeader.indexOf(":");
+                    if (keyEnd === -1) continue;
+
+                    var key = curHeader.substring(0, keyEnd).trim();
+                    var value = (keyEnd + 1 >= curHeader.length) ? "" : curHeader.substring(keyEnd + 1).trim();
+
+                    var header = new EVUI.Modules.Http.HttpRequestHeader(key, value);
+                    _responseHeaders.push(header);
+                }
+
+                return _responseHeaders;                
+            }
+        },
+        configurable: false,
+        enumerable: true
+    })
 };
 
 /**An immutable copy of the internal object that represents an active XMLHTTPRequest.
