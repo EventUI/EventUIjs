@@ -539,168 +539,58 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.setValue = function (valueName
 
 /**Utility for doing a simple deep extend on an object hierarchy. All objects created are either plain objects or plain arrays, but will have the same properties as their source object hierarchy.
 @class*/
-EVUI.Modules.Core.DeepExtender = function ()
+EVUI.Modules.Core.DeepExtender = (function ()
 {
-    var _rootObj = null;
-    var _existingObjects = [];
-    var _filterViaFn = false;
-    var _filterViaArray = false;
+    var _hiddenTag = false;
+    var _tagID = 0;
 
-    /**Extends one object's hierarchy onto another object recursively.
-    @param {Object} target The target object to extend properties on to.
-    @param {Object} source The source object to extend.
-    @param {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]} filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
-    @returns {Object}*/
-    this.deepExtend = function (target, source, filter)
+    try
     {
-        if (typeof source !== "object") throw Error("Object expected.");
-
-        if (filter != null)
-        {
-            if (typeof filter === "function")
-            {
-                _filterViaFn = true;
-            }
-            else if (EVUI.Modules.Core.Utils.isArray(filter) === true)
-            {
-                _filterViaArray = true;
-
-                var filterLookup = {};
-                var numInFilter = filter.length;
-                for (var x = 0; x < numInFilter; x++)
-                {
-                    var curInFilter = filter[x];
-                    filterLookup[curInFilter] = true;
-                }
-
-                filter = filterLookup;
-            }
-        }
-
-        var root = new ExistingObject(source, target);
-        root.paths.push("");
-
-        _existingObjects.push(root); //add the top level object to our list of existing objects so if another property points back to it, it will not get into an infinite loop
-        _rootObj = target;
-        var extended = extend(target, source, filter);
-
-        _existingObjects = [];
-        _filterViaFn = false;
-        _filterViaArray = false;
-        _rootObj = null;
-
-        return extended;
-    };
-
-    /**Extends one object's hierarchy onto another object recursively.
-    @param {Object} source The source object to extend.
-    @param {Object} target The target object to extend properties on to.
-    @param {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|{}} filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
-    @param {String} path The current path from the root object to the current object.
-    @returns {Object}*/
-    var extend = function (target, source, filter, path)
+        if (typeof (Symbol) !== "undefined") _hiddenTag = Symbol((Math.random() * 10000).toString(36));
+    }
+    catch (ex)
     {
-        if (source == null || typeof source !== "object") return target;
-        if (target == null || typeof target !== "object") return target;
 
-        var keys = EVUI.Modules.Core.Utils.getProperties(source); //Object.keys(source);
-        var numKeys = keys.length;
+    }
 
-        //we recursively create a hierarchy of objects for whatever object was passed in.
-        for (var x = 0; x < numKeys; x++)
-        {
-            var prop = keys[x];
-            var val = undefined;
+    /**Dummy object we're using to attach the prototype deepExtend function to.*/
+    var DeepExtender = function () { };
 
-            if (_filterViaFn === true)
-            {
-                if (filter(prop, source, target) === true) continue; //true means don't include
-            }
-            else if (_filterViaArray === true)
-            {
-                if (filter[prop] === true) continue; //was in the filter array, do not include
-            }
-            else
-            {
-                val = source[prop];
-                var valType = typeof val;
-
-                if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
-                {
-                    var curPath = (path == null) ? prop : path + "." + prop;
-                    var targetObj = target[prop];
-                    var sameObj = (typeof targetObj === "object" && targetObj === val); //determine if we have the same object reference in both graphs
-
-                    if (val instanceof Node === true) //no deep cloning of nodes.
-                    {
-                        target[prop] = val;
-                        continue;
-                    }
-
-                    var existingObject = getExistingObject(val); //make sure we haven't already processed this object (without this check circular references cause an error)
-                    if (existingObject != null) //already did this one, just pull out the existing object
-                    {
-                        if (existingObject.sameReference === false) //we already figured out that the existing object appeared in both graphs and assigned the clone to be the same reference as the source, so we have no work to do
-                        {
-                            if (sameObj === true) //both objects are the same, and we have already run into the source object before
-                            {
-                                existingObject.clone = targetObj;
-
-                                //find each location where the clone was stored and switch it with the correct reference
-                                var numLocations = existingObject.paths.length;
-                                for (var y = 0; y < numLocations; y++)
-                                {
-                                    EVUI.Modules.Core.Utils.setValue(existingObject.paths[y], _rootObj, val);
-                                }
-
-                                existingObject.paths.splice(0, numLocations);
-                                existingObject.sameReference = true;
-                            }
-                            else //otherwise, record where we put the object
-                            {
-                                existingObject.paths.push(curPath);
-                            }
-                        }
-
-                        target[prop] = existingObject.clone;
-                    }
-                    else //haven't done it yet
-                    {
-                        if (typeof targetObj !== "object" || targetObj == null)
-                        {
-                            targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
-                        }
-
-                        var newExisting = new ExistingObject(val, targetObj);
-                        newExisting.paths.push(curPath);
-
-                        _existingObjects.push(newExisting);
-
-                        target[prop] = extend(targetObj, val, filter, curPath); //populate our new child recursively
-                    }
-                }
-                else //anything else, just set its value
-                {
-                    if (val !== undefined) target[prop] = val;
-                }
-            }
-        }
-
-        return target;
-    };
-
-    /**Looks through the list of previously extended objects and returns one if found.
-    @param {Object} source The object to extend if not found in this list.*/
-    var getExistingObject = function (source)
+    /**Represents a property bag containing all the information about this deep clone operation.
+    @class*/
+    var DeepExtendSession = function ()
     {
-        var numObjs = _existingObjects.length;
-        for (var x = 0; x < numObjs; x++)
-        {
-            var curObj = _existingObjects[x];
-            if (curObj.source === source) return curObj;
-        }
+        /**The object receiving properties from the source.
+        @type {Object}*/
+        this.target = null;
 
-        return null;
+        /**The object whose properties are being copied onto the target.
+        @type {Object}*/
+        this.source = null;
+
+        /**The options used to configure the deep clone operation.
+        @type {EVUI.Modules.Core.DeepExtenderOptions}*/
+        this.options = null;
+
+        /**An array of ExistingObjects representing all the objects found in this graph.
+        @type {ExistingObject}*/
+        this.existingObjects = [];
+
+        /**A lookup table where elements which were tagged are contained.
+        @type {{}}*/
+        this.existingObjectsLookup = {};
+
+        /**Whether or not to filter by a predicate function.
+        @type {Boolean} */
+        this.filterViaFn = false;
+
+        /**Whether or not to filter by an array od disallowed property names.
+        @type {Boolean} */
+        this.filterViaArray = false;
+
+        /**If there was an array of property names, this is a quick-lookup table of them.
+        @type {{}} */      
+        this.filterLookup = null;
     };
 
     /**Container for a previously extended object.
@@ -720,6 +610,248 @@ EVUI.Modules.Core.DeepExtender = function ()
         @type {Boolean}*/
         this.sameReference = false;
     };
+
+    /**Extends one object's hierarchy onto another object recursively.
+    @param {Object} target The target object to extend properties on to.
+    @param {Object} source The source object to extend.
+    @param {EVUI.Modules.Core.DeepExtenderOptions} options An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+    @returns {Object}*/
+    DeepExtender.prototype.deepExtend = function(target, source, options)
+    {
+
+        if (typeof source !== "object" || source != null) throw Error("source must be an object.");
+        if (typeof target !== "object" || target != null) throw Error("target must be an object.");
+
+        var session = new DeepExtendSession();
+        session.target = target;
+        session.source = source;
+        session.rootObj = target;
+        session.options = (typeof options !== "object" || options == null) ? new EVUI.Modules.Core.DeepExtenderOptions() : options;
+
+        return deepExtend(session);
+    };
+
+
+    /**Extends one object's hierarchy onto another object recursively.
+    @param {DeepExtendSession} session
+    @returns {Object}*/
+    var deepExtend = function (session)
+    {
+        if (session.options.filter != null)
+        {
+            if (typeof filter === "function")
+            {
+                session.filterViaFn = true;
+            }
+            else if (EVUI.Modules.Core.Utils.isArray(filter) === true)
+            {
+                session.filterViaArray = true;
+
+                session.filterLookup = {};
+                var numInFilter = filter.length;
+                for (var x = 0; x < numInFilter; x++)
+                {
+                    var curInFilter = filter[x];
+                    session.filterLookup[curInFilter] = true;
+                }
+            }
+        }
+
+        addExistingObject(session, session.source, session.target, ""); //add the top level object to our list of existing objects so if another property points back to it, it will not get into an infinite loop
+        
+        var extended = extend(session.target, session.source, null, session);
+
+        removeAllTags(session);
+
+        return extended;
+    };
+
+    /**Extends one object's hierarchy onto another object recursively.
+    @param {DeepExtendSession} session
+    @returns {Object}*/
+    var extend = function (target, source, path, session)
+    {
+        if (source == null || typeof source !== "object") return session.target;
+        if (target == null || typeof target !== "object") return session.target;
+
+        var keys = EVUI.Modules.Core.Utils.getProperties(source); //Object.keys(session.source);
+        var numKeys = keys.length;
+
+        //we recursively create a hierarchy of objects for whatever object was passed in.
+        for (var x = 0; x < numKeys; x++)
+        {
+            var prop = keys[x];
+            var val = undefined;
+
+            if (session.filterViaFn === true)
+            {
+                if (session.filter(prop, session.source, target) === true) continue; //true means don't include
+            }
+            else if (session.filterViaArray === true)
+            {
+                if (session.filterLookup[prop] === true) continue; //was in the filter array, do not include
+            }
+            else
+            {
+                val = source[prop];
+                var valType = typeof val;
+
+                if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
+                {
+                    var curPath = (path == null) ? prop : path + "." + prop;
+                    var targetObj = target[prop];
+                    var sameObj = (typeof targetObj === "object" && targetObj === val); //determine if we have the same object reference in both graphs
+
+                    if (val instanceof Node === true) //no deep cloning of nodes.
+                    {
+                        target[prop] = val;
+                        continue;
+                    }
+
+                    var existingObject = getExistingObject(session, val); //make sure we haven't already processed this object (without this check circular references cause an error)
+                    if (existingObject != null) //already did this one, just pull out the existing object
+                    {
+                        if (existingObject.sameReference === false) //we already figured out that the existing object appeared in both graphs and assigned the clone to be the same reference as the session.source, so we have no work to do
+                        {
+                            if (sameObj === true) //both objects are the same, and we have already run into the session.source object before
+                            {
+                                existingObject.clone = targetObj;
+
+                                //find each location where the clone was stored and switch it with the correct reference
+                                var numLocations = existingObject.paths.length;
+                                for (var y = 0; y < numLocations; y++)
+                                {
+                                    EVUI.Modules.Core.Utils.setValue(existingObject.paths[y], session.rootObj, val);
+                                }
+
+                                existingObject.paths.splice(0, numLocations);
+                                existingObject.sameReference = true;
+                            }
+                            else //otherwise, record where we put the object
+                            {
+                                existingObject.paths.push(curPath);
+                                existingObject.sameReference = false;
+                            }
+                        }
+
+                        target[prop] = existingObject.clone;
+                    }
+                    else //haven't done it yet
+                    {
+                        if (typeof targetObj !== "object" || targetObj == null)
+                        {
+                            targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
+                        }
+
+                        addExistingObject(session, val, targetObj, curPath);
+
+                        
+                        target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
+                    }
+                }
+                else //anything else, just set its value
+                {
+                    if (val !== undefined) target[prop] = val;
+                }
+            }
+        }
+
+        return target;
+    };
+
+    /**Looks through the list of previously extended objects and returns one if found.
+    @param {Object} source The object to extend if not found in this list.*/
+    var getExistingObject = function (session, source)
+    {
+        if (_hiddenTag !== false) //if we can tag objects, check that cache first
+        {
+            var existing = session.existingObjectsLookup[source[_hiddenTag]];
+            if (existing != null) return existing;
+        }
+
+        //if we didn't find it, loop through the untagged objects
+        var numObjs = session.existingObjects.length;
+        for (var x = 0; x < numObjs; x++)
+        {
+            var curObj = session.existingObjects[x];
+            if (curObj.source === source) return curObj;
+        }
+
+        return null;
+    };
+
+    /**Adds an object to the lookup hash table and to the lookup array if the hash table add failed.
+    @param {DeepExtendSession} session The session of the extension operation.
+    @param {Object} source The source object to map to the cloned object.
+    @param {Object} clone The clone of the source object.
+    @param {String} path The path at which the clone was made.
+    @returns {ExistingObject}*/
+    var addExistingObject = function (session, source, clone, path)
+    {
+        var entry = null;
+        if (_hiddenTag !== false) //if we have the hidden tag symbol...
+        {
+            //see if we have already tagged this object. If so, just add the path to it and return it. Otherwise make a new one and try to add that to the hash lookup.
+            var existing = session.existingObjectsLookup[source[_hiddenTag]];
+            if (existing == null)
+            {
+                existing = new ExistingObject(source, clone);
+                existing.paths.push(path);
+
+                var tag = _tagID++;
+                source[_hiddenTag] = tag;
+                var wasAdded = typeof (source[_hiddenTag]) === "number"; //if the object is frozen or sealed this will be false
+
+                if (wasAdded === true) //key added, add it to lookup list
+                {
+                    session.existingObjectsLookup[tag] = existing;
+                    return existing;
+                }
+                else //key not added, add to the back-up array
+                {
+                    entry = existing;
+                }
+            }
+            else
+            {
+                existing.paths.push(path);
+                return existing;
+            }
+        }
+
+        //either no support for Symbols or we have an ExistingObject reference from above.
+        if (entry == null) entry = new ExistingObject(source, clone);
+        entry.paths.push(path);
+
+        //add it to the objects list
+        session.existingObjects.push(entry);
+
+        return entry;
+    };
+
+    /**Removes the tags from all the tagged objects.
+    @param {DeepExtendSession} session The session with the tagged objects to be removed.*/
+    var removeAllTags = function (session)
+    {
+        var taggedKeys = Object.keys(session.existingObjectsLookup);
+
+        var numKeys = taggedKeys.length;
+        for (var x = 0; x < numKeys; x++)
+        {
+            var tagged = session.existingObjectsLookup[taggedKeys[x]];
+            if (tagged != null) delete tagged.source[_hiddenTag];
+        }
+    }
+
+    return new DeepExtender();
+})();
+
+/**Options for configuring the DeepExtender.*/
+EVUI.Modules.Core.DeepExtenderOptions = function ()
+{
+    /**filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+    @type {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]}*/
+    this.filter = null;
 };
 
 /**Object for wrapping properties in one object so that manipulating them changes a different object.
@@ -880,17 +1012,18 @@ $evui.cio = function (source)
 /**Extends one object's hierarchy onto another object recursively.
 @param {Object} target The target object to extend properties on to.
 @param {Object} source The source object to extend.
-@param {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]} filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+@param {EVUI.Modules.Core.DeepExtenderOptions} options The configuration options for the deep extender.
 @returns {Object}*/
-EVUI.Modules.Core.Utils.deepExtend = function (target, source, filter)
+EVUI.Modules.Core.Utils.deepExtend = function (target, source, options)
 {
-    return new EVUI.Modules.Core.DeepExtender().deepExtend(target, source, filter);
+    return new EVUI.Modules.Core.DeepExtender.deepExtend(target, source, options);
 };
+
 
 /**Extends one object's hierarchy onto another object recursively.
 @param {Object} target The target object to extend properties on to.
 @param {Object} source The source object to extend.
-@param {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]} filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+@param {EVUI.Modules.Core.DeepExtenderOptions} options The configuration options for the deep extender.
 @returns {Object}*/
 $evui.deepExtend = function (target, source, filter)
 {
