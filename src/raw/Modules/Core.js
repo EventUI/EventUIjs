@@ -1025,9 +1025,9 @@ EVUI.Modules.Core.Utils.deepExtend = function (target, source, options)
 @param {Object} source The source object to extend.
 @param {EVUI.Modules.Core.DeepExtenderOptions} options The configuration options for the deep extender.
 @returns {Object}*/
-$evui.deepExtend = function (target, source, filter)
+$evui.deepExtend = function (target, source, options)
 {
-    return EVUI.Modules.Core.Utils.deepExtend(target, source, filter);
+    return EVUI.Modules.Core.Utils.deepExtend(target, source, options);
 };
 
 /**Returns a CaseInsensitiveObject that contains all the attributes on an element as members of the object.
