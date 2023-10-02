@@ -511,7 +511,7 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.setValue = function (valueName
 
     if (typeof valueName === "string")
     {
-        var keys = Object.keys(source);
+        var keys = Object.keys(this);
         var numKeys = keys.length;
 
         for (var x = 0; x < numKeys; x++)
