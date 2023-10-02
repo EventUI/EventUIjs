@@ -112,7 +112,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         htmlArgs.httpArgs.method = "GET";
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(htmlArgs.url) === false) htmlArgs.httpArgs.url = htmlArgs.url;
 
-        EVUI.Modules.Http.Http.executeRequest(htmlArgs.httpArgs, function (completedRequest)
+        _services.httpManager.executeRequest(htmlArgs.httpArgs, function (completedRequest)
         {
             if (completedRequest.error != null)
             {
@@ -188,7 +188,6 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         //make a safe copy of the arguments to pass into each event stream
         var partialsArgs = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.HtmlLoader.HtmlPartialLoadArgs(), partialLoadArgsOrPartialRequests);
-        partialArgs.htmlPartialLoadRequests = partialsArgs.htmlPartialLoadRequests.map(function (req) { return EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest(), req); });
         partialsArgs.httpArgs = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Http.HttpRequestArgs(), partialsArgs.httpArgs);
 
         //no load requests, something is wrong, just return.
@@ -204,7 +203,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
             totalRequests.push(httpArgs.context);
 
-            EVUI.Modules.Http.Http.executeRequest(httpArgs, function (completedRequest)
+            _services.httpManager.executeRequest(httpArgs, function (completedRequest)
             {
                 translateResponseToText(completedRequest.xmlHttpRequest, function (resultText)
                 {
@@ -1015,7 +1014,14 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         if (_services.httpManager == null || typeof _services.httpManager !== "object")
         {
-            _services.httpManager = EVUI.Modules.Http.Http;
+            Object.defineProperty(_services, "httpManager", {
+                get: function ()
+                {
+                    return EVUI.Modules.Http.Http;
+                },
+                configurable: false,
+                enumerable: true
+            })
         }
     };
 
@@ -1141,15 +1147,15 @@ EVUI.Modules.HtmlLoader.HtmlPartialLoadRequest = function (url, key)
 {
     /**String. The Url to get the Html from.
     @type {String}*/
-    this.url = (url == null) ? null : url;
+    this.url = (url == null) ? undefined : url;
 
     /**String. The Html that was returned from the server.
     @type {String}*/
-    this.html = null;
+    this.html = undefined;
 
     /**String. A string to use to look up this HtmlPartialLoadRequest after it has loaded.
     @type {String}*/
-    this.key = (key == null) ? null : key;
+    this.key = (key == null) ? undefined : key;
 };
 
 /**Arguments for loading a set of Html partials. 
