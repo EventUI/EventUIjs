@@ -359,7 +359,7 @@ EVUI.Modules.Http.HttpManager = function ()
                 {
                     requestInstance.error = new EVUI.Modules.EventStream.EventStreamError("Failed to construct XMLHttpRequest.", ex, EVUI.Modules.EventStream.EventStreamStage.Job, EVUI.Modules.Http.Constants.Job_OpenRequest);
                     requestInstance.requestStatus = RequestStatus.Exception;
-                    jobArgs.EventStream.seek(EVUI.Modules.Http.Constants.Event_OnError);
+                    jobArgs.eventStream.seek(EVUI.Modules.Http.Constants.Event_OnError);
                     return jobArgs.resolve();
                 }
 
