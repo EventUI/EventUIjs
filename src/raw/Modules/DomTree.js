@@ -927,7 +927,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     @returns {DomTreeParseOptions}*/
     var ensureParseOptions = function (options)
     {
-        var newOptions = EVUI.Modules.Core.Utils.shallowExtend({}, (options == null || typeof options !== "object") ? new EVUI.Modules.DomTree.DomTreeElementOptions() : options);
+        var newOptions = (options == null || typeof options !== "object") ? new EVUI.Modules.DomTree.DomTreeElementOptions() : EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.DomTree.DomTreeElementOptions(), options);
         return buildDomTreeParseOptions(newOptions);
     };
 
@@ -1995,7 +1995,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             for (var x = 0; x < numChildren; x++)
             {
                 var curChild = this.content[x];
-                curChild.toNode(node);
+                curChild.toNode(node, options);
             }
         }
         else if (this.blockType === EVUI.Modules.DomTree.DomTreeElementType.CDATA)
