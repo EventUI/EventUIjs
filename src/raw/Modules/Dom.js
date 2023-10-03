@@ -774,7 +774,7 @@ EVUI.Modules.Dom.DomHelper = function ()
         var numChildren = firstChild.childNodes.length;
         for (var x = 0; x < numChildren; x++)
         {
-            var curEle = firstChild.childNodes[x];
+            var curEle = firstChild.childNodes[0];
             curEle.remove();
             elements.push(curEle);
         }
