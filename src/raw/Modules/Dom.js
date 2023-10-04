@@ -17,7 +17,8 @@ EVUI.Modules.Dom = {};
 
 EVUI.Modules.Dom.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ version: "1.0", required: true }),
+    DomTree: Object.freeze({ version: "1.0", required: false})
 };
 
 (function ()
@@ -765,17 +766,31 @@ EVUI.Modules.Dom.DomHelper = function ()
     @returns {Node[]} */
     var htmlToElements = function (html)
     {
+        if (EVUI.Modules.DomTree != null)
+        {
+            var frag = EVUI.Modules.DomTree.Converter.htmlToDocumentFragment(html);
+            if (frag == null) return [];
+
+            var eles = [];
+            var numEles = frag.childNodes.length;
+            for (var x = 0; x < numEles; x++)
+            {
+                eles.push(frag.childNodes[x]);
+            }
+
+            return eles;
+        }
+
         var docFrag = document.createDocumentFragment();
         var element = document.createElement("div");
         element.innerHTML = html;
-        var firstChild = docFrag.appendChild(element);
 
         var elements = [];
-        var numChildren = firstChild.childNodes.length;
+        var numChildren = element.childNodes.length;
         for (var x = 0; x < numChildren; x++)
         {
-            var curEle = firstChild.childNodes[0];
-            curEle.remove();
+            var curEle = element.childNodes[0];
+            docFrag.appendChild(curEle);
             elements.push(curEle);
         }
 
@@ -992,7 +1007,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
         if (elementsOrSelector == null) return [];
 
-        elementsOrSelector = elementsOrSelector.filter(function (ele) { return EVUI.Modules.Core.Utils.isElement(ele) || ele === window || ele === document || ele instanceof DocumentFragment });
+        elementsOrSelector = elementsOrSelector.filter(function (ele) { return ele instanceof Node || ele === window || ele === document || ele instanceof DocumentFragment });
 
         return elementsOrSelector;
     }
