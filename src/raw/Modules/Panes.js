@@ -5069,7 +5069,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             }
 
             var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
-            _settings.stylesheetManager.removeRules(_settings.cssSheetName, movedSelector);
 
             var rules =
             {
@@ -5203,9 +5202,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                     }
                 }
             }          
-
-
-            _settings.stylesheetManager.removeRules(_settings.cssSheetName, resizedSelector);
 
             var rules = {};
 
