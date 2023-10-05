@@ -1398,13 +1398,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         //look for everything with the same load data. The loading data is case-insensitive, so we can't use a direct key=value selector to find them as those are case sensitive, so we just find everything tagged with the same attribute thats being used to load the pane.
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(url) === false)
         {
-            allWithSame = document.querySelectorAll("[ " + urlAttributeName + " ]");
+            allWithSame = document.querySelectorAll("[" + urlAttributeName + "=\"" + url +"\"]");
             sameAttr = urlAttributeName;
             same = url;
         }
         else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === false)
         {
-            allWithSame = document.querySelectorAll("[ " + placeholderAttributeName + " ]");
+            allWithSame = document.querySelectorAll("[" + placeholderAttributeName + "=\"" + placeholderId +"\"]");
             sameAttr = placeholderAttributeName;
             same = placeholderID;
         }
@@ -1413,15 +1413,18 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             var selectedElements = document.querySelectorAll(selector); //if the selector hits more than one element, we're not going to use it.
             if (selectedElements.length == 1)
             {
-                allWithSame = document.querySelectorAll("[ " + selectorAttributeName + " ]");
+                allWithSame = document.querySelectorAll("[" + selectorAttributeName + "=\""+ selector +"\" ]");
                 sameAttr = selectorAttributeName;
                 same = selector;
             }
         }
 
+        var existingPane = null;
+        var numPanes = _entries.length;
+
         var allNeedingID = [event.currentTarget];
         var same = EVUI.Modules.Core.Utils.stringNormalize(same);
-
+        var checkedSame = false;
         //walk every element that came back with the matching attribute and see if it's attribute value matches that of the element we're looking for equivalents to.
         var id = null;
         var numSame = allWithSame.length;
@@ -1439,6 +1442,66 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             {
                 id = curID;
                 continue;
+            }
+            else if (id == null) //if we have no id, do an expensive check based on existing panes to see if we know which pane we should be showing
+            {
+                for (var y = 0; y < numPanes; y++)
+                {
+                    var curEntry = _entries[y];
+                    if (curEntry.link.pane.element === curSame) //first check based on an element equality
+                    {
+                        id = curEntry.paneID;
+                        break;
+                    }
+                    else if (curEntry.link.pane.loadSettings != null && curEntry.link.pane.loadSettings.selector === same) //if not, look at the load settings to see if we can't find the element
+                    {
+                        if (curEntry.link.pane.loadSettings.contextElement instanceof Node === false)
+                        {
+                            var ele = document.querySelector(curEntry.link.pane.loadSettings.selector);
+                            if (ele != null && ele !== curSame) continue;
+
+                            id = curEntry.paneID;
+                            break;
+                        }
+                        else
+                        {
+                            var ele = curEntry.link.pane.loadSettings.contextElement.querySelector(curEntry.link.pane.loadSettings.selector);
+                            if (ele === curSame)
+                            {
+                                id = curEntry.paneID;
+                                break;
+                            }
+                        }
+                    }
+                    else if (checkedSame === false && curEntry.link.pane.loadSettings != null) //no element match, check load settings
+                    {
+                        var compareVal = null;
+
+                        if (curEntry.link.pane.loadSettings.placeholderLoadArgs != null)
+                        {
+                            compareVal = curEntry.link.pane.loadSettings.placeholderLoadArgs.placeholderID;
+                        }
+                        else if (curEntry.link.pane.loadSettings.element === curSame)
+                        {
+                            id = curEntry.paneID;
+                            break;
+                        }
+                        else if (curEntry.link.pane.loadSettings.httpLoadArgs != null)
+                        {
+                            compareVal = curEntry.link.pane.loadSettings.httpLoadArgs.url;
+                        }
+
+
+                        if (typeof compareVal === "string") compareVal = compareVal.toLowerCase();
+                        if (compareVal === same.toLowerCase())
+                        {
+                            id = curEntry.paneID;
+                            break;
+                        }                        
+                    }                    
+                }
+
+                checkedSame = true;
             }
 
             allNeedingID.push(curSame);
