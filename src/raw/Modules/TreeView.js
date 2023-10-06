@@ -3379,8 +3379,8 @@ EVUI.Modules.TreeView.TreeViewNode = function (nodeEntry)
         get: function ()
         {
 
-            if (_nodeEntry.parentNode == null) return null;
-            return _nodeEntry.parentNode.node;
+            if (_nodeEntry.parentNodeEntry == null) return null;
+            return _nodeEntry.parentNodeEntry.node;
         },
         configurable: false,
         enumerable: true
