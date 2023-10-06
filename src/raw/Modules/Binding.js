@@ -720,6 +720,146 @@ EVUI.Modules.Binding.BindingController = function (services)
         //and add the job to the batching logic
         batchJobs(session, null, sessionIndex - 1);
     };
+
+    var BindingSessionBatch2 = function ()
+    {
+        this.id = _batchIDCounter++;
+
+        /**
+        @type {BindingSessionBatch2}*/
+        this.parentBatch = null;
+
+        /**
+        @type {BindingSession[]}*/
+        this.sessions = [];
+
+        this.numSessions = 0;
+        this.numComplete = 0;
+
+        /**
+        @type {BindingSessionBatch2[]}*/
+        this.childBatches = [];
+
+        this.numChildBatches = 0;
+
+        this.executing = false;
+    };
+
+    /**Executes the batch and calls the callback once all members of the batch have completed.
+    @param {Function} callback A callback function to call that takes this BindingSessionBatch as a parameter.*/
+    BindingSessionBatch2.prototype.queueSession = function (session)
+    {
+        var self = this;
+
+        if (session.parentSession !== null)
+        {
+            var parentBatch = _batchContainer.getBatch(session.parentSession.batchId);
+        }
+        
+        this.numSessions = this.sessions.push(session);
+        session.batchId = this.id;
+
+        curSession.eventStream.onComplete = function ()
+        {
+            self.numComplete++;
+            if (self.numSessions === self.numComplete)
+            {
+                self.executing = false;
+                self.callback(self);
+            }
+        };   
+    };
+
+
+    var BindingSessionBatchContainer = function ()
+    {
+        this.numBatches = 0;
+
+        /**
+         * 
+        @type {BindingSessionBatch2[]}*/
+        this.batchList = [];
+
+        this.batchLookup = {};
+
+        this.nextBatchId = -1;
+
+        /**
+        @type {BindingSessionBatch2}*/
+        this.currentRootBatch = null;
+
+        /**
+         * 
+         * @param {any} id
+         * @returns {BindingSessionBatch2}
+         */
+        this.getBatch = function (id)
+        {
+            return this.batchLookup[id];
+        };
+
+        this.removeBatch = function (id)
+        {
+            delete this.batchLookup[id];
+            for (var x = 0; x < this.numBatches; x++)
+            {
+                var curBatch = this.batchList[x];
+                if (curBatch.id === id)
+                {
+                    this.numBatches--;
+                    this.batchList.splice(x, 1);
+
+                    break;
+                }
+            }
+        };
+
+        this.addBatch = function (batch)
+        {
+            this.numBatches = this.batchList.push(batch);
+            this.batchLookup[batch.id] = batch;
+        }
+
+        /**
+         * 
+         * @param {BindingSession} session
+         */
+        this.addToBatch = function (session)
+        {
+            var batch = null;
+            var wasNewBatch = false;
+
+            if (session.parentSession != null)
+            {
+                var parentBatch = this.getBatch(session.parentSession.batchId);
+                if (parentBatch.childBatches.length === 0)
+                {
+                    batch = new BindingSessionBatch2();
+                    batch.parentBatch = parentBatch;
+                    parentBatch.numChildBatches = parentBatch.childBatches.push(batch);
+
+                    wasNewBatch = true;
+                }
+                else
+                {
+                    batch = parentBatch.childBatches[parentBatch.numChildBatches - 1]
+                    if (batch.numSessions >= _maxBatch)
+                }
+            }
+        }
+    };
+
+    var _batchContainer = new BindingSessionBatchContainer();
+
+
+
+    /**Batches jobs so that the checks to ensure that no race conditions occur only operate on a small array and not a gigantic one.
+    @param {BindingSession} session The session to either execute or queue to be batched.
+    @param {BindingSessionBatch} parentBatch The batch that is the parent of this current batch.*/
+    var batchJobs2 = function (session, parentBatch, sessionsIndex, recursiveCall)
+    {
+
+    }
    
 
     /**Batches jobs so that the checks to ensure that no race conditions occur only operate on a small array and not a gigantic one.
