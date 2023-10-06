@@ -1552,7 +1552,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 nodeEntry.listElement = null;
             }
 
-            return;
+            return callback(true);
         }
 
         //have children, but not a list element. Go make it and add it to the end of the current node's wrapper so we have a place to stick the child nodes
