@@ -1552,7 +1552,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 nodeEntry.listElement = null;
             }
 
-            return;
+            return callback(true);
         }
 
         //have children, but not a list element. Go make it and add it to the end of the current node's wrapper so we have a place to stick the child nodes
@@ -3379,8 +3379,8 @@ EVUI.Modules.TreeView.TreeViewNode = function (nodeEntry)
         get: function ()
         {
 
-            if (_nodeEntry.parentNode == null) return null;
-            return _nodeEntry.parentNode.node;
+            if (_nodeEntry.parentNodeEntry == null) return null;
+            return _nodeEntry.parentNodeEntry.node;
         },
         configurable: false,
         enumerable: true
