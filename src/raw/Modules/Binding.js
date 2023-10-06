@@ -126,7 +126,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
     /**Array. All of the queued BindingSessions that are either in progress or going to be batched and executed.
     @type {BindingSession[]}*/
-    var _bindingSessions = [];
+    //var _bindingSessions = [];
 
     /**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
     @type {Object}*/
@@ -625,10 +625,10 @@ EVUI.Modules.Binding.BindingController = function (services)
         buildEventStream(session);
 
         //register session with the controller
-        var sessionIndex = _bindingSessions.push(session);
+        //var sessionIndex = _bindingSessions.push(session);
 
         //and add the job to the batching logic
-        batchJobs(session, null, sessionIndex - 1);
+        batchJobs(session, null, 0);
     };
 
     /**Triggers the update process for a BindingHandle and all of its changed children, which only requires what has changed to re-evaluate itself.
@@ -715,10 +715,10 @@ EVUI.Modules.Binding.BindingController = function (services)
         buildEventStream(session);
 
         //register session with the controller
-        var sessionIndex = _bindingSessions.push(session);
+        //var sessionIndex = _bindingSessions.push(session);
 
         //and add the job to the batching logic
-        batchJobs(session, null, sessionIndex - 1);
+        batchJobs(session, null, 0);
     };
 
     var BindingSessionBatch2 = function ()
@@ -726,140 +726,186 @@ EVUI.Modules.Binding.BindingController = function (services)
         this.id = _batchIDCounter++;
 
         /**
-        @type {BindingSessionBatch2}*/
-        this.parentBatch = null;
+        @type {BindingSessionBatchContainer}*/
+        this.batchContainer = null;
 
         /**
         @type {BindingSession[]}*/
         this.sessions = [];
 
         this.numSessions = 0;
+
         this.numComplete = 0;
-
-        /**
-        @type {BindingSessionBatch2[]}*/
-        this.childBatches = [];
-
-        this.numChildBatches = 0;
-
-        this.executing = false;
     };
-
-    /**Executes the batch and calls the callback once all members of the batch have completed.
-    @param {Function} callback A callback function to call that takes this BindingSessionBatch as a parameter.*/
-    BindingSessionBatch2.prototype.queueSession = function (session)
-    {
-        var self = this;
-
-        if (session.parentSession !== null)
-        {
-            var parentBatch = _batchContainer.getBatch(session.parentSession.batchId);
-        }
-        
-        this.numSessions = this.sessions.push(session);
-        session.batchId = this.id;
-
-        curSession.eventStream.onComplete = function ()
-        {
-            self.numComplete++;
-            if (self.numSessions === self.numComplete)
-            {
-                self.executing = false;
-                self.callback(self);
-            }
-        };   
-    };
-
 
     var BindingSessionBatchContainer = function ()
     {
+        this.parentBindingSessionId = -1;
+
         this.numBatches = 0;
 
         /**
-         * 
         @type {BindingSessionBatch2[]}*/
-        this.batchList = [];
-
-        this.batchLookup = {};
-
-        this.nextBatchId = -1;
+        this.batches = [];
 
         /**
         @type {BindingSessionBatch2}*/
-        this.currentRootBatch = null;
+        this.currentBatch = null;
 
         /**
-         * 
-         * @param {any} id
-         * @returns {BindingSessionBatch2}
-         */
-        this.getBatch = function (id)
-        {
-            return this.batchLookup[id];
-        };
-
-        this.removeBatch = function (id)
-        {
-            delete this.batchLookup[id];
-            for (var x = 0; x < this.numBatches; x++)
-            {
-                var curBatch = this.batchList[x];
-                if (curBatch.id === id)
-                {
-                    this.numBatches--;
-                    this.batchList.splice(x, 1);
-
-                    break;
-                }
-            }
-        };
-
-        this.addBatch = function (batch)
-        {
-            this.numBatches = this.batchList.push(batch);
-            this.batchLookup[batch.id] = batch;
-        }
+        @type {BindingSessionBatchContainer}*/
+        this.parentContainer = null;
 
         /**
-         * 
-         * @param {BindingSession} session
-         */
-        this.addToBatch = function (session)
-        {
-            var batch = null;
-            var wasNewBatch = false;
+        @type {BindingSessionBatchContainer}*/
+        this.childContainers = null;
 
-            if (session.parentSession != null)
-            {
-                var parentBatch = this.getBatch(session.parentSession.batchId);
-                if (parentBatch.childBatches.length === 0)
-                {
-                    batch = new BindingSessionBatch2();
-                    batch.parentBatch = parentBatch;
-                    parentBatch.numChildBatches = parentBatch.childBatches.push(batch);
+        this.numChildContainers = 0;
 
-                    wasNewBatch = true;
-                }
-                else
-                {
-                    batch = parentBatch.childBatches[parentBatch.numChildBatches - 1]
-                    if (batch.numSessions >= _maxBatch)
-                }
-            }
-        }
-    };
+    }
 
     var _batchContainer = new BindingSessionBatchContainer();
-
+    var _batchLookup = {};
 
 
     /**Batches jobs so that the checks to ensure that no race conditions occur only operate on a small array and not a gigantic one.
     @param {BindingSession} session The session to either execute or queue to be batched.
     @param {BindingSessionBatch} parentBatch The batch that is the parent of this current batch.*/
-    var batchJobs2 = function (session, parentBatch, sessionsIndex, recursiveCall)
+    var batchJobs2 = function (session)
     {
+        var batch = null;
+        var parentContainer = _batchContainer;
+        var shouldExecute = false;
 
+        var isChildSession = false;
+        if (session.parentSession != null)
+        {
+            var parentBatch = _batchLookup[session.parentSession.batchId];
+            parentContainer = parentBatch.batchContainer;
+
+            isChildSession = true;
+        }
+
+        if (parentContainer.numChildContainers === 0)
+        {
+            var childContainer = new BindingSessionBatchContainer();
+            parentContainer.childContainers = [];
+            childContainer.parentContainer = parentContainer;
+            parentContainer.numChildContainers = parentContainer.childContainers.push(childContainer);
+            parentContainer = childContainer;
+        }
+        else
+        {
+            var lastChild = parentContainer.childContainers[parentContainer.numChildContainers - 1];
+            var lastBatch = lastChild.batches[lastChild.numBatches - 1];
+            if (lastBatch != null)
+            {
+                var lastItem = lastBatch.sessions[lastBatch.numSessions - 1];
+                var idDelta = (lastItem == null) ? 1 : session.sessionId - lastItem.sessionId;
+                if (lastItem != null && (idDelta !== 1 && idDelta !== -1))
+                {
+                    var childContainer = new BindingSessionBatchContainer();
+
+                    childContainer.parentContainer = parentContainer;
+                    parentContainer.numChildContainers = parentContainer.childContainers.push(childContainer);
+                    parentContainer = childContainer;
+                }
+                else
+                {
+                    parentContainer = lastChild;
+                }
+            }
+            else
+            {
+                parentContainer = (lastChild == null) ? parentContainer.childContainers[0] : lastChild;
+            }
+        }
+
+
+        if (parentContainer.numBatches === 0)
+        {
+            batch = new BindingSessionBatch2();
+            batch.batchContainer = parentContainer;
+
+            _batchLookup[batch.id] = batch;
+
+            parentContainer.currentBatch = batch;
+            parentContainer.numBatches = parentContainer.batches.push(batch);
+        }
+        else
+        {
+            batch = parentContainer.currentBatch;
+        }
+
+        session.batchId = batch.id;
+        batch.numSessions = batch.sessions.push(session);
+
+        shouldExecute = parentContainer.numBatches <= 1;
+
+        if (batch.numSessions >= _maxBatch)
+        {
+            var newBatch = new BindingSessionBatch2();
+            newBatch.batchContainer = parentContainer;
+
+            _batchLookup[newBatch.id] = newBatch;
+
+            parentContainer.currentBatch = newBatch;
+            parentContainer.numBatches = parentContainer.batches.push(newBatch);
+        }
+
+        if (shouldExecute === true)
+        {
+            executeSession(session);
+        }
     }
+
+    /**
+     * 
+     * @param {BindingSessionBatch2} batch
+     */
+    var triggerNextBatch = function (batch)
+    {
+        delete _batchLookup[batch.id];
+
+        var parentContainer = batch.batchContainer;
+
+        var nextBatch = parentContainer.batches.shift();
+        while (nextBatch != null && nextBatch.id === batch.id)
+        {
+            nextBatch = parentContainer.batches.shift();
+        }
+
+        parentContainer.numBatches = parentContainer.batches.length;
+
+        if (nextBatch == null)
+        {
+            parentContainer.currentBatch = null;
+            if (parentContainer.childContainers != null)
+            {
+                var indexToRemove = parentContainer.childContainers.indexOf(parentContainer);
+                if (indexToRemove > -1)
+                {
+                    parentContainer.childContainers.splice(indexToRemove, 1);
+                    parentContainer.numChildContainers--;
+                }
+            }
+        }
+        else
+        {
+            if (nextBatch.numSessions === 0)
+            {
+                triggerNextBatch(nextBatch);
+            }
+            else
+            {
+                for (var x = 0; x < nextBatch.numSessions; x++)
+                {
+                    executeSession(nextBatch.sessions[x]);
+                }
+            }
+        }
+    }
+
    
 
     /**Batches jobs so that the checks to ensure that no race conditions occur only operate on a small array and not a gigantic one.
@@ -867,6 +913,9 @@ EVUI.Modules.Binding.BindingController = function (services)
     @param {BindingSessionBatch} parentBatch The batch that is the parent of this current batch.*/
     var batchJobs = function (session, parentBatch, sessionsIndex, recursiveCall)
     {
+        return batchJobs2(session);
+
+
         /**This function is solving the hellish problem of batching recursive bindings. The idea behind the batches was that we make sure only a certain set can go at a time so the cross-check 
          * that prevents the same binding from being executed twice/the same element having two bindings fight over it. The bigger the batch is, the slower that cross check becomes, so we break
          * it up into little chunks that go one at a time. The problem is that the batches go as sets of racing async processes that advance to the next batch only when all have completed their
@@ -1019,9 +1068,37 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {BindingSessionMatch[]} */
     var getMatchingSessions = function (newSession)
     {
+        return getMatchingSessions2(newSession);
+
         var matches = [];
 
         var sessionArray = newSession.batchId < 0 ? _bindingSessions : _batches[newSession.batchId].sessions;
+        var numSessions = sessionArray.length;
+        for (var x = 0; x < numSessions; x++)
+        {
+            var curSession = sessionArray[x];
+
+            if (curSession.sessionId !== newSession.sessionId)
+            {
+                var match = compareSessions(newSession, curSession);
+                if (match != null)
+                {
+                    matches.push(match);
+                }
+            }
+        }
+
+        return matches;
+    };
+
+    /**Gets all the sessions that are operating with either the same binding or on the same reference element. Helps detect race conditions and enforces the rule that only one binding can execute on an element at a time.
+@param {BindingSession} newSession The new BindingSession to check against the existing binding sessions that are being executed.
+@returns {BindingSessionMatch[]} */
+    var getMatchingSessions2 = function (newSession)
+    {
+        var matches = [];
+
+        var sessionArray = _batchLookup[newSession.batchId].sessions;
         var numSessions = sessionArray.length;
         for (var x = 0; x < numSessions; x++)
         {
@@ -1326,6 +1403,17 @@ EVUI.Modules.Binding.BindingController = function (services)
             cancelAllChildren(session); //tell all children to cancel themselves on their next step
             session.eventStream.seek("finishBinding");
         };
+
+        session.eventStream.onComplete = function (eventStreamArgs)
+        {
+            var batch = _batchLookup[session.batchId];
+
+            batch.numComplete++;
+            if (batch.numComplete >= batch.numSessions)
+            {
+                triggerNextBatch(batch);
+            }
+        }
 
         //add all the steps for the event stream to function
         addOnBindSteps(session);
@@ -1898,8 +1986,8 @@ EVUI.Modules.Binding.BindingController = function (services)
             var cb = function ()
             {
                 //if the session is in the _bindingSessions array, remove it.
-                var index = (item.session.batchId === -1) ? _bindingSessions.indexOf(item.session) : -1;
-                if (index !== -1) _bindingSessions.splice(index, 1);
+                //var index = (item.session.batchId === -1) ? _bindingSessions.indexOf(item.session) : -1;
+                //if (index !== -1) _bindingSessions.splice(index, 1);
 
                 //set it back to idle and dispose of it if it is flagged as needing to be disposed.
                 item.session.bindingHandle.progressState = EVUI.Modules.Binding.BindingProgressStateFlags.Idle;
@@ -1926,8 +2014,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         //if we had no callbacks, do the same cleanup for the current session as is in the callbacks. Sometimes a binding can get canceled twice and wind up in a state where it's progress flags don't reset.
         if (callbacks.length === 0)
         {
-            var index = (session.batchId === -1) ? _bindingSessions.indexOf(session) : -1;
-            if (index !== -1) _bindingSessions.splice(index, 1);
+            //var index = (session.batchId === -1) ? _bindingSessions.indexOf(session) : -1;
+            //if (index !== -1) _bindingSessions.splice(index, 1);
 
             session.bindingHandle.progressState = EVUI.Modules.Binding.BindingProgressStateFlags.Idle;
             if (session.bindingHandle.completionState === EVUI.Modules.Binding.BindingCompletionState.Executing) session.bindingHandle.completionState = EVUI.Modules.Binding.BindingCompletionState.Success;
