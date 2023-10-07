@@ -105,12 +105,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     var _hashMarker = EVUI.Modules.Core.Utils.getHashCode(EVUI.Modules.Core.Utils.makeGuid()).toString(36).replace(".", ""); //a hidden hash value that is used to look up information about objects or nodes that will never occur in a user's code.
     var _hashMarkerLength = _hashMarker.length; //the cached length of the hashMarker so it doesn't need to be recalculated over and over
     var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
-    var _batches =
-    {
-        numBatches: 0,
-        batchIds: [],
-        finalBatchTimeoutId: -1
-    };
+
 
     /**Additional information about all the htmlContent that has been bound.
     @type {HtmlContentMetadata[]}*/
@@ -124,10 +119,6 @@ EVUI.Modules.Binding.BindingController = function (services)
     @type {EVUI.Modules.Binding.BindingTemplate[]}*/
     var _bindingTemplates = [];
 
-    /**Array. All of the queued BindingSessions that are either in progress or going to be batched and executed.
-    @type {BindingSession[]}*/
-    //var _bindingSessions = [];
-
     /**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
     @type {Object}*/
     var _invocationDictionary = {};
@@ -135,6 +126,14 @@ EVUI.Modules.Binding.BindingController = function (services)
     /**Object. Injected services into this controller to use custom 
     @type {EVUI.Modules.Binding.BindingControllerServices}*/
     var _services = services;
+
+    /**The root level container for all batching operations.
+    @type {BindingSessionBatchContainer}*/
+    var _batchContainer = null;
+
+    /**A lookup table of batches keyed by their ID's.
+    @type {Object}*/
+    var _batchLookup = {};
 
     /**Gets a BindingHtmlContent from the controller's internal store of BindingHtmlContents.
     @param {String|EVUI.Modules.Binding.Constants.Fn_SearchHtmlContent} keyOrSelector The string key or selector predicate to select the set of BindingHtmlContent to return.
@@ -370,6 +369,8 @@ EVUI.Modules.Binding.BindingController = function (services)
     /**Ensures that the required service dependencies from other modules are present for the Binder to do its job.*/
     var ensureServices = function ()
     {
+        _batchContainer = new BindingSessionBatchContainer()
+
         if (_services == null || typeof _services !== "object")
         {
             _services = new EVUI.Modules.Binding.BindingControllerServices();
@@ -624,11 +625,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         //build all the events/jobs for the event stream
         buildEventStream(session);
 
-        //register session with the controller
-        //var sessionIndex = _bindingSessions.push(session);
-
         //and add the job to the batching logic
-        batchJobs(session, null, 0);
+        batchJobs(session);
     };
 
     /**Triggers the update process for a BindingHandle and all of its changed children, which only requires what has changed to re-evaluate itself.
@@ -714,92 +712,46 @@ EVUI.Modules.Binding.BindingController = function (services)
         //build all the events/jobs for the event stream
         buildEventStream(session);
 
-        //register session with the controller
-        //var sessionIndex = _bindingSessions.push(session);
-
         //and add the job to the batching logic
-        batchJobs(session, null, 0);
+        batchJobs(session);
     };
-
-    var BindingSessionBatch2 = function ()
-    {
-        this.id = _batchIDCounter++;
-
-        /**
-        @type {BindingSessionBatchContainer}*/
-        this.batchContainer = null;
-
-        /**
-        @type {BindingSession[]}*/
-        this.sessions = [];
-
-        this.numSessions = 0;
-
-        this.numComplete = 0;
-    };
-
-    var BindingSessionBatchContainer = function ()
-    {
-        this.parentBindingSessionId = -1;
-
-        this.numBatches = 0;
-
-        /**
-        @type {BindingSessionBatch2[]}*/
-        this.batches = [];
-
-        /**
-        @type {BindingSessionBatch2}*/
-        this.currentBatch = null;
-
-        /**
-        @type {BindingSessionBatchContainer}*/
-        this.parentContainer = null;
-
-        /**
-        @type {BindingSessionBatchContainer}*/
-        this.childContainers = null;
-
-        this.numChildContainers = 0;
-
-    }
-
-    var _batchContainer = new BindingSessionBatchContainer();
-    var _batchLookup = {};
 
 
     /**Batches jobs so that the checks to ensure that no race conditions occur only operate on a small array and not a gigantic one.
-    @param {BindingSession} session The session to either execute or queue to be batched.
-    @param {BindingSessionBatch} parentBatch The batch that is the parent of this current batch.*/
-    var batchJobs2 = function (session)
+    @param {BindingSession} session The session to either execute or queue to be batched.*/
+    var batchJobs = function (session)
     {
         var batch = null;
-        var parentContainer = _batchContainer;
         var shouldExecute = false;
 
-        var isChildSession = false;
+        //first, get the right batch container. this will be the default batch if this binding session has no parent - if it does have a parent, it will be the batch container that contains the parent's batch.
+        var parentContainer = _batchContainer;
         if (session.parentSession != null)
         {
             var parentBatch = _batchLookup[session.parentSession.batchId];
             parentContainer = parentBatch.batchContainer;
-
-            isChildSession = true;
         }
 
+        //we want a child container to put the batch into, so we either make one or find one and use that as our context going forward
         if (parentContainer.numChildContainers === 0)
         {
             var childContainer = new BindingSessionBatchContainer();
-            parentContainer.childContainers = [];
             childContainer.parentContainer = parentContainer;
+
+            parentContainer.childContainers = [];
             parentContainer.numChildContainers = parentContainer.childContainers.push(childContainer);
             parentContainer = childContainer;
         }
         else
         {
+            //we want to get the child container furthest back in the list
             var lastChild = parentContainer.childContainers[parentContainer.numChildContainers - 1];
             var lastBatch = lastChild.batches[lastChild.numBatches - 1];
             if (lastBatch != null)
             {
+                //if we have a batch in progress, go look at the sequence number (sessionId) of the incoming session and the last session in the list.
+                //If they arent next to each other, we want to put the new session in its own container to keep the last batch from stalling if one
+                //relies on the other finishing first and deadlock instead.
                 var lastItem = lastBatch.sessions[lastBatch.numSessions - 1];
                 var idDelta = (lastItem == null) ? 1 : session.sessionId - lastItem.sessionId;
                 if (lastItem != null && (idDelta !== 1 && idDelta !== -1))
@@ -810,18 +762,18 @@ EVUI.Modules.Binding.BindingController = function (services)
                     parentContainer.numChildContainers = parentContainer.childContainers.push(childContainer);
                     parentContainer = childContainer;
                 }
-                else
+                else //next to each other, use the last child session to hold this session
                 {
                     parentContainer = lastChild;
                 }
             }
-            else
+            else //if all else fails they get the 0th child.
             {
                 parentContainer = (lastChild == null) ? parentContainer.childContainers[0] : lastChild;
             }
         }
 
-
+        //if there aren't any batches to hold the incoming session, make a new one
         if (parentContainer.numBatches === 0)
         {
             batch = new BindingSessionBatch2();
@@ -832,16 +784,20 @@ EVUI.Modules.Binding.BindingController = function (services)
             parentContainer.currentBatch = batch;
             parentContainer.numBatches = parentContainer.batches.push(batch);
         }
-        else
+        else //otherwise use the current batch being loaded in the container
         {
             batch = parentContainer.currentBatch;
         }
 
+        //flag the session with the batchId so we can look it up in the _batchLookup table later.
         session.batchId = batch.id;
+
         batch.numSessions = batch.sessions.push(session);
 
+        //if we're on the first batch, execute the session as we havent met the minimum batch size to start spooling sessions yet
         shouldExecute = parentContainer.numBatches <= 1;
 
+        //if we are over the batch size, make a new batch and set it to be the currentBatch to load up with future sessions.
         if (batch.numSessions >= _maxBatch)
         {
             var newBatch = new BindingSessionBatch2();
@@ -853,22 +809,23 @@ EVUI.Modules.Binding.BindingController = function (services)
             parentContainer.numBatches = parentContainer.batches.push(newBatch);
         }
 
+        //finally, kick off the binding if we're under the batch size
         if (shouldExecute === true)
         {
             executeSession(session);
         }
     }
 
-    /**
-     * 
-     * @param {BindingSessionBatch2} batch
-     */
+    /**Kicks off the next batch in a batch container.
+    @param {BindingSessionBatch2} batch The batch that has just completed.*/
     var triggerNextBatch = function (batch)
     {
+        //remove the batch from the lookup table since we're done with it forever
         delete _batchLookup[batch.id];
 
         var parentContainer = batch.batchContainer;
 
+        //get the next batch, which is sometimes the first batch in the container, so we get it twice sometimes to make sure we're not re-running the batch
         var nextBatch = parentContainer.batches.shift();
         while (nextBatch != null && nextBatch.id === batch.id)
         {
@@ -877,26 +834,26 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         parentContainer.numBatches = parentContainer.batches.length;
 
-        if (nextBatch == null)
+        if (nextBatch == null) //didn't find another batch - this container is done
         {
             parentContainer.currentBatch = null;
-            if (parentContainer.childContainers != null)
+            if (parentContainer.parentContainer != null)
             {
-                var indexToRemove = parentContainer.childContainers.indexOf(parentContainer);
+                var indexToRemove = parentContainer.parentContainer.childContainers.indexOf(parentContainer);
                 if (indexToRemove > -1)
                 {
-                    parentContainer.childContainers.splice(indexToRemove, 1);
-                    parentContainer.numChildContainers--;
+                    parentContainer.parentContainer.childContainers.splice(indexToRemove, 1);
+                    parentContainer.parentContainer.numChildContainers--;
                 }
             }
         }
         else
         {
-            if (nextBatch.numSessions === 0)
+            if (nextBatch.numSessions === 0) //an empty batch, recursively clean up
             {
                 triggerNextBatch(nextBatch);
             }
-            else
+            else //otherwise launch all the sessions in the batch. The completed sessions will trigger the next batch when it finishes
             {
                 for (var x = 0; x < nextBatch.numSessions; x++)
                 {
@@ -906,195 +863,10 @@ EVUI.Modules.Binding.BindingController = function (services)
         }
     }
 
-   
-
-    /**Batches jobs so that the checks to ensure that no race conditions occur only operate on a small array and not a gigantic one.
-    @param {BindingSession} session The session to either execute or queue to be batched.
-    @param {BindingSessionBatch} parentBatch The batch that is the parent of this current batch.*/
-    var batchJobs = function (session, parentBatch, sessionsIndex, recursiveCall)
-    {
-        return batchJobs2(session);
-
-
-        /**This function is solving the hellish problem of batching recursive bindings. The idea behind the batches was that we make sure only a certain set can go at a time so the cross-check 
-         * that prevents the same binding from being executed twice/the same element having two bindings fight over it. The bigger the batch is, the slower that cross check becomes, so we break
-         * it up into little chunks that go one at a time. The problem is that the batches go as sets of racing async processes that advance to the next batch only when all have completed their
-         * jobs - but since bindings can have children or grandchildren, it's possible for a child to wind up in a subsequent batch to its parent - the parent binding will wait for the child to  
-         * finish before it marks itself as finished, but the child is never launched because it's batch isn't up for execution - this causes a deadlock and the entire Binder freezes forever. So,
-         * to fix this problem, we recursively launch child batches when the session has a parent session that run in "parallel" - when the parent pauses to wait for its child (i.e. enters the deadlock), 
-         * that opens up a gap on the page's thread where the child batch can execute. The child eventually finishes, which lets the parent finish. However, a parent can have multiple child batches, 
-         * each of which can have its own children, so we wind up with a "saw-tooth" like pattern where we have horizontal queues stemming from vertical recursion stacks, all going at the same time, with each 
-         * deadlock opening a gap for another batch to slide in. Sometimes in very, very deep recusion for a huge set of bindings it STILL breaks sometimes - se we add a failsafe timeout to poke
-         * the batching mechanism and force it to keep going if we get deep into that recursion scenario, but that mechanism has a flaw where its possible for the batch closed over in the timeout
-         * in to have more child batches that might get missed. We don't need to worry about cross-chcecking for collisions between parent and child batches - any collision is a bug in the Binder
-         * and not user input spam - we still check the child batches against themselves but the odds of a collision are extremely low.
-         * 
-         * 
-         * 
-         * Honestly, this should be redone (again) to be less zany - but this works for now.*/
-
-        //get our list of sessions from either the global list or the parent batch
-        var sessions = null;
-        if (parentBatch == null)
-        {
-            sessions = _bindingSessions;
-        }
-        else
-        {
-            sessions = parentBatch.childSessionQueue;
-        }
-
-        var numSessions = sessions.length;
-
-        //callback to keep getting batches until we run out of sessions
-        var executeBatchCallback = function (finishedBatch)
-        {
-            //this batch is done, remove it from global tracker
-            delete _batches[finishedBatch.id];
-            _batches.numBatches--;
-
-            //get the next batch from the finished batch's list of children
-            var nextBatch = finishedBatch.getNextChildBatch();
-            if (nextBatch == null || nextBatch.sessions.length === 0) //did not get a child batch. A parent batch could be waiting on the child to finish, so walk backwards up the hierarchy until we can get a valid batch
-            {
-                var curBatch = finishedBatch;
-                while (curBatch.parentBatch != null)
-                {
-                    curBatch = curBatch.parentBatch;
-                    nextBatch = curBatch.getNextChildBatch();
-                    if (nextBatch != null && nextBatch.numSessions > 0) break;  //found a waiting batch in the parent, execute it.
-                }
-
-                if (nextBatch == null || nextBatch.numSessions === 0) nextBatch = getNextBatch(); //if we didn't get a batch from any of the parent, get one from the global list
-                if (nextBatch == null || nextBatch.numSessions === 0) return; //no batch from global list either, we are done.
-            }
-
-            //register and execute next batch
-            _batches[nextBatch.id] = nextBatch;
-            _batches.numBatches++;
-
-            nextBatch.execute(executeBatchCallback);
-        }
-
-        //if we have more sessions than the maximum batch size in the sessions list and we are either recursing with a parent batch or on the top level with no batches executing, make and launch a new batch
-        if (numSessions > _maxBatch && (parentBatch != null || _batches.numBatches === 0)) 
-        {
-            var batch = null;
-            if (parentBatch == null) //no parent, working with global sessions list
-            {
-                //remove all the current sessions (which are already queued and/or in progress) from the sessions list
-                sessions.splice(0, _maxBatch);
-                batch = getNextBatch();
-            }
-            else //getting a list of sessions from the parent batch
-            {
-                batch = parentBatch.getNextChildBatch();
-            }
-
-            //add the batch to our global batch tracker
-            _batches[batch.id] = batch;
-            _batches.numBatches++;
-
-            if (_batches.finalBatchTimeoutId !== -1) clearTimeout(_batches.finalBatchTimeoutId);
-
-            //kick off the batched binding process            
-            return batch.execute(executeBatchCallback);
-
-        }
-        else //we have no batch or are under the batch threshold, we have to do some special logic here to keep recursive bindings from deadlocking - otherwise we just launch the batch as normal
-        {
-            //if we have a current batch going, make sure the child isn't waiting on the parent batch to complete before it starts (this is the deadlock source)
-            if (_batches.numBatches > 0)
-            {
-                if (session.parentSession != null) //we have a parent session, the deadlock scenario is possible
-                {
-                    var curParentBatch = _batches[session.parentSession.batchId];
-                    if (curParentBatch != null) //the child is waiting on the parent's batch, this will deadlock without setting up a parallel execution session
-                    {
-                        if (typeof sessionsIndex === "number" && recursiveCall !== true) _bindingSessions.splice(sessionsIndex, 1); //remove from global list if it was in there, this prevents it from getting grabbed by two batches at the same time
-                        if (session.batchId === -1 && recursiveCall !== true) //if we already have this in the queue, don't add it again. Otherwise add it and check the parent's batch to see if it's ready for execution
-                        {
-                            var sessionIndex = curParentBatch.childSessionQueue.push(session);
-
-                            //add a "failsafe" to poke the batching logic - its possible in a deep recursion batching scenario that straggling bind orders get queued but never executed, which also results in a deadlock
-                            if (_batches.finalBatchTimeoutId === -1) 
-                            {
-                                _batches.finalBatchTimeoutId = setTimeout(function ()
-                                {
-                                    _batches.finalBatchTimeoutId = -1;
-
-                                    executeBatchCallback(curParentBatch); //we basically tell it to launch another parallel batch from the recursion stack if possible - the parent batch will recursively poke its parents all the way up to the global list, which is enough of a poke to keep the binder from deadlocking
-                                });
-                            }
-
-                            return batchJobs(session, curParentBatch, sessionIndex - 1, true); //trigger the batching logic for the parent batch
-                        }
-                        else //either we are a recursive batch call (in which case it sits in the queue) or the session is already batched, in which case it also just sits in the queue
-                        {
-                            return;
-                        }
-                    }
-                    else //if we have a parent session, but that session has no batch, then it came from the global list (which this session is already in) so we can let it sit in the queue to be picked up by the batch finishing
-                    {
-                        return; 
-                    }
-                }
-                else //a batch is running, but we have no parent so a recursion deadlock isnt possible AND we are under the batch threshold, so execute away
-                {
-                    return executeSession(session);
-                }
-            }
-            else //zero batches executing and we are under the batch threshold, execute away
-            {
-                return executeSession(session);
-            }
-        }
-    };
-
-    /**Gets the next BindingSessionBatch of BindingSessions.
-    @returns {BindingSessionBatch}*/
-    var getNextBatch = function ()
-    {
-        //make a new batch and take up to the maximum amount of children to process.
-        var batch = new BindingSessionBatch();
-        batch.sessions = _bindingSessions.splice(0, _maxBatch);
-        batch.numSessions = batch.sessions.length;
-
-        return batch;
-    };
-
     /**Gets all the sessions that are operating with either the same binding or on the same reference element. Helps detect race conditions and enforces the rule that only one binding can execute on an element at a time.
     @param {BindingSession} newSession The new BindingSession to check against the existing binding sessions that are being executed.
     @returns {BindingSessionMatch[]} */
     var getMatchingSessions = function (newSession)
-    {
-        return getMatchingSessions2(newSession);
-
-        var matches = [];
-
-        var sessionArray = newSession.batchId < 0 ? _bindingSessions : _batches[newSession.batchId].sessions;
-        var numSessions = sessionArray.length;
-        for (var x = 0; x < numSessions; x++)
-        {
-            var curSession = sessionArray[x];
-
-            if (curSession.sessionId !== newSession.sessionId)
-            {
-                var match = compareSessions(newSession, curSession);
-                if (match != null)
-                {
-                    matches.push(match);
-                }
-            }
-        }
-
-        return matches;
-    };
-
-    /**Gets all the sessions that are operating with either the same binding or on the same reference element. Helps detect race conditions and enforces the rule that only one binding can execute on an element at a time.
-@param {BindingSession} newSession The new BindingSession to check against the existing binding sessions that are being executed.
-@returns {BindingSessionMatch[]} */
-    var getMatchingSessions2 = function (newSession)
     {
         var matches = [];
 
@@ -1985,10 +1757,6 @@ EVUI.Modules.Binding.BindingController = function (services)
         {
             var cb = function ()
             {
-                //if the session is in the _bindingSessions array, remove it.
-                //var index = (item.session.batchId === -1) ? _bindingSessions.indexOf(item.session) : -1;
-                //if (index !== -1) _bindingSessions.splice(index, 1);
-
                 //set it back to idle and dispose of it if it is flagged as needing to be disposed.
                 item.session.bindingHandle.progressState = EVUI.Modules.Binding.BindingProgressStateFlags.Idle;
                 if (item.session.bindingHandle.completionState === EVUI.Modules.Binding.BindingCompletionState.Executing) item.session.bindingHandle.completionState = EVUI.Modules.Binding.BindingCompletionState.Success;
@@ -2014,9 +1782,6 @@ EVUI.Modules.Binding.BindingController = function (services)
         //if we had no callbacks, do the same cleanup for the current session as is in the callbacks. Sometimes a binding can get canceled twice and wind up in a state where it's progress flags don't reset.
         if (callbacks.length === 0)
         {
-            //var index = (session.batchId === -1) ? _bindingSessions.indexOf(session) : -1;
-            //if (index !== -1) _bindingSessions.splice(index, 1);
-
             session.bindingHandle.progressState = EVUI.Modules.Binding.BindingProgressStateFlags.Idle;
             if (session.bindingHandle.completionState === EVUI.Modules.Binding.BindingCompletionState.Executing) session.bindingHandle.completionState = EVUI.Modules.Binding.BindingCompletionState.Success;
             if (session.bindingHandle.disposing === true) disposeBinding(session.bindingHandle);
@@ -6833,91 +6598,6 @@ EVUI.Modules.Binding.BindingController = function (services)
         this.path = null;
     };
 
-
-    /**Represents a batch of BindingSessions that are being executed together as a group.
-    @class*/
-    var BindingSessionBatch = function ()
-    {
-        /**Number. The sequential ID of the batch.
-        @type {Number}*/
-        this.id = _batchIDCounter++;
-
-        /**Array. All of the BindingSessions being run by this batch.
-        @type {BindingSession[]}*/
-        this.sessions = [];
-
-        /**Number. The number of sessions being run.
-        @type {Number}*/
-        this.numSessions = 0;
-
-        /**Array. All of the BindingSessions that are a children of any of the sessions in the sesions list.
-        @type {BindingSession[]}*/
-        this.childSessionQueue = [];
-
-        /**Object. The batch that is a child of this batch.
-        @type {BindingSessionBatch}*/
-        this.childBatches = [];
-
-        /**Object. The batch that is the parent of this batch.
-        @type {BindingSessionBatch}*/
-        this.parentBatch = null;
-
-        /**Boolean. Whether or not the batch is executing.
-        @type {Boolean}*/
-        this.executing = false;
-    };
-
-    /**Gets the next batch of child sessions to run as a parallel child batch to its parent.
-    @returns {BindingSessionBatch}*/
-    BindingSessionBatch.prototype.getNextChildBatch = function ()
-    {
-        if (this.childSessionQueue.length === 0) return null;
-
-        var nextBatch = new BindingSessionBatch();
-        nextBatch.sessions = this.childSessionQueue.splice(0, _maxBatch);
-        nextBatch.numSessions = nextBatch.sessions.length;
-        nextBatch.parentBatch = this;
-
-        this.childBatches.push(nextBatch);
-
-        return nextBatch;
-    };
-
-    /**Executes the batch and calls the callback once all members of the batch have completed.
-    @param {Function} callback A callback function to call that takes this BindingSessionBatch as a parameter.*/
-    BindingSessionBatch.prototype.execute = function (callback)
-    {
-        var self = this;
-        var numSessions = this.sessions.length;
-        if (numSessions === 0) return callback(self);
-
-        this.executing = true;
-        var numComplete = 0;
-
-        var commonCallback = function ()
-        {
-            numComplete++;
-            if (numSessions === numComplete)
-            {
-                self.executing = false;
-                callback(self);
-            }
-        };
-
-        for (var x = 0; x < numSessions; x++)
-        {
-            var curSession = this.sessions[x];
-            curSession.batchId = this.id;
-
-            curSession.eventStream.onComplete = function ()
-            {
-                commonCallback();
-            };
-
-            executeSession(curSession);
-        }
-    };
-
     /**The various modes that a BindingSession can execute itself in.
     @enum*/
     var BindingSessionMode =
@@ -7177,6 +6857,63 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         this.templateName = null;
     };
+
+    /**Represents a batch of peer-bindings to be executed at the same time.
+    @class*/
+    var BindingSessionBatch2 = function ()
+    {
+        /**The unique ID of this batch.
+        @type {Number}*/
+        this.id = _batchIDCounter++;
+
+        /**The container that holds this batch and its peer batches.
+        @type {BindingSessionBatchContainer}*/
+        this.batchContainer = null;
+
+        /**The sessions in the batch being executed.
+        @type {BindingSession[]}*/
+        this.sessions = [];
+
+        /**The number of sessions in the batch.
+        @type {Number}*/
+        this.numSessions = 0;
+
+        /**The number of completed sessions in the batch.
+        @type {Number}*/
+        this.numComplete = 0;
+    };
+
+    /**Represents a container for BindingSessionBatches.
+    @class     */
+    var BindingSessionBatchContainer = function ()
+    {
+
+        /**The number of batches in this container.
+        @type {Number}*/
+        this.numBatches = 0;
+
+        /**The batches contained by this container.
+        @type {BindingSessionBatch2[]}*/
+        this.batches = [];
+
+        /**The batch that is currently being loaded with sessions.
+        @type {BindingSessionBatch2}*/
+        this.currentBatch = null;
+
+        /**The batch container that contains this one.
+        @type {BindingSessionBatchContainer}*/
+        this.parentContainer = null;
+
+        /**The child batches of this batch. Mirrors the hierarchy of the objects being bound.
+        @type {BindingSessionBatchContainer[]}*/
+        this.childContainers = null;
+
+        /**The number of child containers.
+        @type {Number}*/
+        this.numChildContainers = 0;
+
+    }
+
 
     cacheObjectKeys();
     ensureServices();
