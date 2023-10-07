@@ -776,7 +776,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         //if there aren't any batches to hold the incoming session, make a new one
         if (parentContainer.numBatches === 0)
         {
-            batch = new BindingSessionBatch2();
+            batch = new BindingSessionBatch();
             batch.batchContainer = parentContainer;
 
             _batchLookup[batch.id] = batch;
@@ -800,7 +800,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         //if we are over the batch size, make a new batch and set it to be the currentBatch to load up with future sessions.
         if (batch.numSessions >= _maxBatch)
         {
-            var newBatch = new BindingSessionBatch2();
+            var newBatch = new BindingSessionBatch();
             newBatch.batchContainer = parentContainer;
 
             _batchLookup[newBatch.id] = newBatch;
@@ -817,7 +817,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     }
 
     /**Kicks off the next batch in a batch container.
-    @param {BindingSessionBatch2} batch The batch that has just completed.*/
+    @param {BindingSessionBatch} batch The batch that has just completed.*/
     var triggerNextBatch = function (batch)
     {
         //remove the batch from the lookup table since we're done with it forever
@@ -1769,7 +1769,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             callbacks.push(cb);
         };
 
-        //sort the callbacks so that they are called in order of quevuing
+        //sort the callbacks so that they are called in order of queuing
         session.callbacks.sort(function (a, b) { return a.id - b.id; });
 
         //make the modified wrapper function callbacks to use
@@ -6860,7 +6860,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
     /**Represents a batch of peer-bindings to be executed at the same time.
     @class*/
-    var BindingSessionBatch2 = function ()
+    var BindingSessionBatch = function ()
     {
         /**The unique ID of this batch.
         @type {Number}*/
@@ -6893,11 +6893,11 @@ EVUI.Modules.Binding.BindingController = function (services)
         this.numBatches = 0;
 
         /**The batches contained by this container.
-        @type {BindingSessionBatch2[]}*/
+        @type {BindingSessionBatch[]}*/
         this.batches = [];
 
         /**The batch that is currently being loaded with sessions.
-        @type {BindingSessionBatch2}*/
+        @type {BindingSessionBatch}*/
         this.currentBatch = null;
 
         /**The batch container that contains this one.
@@ -7296,7 +7296,7 @@ EVUI.Modules.Binding.Binding = function (handle)
         return true;
     };
 
-    /**Gets a copy of the internal boundContent list that contains all the Nodes produced by binding this Binidng to the DOM.
+    /**Gets a copy of the internal boundContent list that contains all the Nodes produced by binding this Binding to the DOM.
     @returns {Node[]}*/
     this.getBoundContent = function ()
     {
