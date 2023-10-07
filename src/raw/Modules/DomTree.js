@@ -2030,7 +2030,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             for (var x = 0; x < numAttrs; x++)
             {
                 var curAttr = this.attributes[x];
-                if (options.isOmittedAttribute((curAttr) === true)) continue;
+                if (options.isOmittedAttribute(curAttr) === true) continue;
                 if (noSrc === true && curAttr.key.toLowerCase() === "src") continue;
 
                 node.setAttribute(curAttr.key, curAttr.val);
