@@ -311,18 +311,21 @@ EVUI.Modules.Diff.DiffController = function ()
 
         if (aType === "object" && bType === "object") //if both are objects
         {
+            var aNull = a == null;
+            var bNull = b == null;
+
             comparison.diffType = EVUI.Modules.Diff.DiffType.Object;
 
-            if (a != null && b != null) //and neither is null, do a recursive object comparison
+            if (aNull === false && bNull === false) //and neither is null, do a recursive object comparison
             {
                 comparison = compareObjects(session, comparison);
-                if (a.prototype !== b.prototype) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Prototype;
+                if (a.constructor.prototype !== b.constructor.prototype) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Prototype;
             }
             else //otherwise, if one is null, don't bother doing a comparison.
             {
-                if (a != null || b != null)
+                if (aNull === false || bNull === false)
                 {
-                    comparison.flags |= (a != null) ? EVUI.Modules.Diff.DiffFlags.AOnly : EVUI.Modules.Diff.DiffFlags.BOnly;
+                    comparison.flags |= (aNull === false) ? EVUI.Modules.Diff.DiffFlags.AOnly : EVUI.Modules.Diff.DiffFlags.BOnly;
 
                     //if (session.compareResult.options.compareValuesOnly === false) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Reference;
                     comparison.flags |= EVUI.Modules.Diff.DiffFlags.Reference;
