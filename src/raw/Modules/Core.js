@@ -270,9 +270,20 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
             exeArgsOrFns = new EVUI.Modules.Core.AsyncSequenceExecutionArgs();
             exeArgsOrFns.functions = fns;
         }
+        else if (typeof exeArgsOrFns === "function")
+        {
+            var fns = [exeArgsOrFns];
+
+            exeArgsOrFns = new EVUI.Modules.Core.AsyncSequenceExecutionArgs();
+            exeArgsOrFns.functions = fns;
+        }
+        else if (typeof exeArgsOrFns === "object" && exeArgsOrFns != null)
+        {
+            if (EVUI.Modules.Core.Utils.isArray(exeArgsOrFns.functions) === false) exeArgsOrFns.functions = [exeArgsOrFns.functions];
+        }
         else
         {
-            if (EVUI.Modules.Core.Utils.isArray(exeArgsOrFns.functions) === false) throw Error("Cannot execute without an array of functions.");
+            throw Error("Function, Array of Functions, or Object expected.")
         }
 
         if (typeof callback !== "function") callback = function () { };
