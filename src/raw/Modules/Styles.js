@@ -198,9 +198,9 @@ EVUI.Modules.Styles.StyleSheetManager = function ()
                 var numKeys = keys.length;
                 var allNulls = true;
 
-                for (var x = 0; x < numKeys; x++)
+                for (var y = 0; y < numKeys; y++)
                 {
-                    if (curNewRule.rules[keys[x]] !== "null") //null is the magic key that means "get rid of this rule"
+                    if (curNewRule.rules[keys[y]] !== "null") //null is the magic key that means "get rid of this rule"
                     {
                         allNulls = false;
                         break;
