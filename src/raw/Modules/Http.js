@@ -88,7 +88,7 @@ EVUI.Modules.Http.HttpManager = function ()
     /**Executes a HTTP request with the given arguments.
     @param {EVUI.Modules.Http.HttpRequestArgs} requestArgs A YOLO HttpRequestArgs that contains the information needed to run the Http request.
     @param {EVUI.Modules.Http.Constants.Fn_HttpCallback} callback A callback to call once the HTTP request completes.*/
-    this.executeRequest = function (requestArgs, callback)
+    this.send = function (requestArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
 
@@ -113,7 +113,7 @@ EVUI.Modules.Http.HttpManager = function ()
     /**Executes a HTTP request with the given arguments that it can be awaited.
     @param {EVUI.Modules.Http.HttpRequestArgs} requestArgs A YOLO HttpRequestArgs that contains the information needed to run the Http request.
     @returns {Promise<EVUI.Modules.Http.CompletedHttpRequest>}*/
-    this.executeRequestAsync = function (requestArgs)
+    this.sendAsync = function (requestArgs)
     {
         var requestInstance = buildRequest(requestArgs);
         requestInstance.eventStream.getPromiseResolutionValue = function ()
@@ -1201,7 +1201,7 @@ Object.defineProperty($evui, "httpManager",
 @param {EVUI.Modules.Http.Constants.Fn_HttpCallback} callback A callback to call once the HTTP request completes**/
 $evui.http = function (requestArgs, callback)
 {
-    $evui.httpManager.executeRequest(requestArgs, callback);
+    $evui.httpManager.send(requestArgs, callback);
 };
 
 
@@ -1210,7 +1210,7 @@ $evui.http = function (requestArgs, callback)
 @returns {Promise<EVUI.Modules.Http.CompletedHttpRequest>} */
 $evui.httpAsync = function (requestArgs)
 {
-    return $evui.httpManager.executeRequestAsync(requestArgs);
+    return $evui.httpManager.sendAsync(requestArgs);
 };
 
 /*#ENDWRAP(Http)#*/

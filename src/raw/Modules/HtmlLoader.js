@@ -112,7 +112,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         htmlArgs.httpArgs.method = "GET";
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(htmlArgs.url) === false) htmlArgs.httpArgs.url = htmlArgs.url;
 
-        _services.httpManager.executeRequest(htmlArgs.httpArgs, function (completedRequest)
+        _services.httpManager.send(htmlArgs.httpArgs, function (completedRequest)
         {
             if (completedRequest.error != null)
             {
@@ -203,7 +203,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
             totalRequests.push(httpArgs.context);
 
-            _services.httpManager.executeRequest(httpArgs, function (completedRequest)
+            _services.httpManager.send(httpArgs, function (completedRequest)
             {
                 translateResponseToText(completedRequest.xmlHttpRequest, function (resultText)
                 {
