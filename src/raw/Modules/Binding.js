@@ -84,7 +84,8 @@ EVUI.Modules.Binding.Constants.Fn_BindingEventHandler = function (bindingEventAr
 
 Object.freeze(EVUI.Modules.Binding.Constants);
 
-/**Data-binding controller used for recursively binding object to DOM Nodes.
+/**Data-binding controller used for recursively binding objects to DOM Nodes.
+@param {EVUI.Modules.Binding.BindingControllerServices} services Optional object to inject the dependent services the controller should use instead of the default services.
 @class*/
 EVUI.Modules.Binding.BindingController = function (services) 
 {
@@ -7916,5 +7917,8 @@ $evui.removeBindingHtmlContent = function (key)
     return $evui.binder.removeHtmlContent(key)
 };
 
+/**Data-binding controller used for recursively binding objects to DOM Nodes.
+@param {EVUI.Modules.Binding.BindingControllerServices} services Optional object to inject the dependent services the controller should use instead of the default services.*/
+$evui.controllers.bindingController = EVUI.Modules.Binding.BindingController;
 
 /*#ENDWRAP(Binding)#*/

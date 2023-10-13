@@ -8,11 +8,15 @@ LICENSE file in the root directory of this source tree.*/
 @namespace*/
 EVUI = {};
 
+/**Root namespace declaration for all the modules that EventUI uses.
+@namespace*/
+EVUI.Modules = {};
+
 /**Root shorthand reference container for EventUI commands. All functions listed here are shorthand for functions found deeper in the API: these merely call the API commands and there is no difference
 between them and the fully qualified function name.
 @static*/
 $evui = {};
 
-/**Root namespace declaration for all the modules that EventUI uses.
-@namespace*/
-EVUI.Modules = {};
+/**Root container for all module controller constructors.
+@static*/
+$evui.controllers = {}
