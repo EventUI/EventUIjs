@@ -51,13 +51,13 @@ EVUI.Modules.Binding.Constants.Attr_BoundObj = "evui-binder-source";
 EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
 EVUI.Modules.Binding.Constants.Attr_BindingTemplateName = "evui-binder-template-name";
 
-EVUI.Modules.Binding.Constants.Event_OnBind = "evui.binder.bind";
-EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "evui.binder.get.htmlContent";
-EVUI.Modules.Binding.Constants.Event_OnSetBindings = "evui.binder.get.bindings";
-EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent = "evui.binder.bind.htmlContent";
-EVUI.Modules.Binding.Constants.Event_OnBindChildren = "evui.binder.bind.children";
-EVUI.Modules.Binding.Constants.Event_OnBoundChildren = "evui.binder.bound.children";
-EVUI.Modules.Binding.Constants.Event_OnBound = "evui.binder.bound";
+EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
+EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "gethtmlContent";
+EVUI.Modules.Binding.Constants.Event_OnGetBindings = "getbindings";
+EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent = "bindhtmlContent";
+EVUI.Modules.Binding.Constants.Event_OnBindChildren = "bindchildren";
+EVUI.Modules.Binding.Constants.Event_OnBoundChildren = "boundchildren";
+EVUI.Modules.Binding.Constants.Event_OnBound = "bound";
 
 /**Callback function definition for when a Binding has completed its work or was canceled.
 @param {EVUI.Modules.Binding.Binding} binding The Binding that was created or re-bound.*/
@@ -1332,14 +1332,14 @@ EVUI.Modules.Binding.BindingController = function (services)
     @param {BindingSession} session The BindingSession being executed.*/
     var addonSetBindingsSteps = function (session)
     {
-        session.eventStream.addJob(EVUI.Modules.Binding.Constants.Event_OnSetBindings, "getBindings", function (jobArgs)
+        session.eventStream.addJob(EVUI.Modules.Binding.Constants.Event_OnGetBindings, "getBindings", function (jobArgs)
         {
             onGetBindingsJob(session, jobArgs);
         });
 
         if (session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) return;
 
-        session.eventStream.addEvent(EVUI.Modules.Binding.Constants.Event_OnSetBindings, "onSetBindings", function (eventArgs)
+        session.eventStream.addEvent(EVUI.Modules.Binding.Constants.Event_OnGetBindings, "onSetBindings", function (eventArgs)
         {
             if (validateSession(session, eventArgs) === false) return;
             if (typeof session.bindingHandle.binding.onSetBindings === "function")
