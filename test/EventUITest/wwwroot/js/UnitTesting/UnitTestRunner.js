@@ -11,8 +11,7 @@ EVUIUnit.Controllers.TestRunner = class
     #testRunning = false;
     #initialized = false;
     #functionName = null;
-
-    testCodeWrapper = null;
+    #timeout = 10;
 
     initialize(testRunnerArgs, testHost)
     {
@@ -21,36 +20,93 @@ EVUIUnit.Controllers.TestRunner = class
 
         this.#initialized = true;
         this.#runnerArgs = this.#cloneRunnerArgs(testRunnerArgs);
-        this.#functionName = "INJECTED_CODE_" + (Math.random() * 10000).toString(36).replace(".", "").toUpperCase();
+        this.#functionName = "TEST_CODE";
+
+        if (this.#isChildWindow === true)
+        {
+            EVUITest.Settings.outputWriter.writeOutput = (outputMessage) =>
+            {
+                this.writeOutput(outputMessage);
+            }
+        }
     }
 
     writeOutput(ouput, outputLevel)
     {
-        if (typeof output !== "string") throw Error("String expected.");
+        if (ouput == null) return;
 
-        if (typeof outputLevel !== "string") outputLevel = EVUIUnit.Resources.LogLevel.Info;
-        if (outputLevel === EVUIUnit.Resources.LogLevel.None) return;
-
-        if (this.#isChildWindow === false)
+        if (this.#isChildWindow === fale)
         {
-            return console.log(`${outputLevel.toUpperCase()}: ${output}`);
+            var message = ouput;
+            var level = outputLevel;
+            var timestamp = null;
+
+            if (typeof output === "object")
+            {
+                message = output.message;
+
+                if (ouput.level != null) level = ouput.level;
+                if (output.timestamp != null) timestamp = ouput.timestamp;
+            }
+
+            if (typeof level !== "string") level = EVUITest.LogLevel.Info;
+            if (typeof timestamp !== "string") timestamp = new Date(Date.now()).toISOString();
+
+            console.log(`${timestamp} - [${level.toUpperCase()}]: ${message}`);
+
+            return;
+        }
+
+        var message = ouput;
+        if (typeof output !== "object")
+        {
+            message = new EVUITest.OutputWiterMessage();
+            message.message = output;
+
+            if (typeof outputLevel !== "string") outputLevel = EVUITest.LogLevel.Info;
+            message.level = outputLevel;
         }
 
         var pushMessage = new EVUIUnit.Resources.OuputMessagePush();
-        pushMessage.level = outputLevel;
-        pushMessage.message = ouput;
+        pushMessage.message = message;
 
         window.parent.postMessage(pushMessage);
     }
 
-    #getOutputLevel(outputMessage)
-    {
-        var succeeded
-    }
-
     async run()
     {
+        if (this.#testRunning === true) return;
+        this.#testRunning = true;
 
+        try
+        {
+            var script = await this.#getScriptText();
+            var injectionResult = await this.#injectScript(script);
+            if (injectionResult === false) throw Error("Failed to inject test code.");
+
+            this.#sendTestStartMessage();
+
+            await window[this.#functionName]();
+            var now = Date.now();
+
+            while ($evui.testHost.executing === true)
+            {
+                await this.#waitAsync(10);
+                if (Date.now() - now > (this.#timeout * 1000)) throw Error("Test timeout hit.")
+            }
+        }
+        catch (ex)
+        {
+            var outputMessage = new EVUITest.OutputWiterMessage();
+            outputMessage.logLevel = EVUITest.LogLevel.Critial;
+            outputMessage.message = "Error executing test function wrapper: " + ex.stack;
+
+            this.writeOutput(outputMessage);
+        }
+        finally
+        {
+            this.#sendTestEndMessage();
+        }
     }
 
     async #getScriptText()
@@ -69,27 +125,42 @@ EVUIUnit.Controllers.TestRunner = class
         var responseText = await response.text();
         if (typeof responseText !== "string" || responseTest.trim().length === 0) throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
 
-        var finalScript = `var ${functionName} = async function() {${responseText}};`
+        var finalScript = `window[${functionName}] = async function() {${responseText}};`
 
         return finalScript;
     };
 
     #injectScript(scriptText)
     {
+        var failed = false;
         var errorHandler = (errorArgs) =>
         {
-            this.writeOutput("CODE INJECTION PARSE ERROR:" + errorArgs.error.stack, EVUIUnit.Resources.LogLevel.Critial);
+            if (failed === false) this.writeOutput("CODE INJECTION PARSE ERROR:" + errorArgs.error.stack, EVUIUnit.Resources.LogLevel.Critial);
+            failed = true;           
         };
 
         window.addEventListener("error", errorHandler);
 
         var scriptTag = document.createElement("script");
         scriptTag.innerText = scriptText;
+        try
+        {
+            document.body.append(scriptTag);
+        }
+        catch (ex)
+        {
+            errorHandler({ error: ex });
+        }
 
-        document.body.append(scriptTag);
-
-        window.removeEventListener("error", errorHandler);
-    }
+        return new Promise((resolve) =>
+        {
+            setTimeout(function ()
+            {
+                window.removeEventListener("error", errorHandler);
+                resolve(failed);
+            }, 10);
+        });
+    };
 
     #cloneRunnerArgs(serverArgs)
     {
@@ -97,6 +168,40 @@ EVUIUnit.Controllers.TestRunner = class
         newArgs.testFilePath = serverArgs.testFilePath;
 
         return newArgs;
+    }
+
+    #sendTestStartMessage()
+    {
+        if (this.#isChildWindow === false)
+        {
+            return this.writeOutput("Test starting!");
+        }
+
+        var pushMessage = new EVUIUnit.Resources.TestStatusUpdate();
+        pushMessage.messageCode = EVUIUnit.Resources.MessageCodes.TestReady;
+
+        window.parent.postMessage(pushMessage);
+    }
+
+    #sendTestEndMessage()
+    {
+        if (this.#isChildWindow === false)
+        {
+            return this.writeOutput("Test complete!");
+        }
+
+        var pushMessage = new EVUIUnit.Resources.TestStatusUpdate();
+        pushMessage.messageCode = EVUIUnit.Resources.MessageCodes.TestComplete;
+
+        window.parent.postMessage(pushMessage);
+    }
+
+    #waitAsync(duration)
+    {
+        return new Promise((resolve) =>
+        {
+            resolve();
+        }, duration);
     }
 }
 

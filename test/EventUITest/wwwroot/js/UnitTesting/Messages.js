@@ -25,7 +25,6 @@ EVUIUnit.Resources.OuputMessagePush = class extends EVUIUnit.Resources.TestStatu
     }
 
     message = null;
-    level = EVUIUnit.Resources.LogLevel.None;
 };
 
 EVUIUnit.Resources.LogLevel =

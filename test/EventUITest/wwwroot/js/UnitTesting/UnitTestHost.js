@@ -138,7 +138,7 @@ EVUIUnit.Controllers.HostController = class
         else if (message.messageCode === EVUIUnit.Resources.MessageCodes.OutputMessagePush)
         {
             this.#setTimeout(session);
-
+            this.#writeMessageOutput(session, message.message);
         }
         else if (message.messageCode === EVUIUnit.Resources.MessageCodes.TestComplete)
         {
@@ -176,7 +176,7 @@ EVUIUnit.Controllers.HostController = class
 
     #writeMessageOutput(session, message)
     {
-
+        console.log(message, session);
     };
 
     #TestSession = class

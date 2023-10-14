@@ -137,13 +137,7 @@ EVUITest.TestResult = function ()
 @class*/
 EVUITest.OutputWriter = function ()
 {
-    /**Writes the output of a TestResult.
-    @param {EVUITest.TestResult} testResult The result of a test.*/
-    this.writeTestOuput = function (testResult)
-    {
-        var output = this.formatTestOutput(testResult);
-        this.writeOutput(output);
-    };
+    var _self = this;
 
     /**Writes arbitrary output.
     @param {Any} args Any arguments to write to output.*/
@@ -152,54 +146,83 @@ EVUITest.OutputWriter = function ()
         console.log(...args);
     };
 
-    /**Formats a testResult into a loggable string.
-    @param {EVUITest.TestResult} testResult The result of a test.*/
-    this.formatTestOutput = function (testResult)
+    /**Logs a "critical" level log message.
+    @param {String} message The message to log.*/
+    this.logCritical = function (message)
     {
-        if (testResult == null) return null;
-
-        var output = "Test #" + testResult.testId + " - \"" + testResult.testName + "\" ";
-
-        if (testResult.success === true)
-        {
-            output += "SUCCEDED in " + testResult.duration + "ms."
-        }
-        else
-        {
-            output += "FAILED  in " + testResult.duration + "ms.";
-
-            if (typeof testResult.reason === "string" && testResult.reason.trim().length > 0)
-            {
-                output += "\nReason: " + testResult.reason;
-            }
-            else if (testResult.error instanceof Error)
-            {
-                output += "\nError: " + testResult.error.stack;
-            }
-        }
-
-        if (testResult.arguments != null && testResult.arguments.length > 0)
-        {
-            var argsStr = "\n\nWith Arguments:\n";
-
-            if (typeof arguments === "function")
-            {
-                argsStr += testResult.arguments.toString();
-            }
-            else if (typeof arguments === "object")
-            {
-                argsStr += JSON.stringify(testResult.arguments);
-            }
-            else
-            {
-                argsStr += testResult.arguments.toString();
-            }
-
-            output += argsStr;
-        }
-
-        return output;
+        log(message, EVUITest.LogLevel.Critial);
     };
+
+    /**Logs a "error" level log message.
+    @param {String} message The message to log.*/
+    this.logError = function (message)
+    {
+        log(message, EVUITest.LogLevel.Error);
+    };
+
+    /**Logs a "warning" level log message.
+    @param {String} message The message to log.*/
+    this.logWarning = function (message)
+    {
+        log(message, EVUITest.LogLevel.Warn); 
+    };
+
+    /**Logs a "debug" level log message.
+    @param {String} message The message to log.*/
+    this.logDebug = function (message)
+    {
+        log(message, EVUITest.LogLevel.Debug);
+    };
+
+    /**Logs a "info" level log message.
+    @param {String} message The message to log.*/
+    this.logInfo = function (message)
+    {
+        log(message, EVUITest.LogLevel.Info);
+    };
+
+    /**Logs a message by creating a OutputWriterMessage and passing it to writeOutput.
+    @param {String} message The message to log.
+    @param {String} level The LogLevel enum value to associate with the log message.*/
+    var log = function (message, level)
+    {
+        if (typeof message == null) return;
+        if (typeof level !== "string") level = EVUITest.LogLevel.Info;
+
+        var logMessage = new EVUITest.OutputWiterMessage();
+        logMessage.message = message;
+        logMessage.logLevel = level;
+
+        _self.writeOutput(logMessage)
+    }
+};
+
+/**Represents an output message from the EVUITest library that ties together a log message with a log level code.
+@class */
+EVUITest.OutputWiterMessage = function ()
+{
+    /**A value from the LogLevel enum indicating the level of severity of the log message.
+    @type {String}*/
+    this.logLevel = EVUITest.LogLevel.Info;
+
+    /**The message to log. Must be able to be sent in an iframe message.
+    @type {Any}*/
+    this.message = null;
+
+    /**The UTC ISO timestamp for when this log statement was made.
+    @type {String}*/
+    this.timestamp = new Date(Date.now()).toISOString();
+};
+
+EVUITest.LogLevel =
+{
+    None: "none",
+    Trace: "trace",
+    Debug: "debug",
+    Info: "info",
+    Warn: "warn",
+    Error: "error",
+    Critial: "critical"
 };
 
 /**Settings for running tests.
@@ -274,11 +297,65 @@ EVUITest.TestHostController = function ()
         });
     };
 
-    /**Uses the ouputWriter to write arbitrary output.
+    /**Uses the outputWriter to write arbitrary output.
     @param {Any} args Any arguments to write as output.*/
     this.writeOutput = function (...args)
     {
         writeOutput(...args);
+    };
+
+    /**Formats a testResult into a loggable string.
+    @param {EVUITest.TestResult} testResult The result of a test.
+    @returns {EVUITest.OutputWiterMessage}*/
+    var formatTestOutput = function (testResult)
+    {
+        if (testResult == null) return null;
+
+        var outputMessage = new EVUITest.OutputWiterMessage();
+        var output = "Test #" + testResult.testId + " - \"" + testResult.testName + "\" ";
+
+        if (testResult.success === true)
+        {
+            outputMessage.logLevel = EVUITest.LogLevel.Debug;
+            output += "SUCCEDED in " + testResult.duration.toFixed(3) + "ms."
+        }
+        else
+        {
+            outputMessage.logLevel = EVUITest.LogLevel.Error;
+            output += "FAILED  in " + testResult.duration.toFixed(3) + "ms.";
+
+            if (typeof testResult.reason === "string" && testResult.reason.trim().length > 0)
+            {
+                output += "\nReason: " + testResult.reason;
+            }
+            else if (testResult.error instanceof Error)
+            {
+                output += "\nError: " + testResult.error.stack;
+            }
+        }
+
+        if (testResult.arguments != null && testResult.arguments.length > 0)
+        {
+            var argsStr = "\n\nWith Arguments:\n";
+
+            if (typeof arguments === "function")
+            {
+                argsStr += testResult.arguments.toString();
+            }
+            else if (typeof arguments === "object")
+            {
+                argsStr += JSON.stringify(testResult.arguments);
+            }
+            else
+            {
+                argsStr += testResult.arguments.toString();
+            }
+
+            output += argsStr;
+        }
+
+        outputMessage.message = output;
+        return outputMessage;
     };
 
     /**Takes ambiguous user input and makes a TestState object from it.
@@ -363,9 +440,9 @@ EVUITest.TestHostController = function ()
     @param {TestInstance} testInstance The instance of a test that was just completed.*/
     var writeTestOutput = function (testInstance)
     {
-        if (typeof EVUITest.Settings.outputWriter?.writeTestOuput !== "function")
+        if (typeof EVUITest.Settings.outputWriter.writeOutput !== "function")
         {
-            console.log("Invalid outputWriter! The outputWriter must have a \"writeTestOutput\" function that accepts a TestResult as a parameter.");
+            console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function.");
         }
         else
         {
@@ -373,11 +450,16 @@ EVUITest.TestHostController = function ()
 
             try
             {
-                EVUITest.Settings.outputWriter.writeTestOuput(result);
+                var testLogMessage = formatTestOutput(result);
+                EVUITest.Settings.outputWriter.writeOutput(testLogMessage);
             }
             catch (ex)
             {
-                writeOutput(ex);
+                var errorLogMessage = new EVUITest.OutputWiterMessage();
+                errorLogMessage.logLevel = EVUITest.LogLevel.Critial;
+                errorLogMessage.message = "Error generating log message: " + ex.stack;
+
+                writeOutput(errorLogMessage);
             }
         }
     };
@@ -392,7 +474,6 @@ EVUITest.TestHostController = function ()
         }
         else
         {
-
             try
             {
                 EVUITest.Settings.outputWriter.writeOutput(...args);
@@ -423,7 +504,11 @@ EVUITest.TestHostController = function ()
                 }
                 catch (ex)
                 {
-                    writeOutput("Error in " + testState.test.name + " callback!", ex);
+                    var errorLogMessage = new EVUITest.OutputWiterMessage();
+                    errorLogMessage.logLevel = EVUITest.LogLevel.Critial;
+                    errorLogMessage.message = "Error in " + testState.test.name + " callback: " + ex.stack;
+
+                    writeOutput(errorLogMessage);
                 }
 
                 var next = getNextTest();
@@ -513,8 +598,8 @@ EVUITest.TestHostController = function ()
         //add the global error event listener to catch exceptions thrown not on the stack trace of the promise (i.e. in a callback for a native API, like a XMLHttpRequest)
         addEventListener("error", errorHandler);
 
-        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow
-        Promise.resolve().then(function ()
+        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow and allows for log messages to come through mid-test
+        setTimeout(function ()
         {
             try
             {
@@ -540,7 +625,7 @@ EVUITest.TestHostController = function ()
             {
                 fail(ex);
             }
-        });
+        }, 5);
     };
 
     /**Creates a TestInstance for every set of arguments in the args list provided by the user.
@@ -1032,14 +1117,20 @@ EVUITest.Assertion = function (value, settings)
         var logOnSuccess = typeof settings.logOnSuccess === "boolean" ? settings.logOnSuccess : _settings.logOnSuccess;
         var throwOnFailure = typeof settings.throwOnFailure === "boolean" ? settings.throwOnFailure : _settings.throwOnFailure;
 
+        var outputMessage = new EVUITest.OutputWiterMessage();
+        outputMessage.message = logMessage;
+
         if (comparisonResult.success === true)
         {
-            if (logOnSuccess !== false) writeOutput(logMessage);
+            outputMessage.logLevel = EVUITest.LogLevel.Debug;
+            if (logOnSuccess !== false) writeOutput(outputMessage);
         }
         else
         {
+            outputMessage.logLevel = EVUITest.LogLevel.Error;
+
             if (throwOnFailure !== false) return Error(logMessage);
-            writeOutput(logMessage);
+            writeOutput(outputMessage);
         }
     };
 
