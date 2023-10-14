@@ -5,7 +5,7 @@ LICENSE file in the root directory of this source tree.*/
 
 EVUIUnit.Controllers.TestRunner = class
 {
-    get #isChildWindow()  { return window.parent != null; }
+    get #isChildWindow()  { return window.parent != window; }
     
     #runnerArgs = null;
     #testRunning = false;
@@ -13,7 +13,7 @@ EVUIUnit.Controllers.TestRunner = class
     #functionName = null;
     #timeout = 10;
 
-    initialize(testRunnerArgs, testHost)
+    initialize(testRunnerArgs)
     {
         if (testRunnerArgs == null || typeof testRunnerArgs !== "object") throw Error("Object expected.");
         if (this.#initialized === true) throw Error("Already initialized.");
@@ -31,13 +31,13 @@ EVUIUnit.Controllers.TestRunner = class
         }
     }
 
-    writeOutput(ouput, outputLevel)
+    writeOutput(output, outputLevel)
     {
-        if (ouput == null) return;
+        if (output == null) return;
 
-        if (this.#isChildWindow === fale)
+        if (this.#isChildWindow === false)
         {
-            var message = ouput;
+            var message = output;
             var level = outputLevel;
             var timestamp = null;
 
@@ -45,8 +45,8 @@ EVUIUnit.Controllers.TestRunner = class
             {
                 message = output.message;
 
-                if (ouput.level != null) level = ouput.level;
-                if (output.timestamp != null) timestamp = ouput.timestamp;
+                if (output.level != null) level = output.level;
+                if (output.timestamp != null) timestamp = output.timestamp;
             }
 
             if (typeof level !== "string") level = EVUITest.LogLevel.Info;
@@ -57,7 +57,7 @@ EVUIUnit.Controllers.TestRunner = class
             return;
         }
 
-        var message = ouput;
+        var message = output;
         if (typeof output !== "object")
         {
             message = new EVUITest.OutputWiterMessage();
@@ -117,32 +117,35 @@ EVUIUnit.Controllers.TestRunner = class
         var qsExtension = url.indexOf("?") !== -1 ? "&" : "?";
         url += qsExtension + "rand=" + (Math.random() * 10000).toString(36);
 
-        var response = await fetch({
-            url: url,
-            method: "GET"
+        var response = await fetch(url, {
+            headers: {
+                "Content-Type": "text/plain",
+                "Accept": "text/plain"
+            }
         });
 
-        var responseText = await response.text();
-        if (typeof responseText !== "string" || responseTest.trim().length === 0) throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
+        var responseText = new TextDecoder().decode(await response.arrayBuffer());
+        if (typeof responseText !== "string" || responseText.trim().length === 0) throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
 
-        var finalScript = `window[${functionName}] = async function() {${responseText}};`
+        var finalScript = `window["${this.#functionName}"] = async function() {${responseText}};`
 
         return finalScript;
     };
 
     #injectScript(scriptText)
     {
-        var failed = false;
+        var success = true;
         var errorHandler = (errorArgs) =>
         {
-            if (failed === false) this.writeOutput("CODE INJECTION PARSE ERROR:" + errorArgs.error.stack, EVUIUnit.Resources.LogLevel.Critial);
-            failed = true;           
+            if (success === false) this.writeOutput("CODE INJECTION PARSE ERROR:" + errorArgs.error.stack, EVUIUnit.Resources.LogLevel.Critial);
+            success = false;           
         };
 
         window.addEventListener("error", errorHandler);
 
         var scriptTag = document.createElement("script");
-        scriptTag.innerText = scriptText;
+        scriptTag.innerHTML = scriptText;
+
         try
         {
             document.body.append(scriptTag);
@@ -157,7 +160,7 @@ EVUIUnit.Controllers.TestRunner = class
             setTimeout(function ()
             {
                 window.removeEventListener("error", errorHandler);
-                resolve(failed);
+                resolve(success);
             }, 10);
         });
     };

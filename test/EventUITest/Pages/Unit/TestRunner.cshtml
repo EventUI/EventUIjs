@@ -1,4 +1,20 @@
 ﻿@page
 @model EventUITest.Pages.Unit.TestRunnerModel
 @{
+    Layout = "_EVUITestLayout";
+}
+
+@section Scripts
+{
+    <script src="/js/UnitTesting/UnitTestRunner.js"></script>
+    <script>
+        var args = {
+            testFilePath: "/evuitest/_evuitest/testhost/testHostBasic.js"
+        }
+
+        var runner = new EVUIUnit.Controllers.TestRunner();
+        runner.initialize(args);
+        runner.run();
+
+    </script>
 }

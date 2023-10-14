@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - EventUITest</title>
+    @RenderSection("CSS", required: false)
+</head>
+<body>
+    <header>
+        <h1>EventUI Test Harness</h1>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+
+            <div class="testOutput">
+
+            </div>
+        </main>
+    </div>
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2023 - EventUITest - <a asp-area="" asp-page="/Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <!--ASP's "asp-src-include" tag helper doesn't like glob patterns that point at files that fall outside of the wwwroot folder, so we have to manually include each module.-->
+    <script src="/evuisrc/raw/EventUI.js"></script>
+    <script src="/evuisrc/raw/Modules/Binding.js"></script>
+    <script src="/evuisrc/raw/Modules/Core.js"></script>
+    <script src="/evuisrc/raw/Modules/Dialogs.js"></script>
+    <script src="/evuisrc/raw/Modules/Diff.js"></script>
+    <script src="/evuisrc/raw/Modules/Dom.js"></script>
+    <script src="/evuisrc/raw/Modules/DomEvents.js"></script>
+    <script src="/evuisrc/raw/Modules/DomTree.js"></script>
+    <script src="/evuisrc/raw/Modules/Dropdowns.js"></script>
+    <script src="/evuisrc/raw/Modules/Enums.js"></script>
+    <script src="/evuisrc/raw/Modules/Events.js"></script>
+    <script src="/evuisrc/raw/Modules/EventStream.js"></script>
+    <script src="/evuisrc/raw/Modules/HtmlLoader.js"></script>
+    <script src="/evuisrc/raw/Modules/Http.js"></script>
+    <script src="/evuisrc/raw/Modules/IFrames.js"></script>
+    <script src="/evuisrc/raw/Modules/Modals.js"></script>
+    <script src="/evuisrc/raw/Modules/Observers.js"></script>
+    <script src="/evuisrc/raw/Modules/Panes.js"></script>
+    <script src="/evuisrc/raw/Modules/PopIns.js"></script>
+    <script src="/evuisrc/raw/Modules/Styles.js"></script>
+    <script src="/evuisrc/raw/Modules/TreeView.js"></script>
+    <script src="/evuisrc/raw/Modules/UIHandler.js"></script>
+    <script src="/evuisrc/test/EVUITest.js"></script>
+
+    <script src="/js/UnitTesting/EVUIUnit.js"></script>
+    <script src="/js/UnitTesting/Messages.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
