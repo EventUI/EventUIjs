@@ -1,0 +1,14 @@
+{
+  "runOrder": [
+    "_evuiTest/testhost/testHostBasic.js",
+    "_evuitest/testhost/**/*.js",
+    "_evuiTest/assertions/assertionsBasic.js",
+    "_evuiTest/assertions/**/*.js",
+    "modules/core/**/*.js",
+    "modules/**/*.js"
+  ],
+  "critialFails": [
+    "_evuitest/**/*.js",
+    "modules/core/**/*.js"
+  ]
+}
