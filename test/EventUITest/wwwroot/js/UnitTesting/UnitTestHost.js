@@ -134,6 +134,7 @@ EVUIUnit.Controllers.HostController = class
         session.iframe.remove();
         session.iframe.src = null;
         session.iframeClosedAt = Date.now();
+        window.removeEventListener("message", session.logHandler);
     };
 
     #cloneServerArgs(serverArgs)
@@ -152,12 +153,15 @@ EVUIUnit.Controllers.HostController = class
     {
         var iframe = document.createElement("iframe");
         iframe.src = EVUIUnit.Constants.Path_TestRunner + "?" + EVUIUnit.Constants.QS_TestFile + "=" + encodeURIComponent(session.fileName) + "&" + EVUIUnit.Constants.QS_TestSession + "=" + encodeURIComponent(this.#serverArgs.sessionId);
-        window.addEventListener("message", (args) =>
+        var onMessageHandler = (args) =>
         {
             this.#handleIFrameMessage(session, args);
-        });
+        }
+
+        window.addEventListener("message", onMessageHandler);
 
         session.iframe = iframe;
+        session.logHandler = onMessageHandler;
     };
 
     /**
@@ -231,6 +235,7 @@ EVUIUnit.Controllers.HostController = class
         iframeClosedAt = 0;
         timeoutID = -1;
         timedOut = false;
+        logHandler = null;
     }
 };
 

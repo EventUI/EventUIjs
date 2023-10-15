@@ -205,8 +205,11 @@ EVUIUnit.Controllers.TestRunner = class
     {
         return new Promise((resolve) =>
         {
-            resolve();
-        }, duration);
+            setTimeout(function ()
+            {
+                resolve();
+            }, duration);
+        });
     }
 }
 
