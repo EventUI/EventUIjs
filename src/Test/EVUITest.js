@@ -150,7 +150,7 @@ EVUITest.OutputWriter = function ()
     @param {String} message The message to log.*/
     this.logCritical = function (message)
     {
-        log(message, EVUITest.LogLevel.Critial);
+        log(message, EVUITest.LogLevel.Critical);
     };
 
     /**Logs a "error" level log message.
@@ -222,7 +222,7 @@ EVUITest.LogLevel =
     Info: "info",
     Warn: "warn",
     Error: "error",
-    Critial: "critical"
+    Critical: "critical"
 };
 
 /**Settings for running tests.
@@ -456,7 +456,7 @@ EVUITest.TestHostController = function ()
             catch (ex)
             {
                 var errorLogMessage = new EVUITest.OutputWiterMessage();
-                errorLogMessage.logLevel = EVUITest.LogLevel.Critial;
+                errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
                 errorLogMessage.message = "Error generating log message: " + ex.stack;
 
                 writeOutput(errorLogMessage);
@@ -505,7 +505,7 @@ EVUITest.TestHostController = function ()
                 catch (ex)
                 {
                     var errorLogMessage = new EVUITest.OutputWiterMessage();
-                    errorLogMessage.logLevel = EVUITest.LogLevel.Critial;
+                    errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
                     errorLogMessage.message = "Error in " + testState.test.name + " callback: " + ex.stack;
 
                     writeOutput(errorLogMessage);

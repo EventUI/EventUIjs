@@ -52,20 +52,50 @@ EVUIUnit.Controllers.HostController = class
             }
 
             this.#attachIFrame(session);
+            this.#launchIFrame(session);
         });
     }
 
-    writeMessage(message, messageType)
+    writeMessage(message, logLevel)
     {
-        if (this.#outputElement == null) return console.log(message, messageType);
+        if (this.#outputElement == null) return console.log(message, logLevel);
 
         var messageDiv = document.createElement("div");
-        messageDiv.innerText = message;
+        var innerNode = null;
+        var className = null;
 
-        if (messageType === "sdasd")
+        if (logLevel === EVUITest.LogLevel.Critical)
         {
+            innerNode = document.createElement("strong");
+            innerNode.innerText = message;
 
+            className = EVUIUnit.Constants.Class_TestOutput_Critical;
         }
+        else if (logLevel === EVUITest.LogLevel.Error)
+        {
+            innerNode = document.createElement("span");
+            innerNode.innerText = message;
+
+            className = EVUIUnit.Constants.Class_TestOutput_Error;
+        }
+        else
+        {
+            innerNode = document.createElement("span");
+            innerNode.innerText = message;
+
+            className = EVUIUnit.Constants.Class_TestOutput_Normal;
+
+            if (logLevel !== EVUITest.LogLevel.Debug &&
+                logLevel !== EVUITest.LogLevel.Info &&
+                logLevel !== EVUITest.LogLevel.Warn &&
+                logLevel !== EVUITest.LogLevel.Trace)
+            {
+                className = EVUIUnit.Constants.Class_TestOutput_Console;
+            }
+        }
+
+        if (innerNode != null) messageDiv.append(innerNode);
+        messageDiv.classList.add(className);
 
         this.#outputElement.append(messageDiv);
     };
@@ -79,6 +109,15 @@ EVUIUnit.Controllers.HostController = class
         {
             this.#outputElement.childNodes[0].remove();
             numChildren--
+        }
+    }
+
+    async runAllAsync()
+    {
+        var numFiles = this.#serverArgs.runOrder.length;
+        for (var x = 0; x < numFiles; x++)
+        {
+            await this.runFileAsync(this.#serverArgs.runOrder[x]);
         }
     }
 
@@ -112,8 +151,8 @@ EVUIUnit.Controllers.HostController = class
     #attachIFrame(session)
     {
         var iframe = document.createElement("iframe");
-        iframe.src = EVUIUnit.Constants.Path_TestRunner + "?" + EVUIUnit.Constants.QS_TestFile + "=" + encodeUriComponent(session.fileName);
-        iframe.addEventListener("message", (args) =>
+        iframe.src = EVUIUnit.Constants.Path_TestRunner + "?" + EVUIUnit.Constants.QS_TestFile + "=" + encodeURIComponent(session.fileName) + "&" + EVUIUnit.Constants.QS_TestSession + "=" + encodeURIComponent(this.#serverArgs.sessionId);
+        window.addEventListener("message", (args) =>
         {
             this.#handleIFrameMessage(session, args);
         });
@@ -176,7 +215,7 @@ EVUIUnit.Controllers.HostController = class
 
     #writeMessageOutput(session, message)
     {
-        console.log(message, session);
+        this.writeMessage(message.message, message.logLevel);
     };
 
     #TestSession = class
@@ -197,6 +236,7 @@ EVUIUnit.Controllers.HostController = class
 
 EVUIUnit.Resources.TestHostServerArgs = class
 {
+    sessionId = null;
     runOrder = [];
     criticalFails = [];
 };

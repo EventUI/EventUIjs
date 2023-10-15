@@ -8,12 +8,15 @@
 {
     <script src="/js/UnitTesting/UnitTestRunner.js"></script>
     <script>
+        const TestRunnerServerArgs = @Model.GetServerArgsJSON();
+    </script>
+    <script>
         var args = {
             testFilePath: "/evuitest/_evuitest/testhost/testHostBasic.js"
         }
 
         var runner = new EVUIUnit.Controllers.TestRunner();
-        runner.initialize(args);
+        runner.initialize(TestRunnerServerArgs);
         runner.run();
 
     </script>

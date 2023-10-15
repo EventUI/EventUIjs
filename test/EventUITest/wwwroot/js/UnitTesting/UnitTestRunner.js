@@ -80,6 +80,8 @@ EVUIUnit.Controllers.TestRunner = class
 
         try
         {
+            if (typeof this.#runnerArgs.testFilePath !== "string") throw Error("No file path specified.");
+
             var script = await this.#getScriptText();
             var injectionResult = await this.#injectScript(script);
             if (injectionResult === false) throw Error("Failed to inject test code.");
@@ -98,7 +100,7 @@ EVUIUnit.Controllers.TestRunner = class
         catch (ex)
         {
             var outputMessage = new EVUITest.OutputWiterMessage();
-            outputMessage.logLevel = EVUITest.LogLevel.Critial;
+            outputMessage.logLevel = EVUITest.LogLevel.Critical;
             outputMessage.message = "Error executing test function wrapper: " + ex.stack;
 
             this.writeOutput(outputMessage);
@@ -124,7 +126,7 @@ EVUIUnit.Controllers.TestRunner = class
             }
         });
 
-        var responseText = new TextDecoder().decode(await response.arrayBuffer());
+        var responseText = await response.text();
         if (typeof responseText !== "string" || responseText.trim().length === 0) throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
 
         var finalScript = `window["${this.#functionName}"] = async function() {${responseText}};`
@@ -137,7 +139,7 @@ EVUIUnit.Controllers.TestRunner = class
         var success = true;
         var errorHandler = (errorArgs) =>
         {
-            if (success === false) this.writeOutput("CODE INJECTION PARSE ERROR:" + errorArgs.error.stack, EVUIUnit.Resources.LogLevel.Critial);
+            if (success === false) this.writeOutput("CODE INJECTION PARSE ERROR:" + errorArgs.error.stack, EVUITest.LogLevel.Critical);
             success = false;           
         };
 

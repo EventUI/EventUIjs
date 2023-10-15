@@ -17,5 +17,10 @@ EVUIUnit.TestRunnerServerArgs = {};
 
 EVUIUnit.Constants = {};
 EVUIUnit.Constants.QS_TestFile = "file";
+EVUIUnit.Constants.QS_TestSession = "session";
 EVUIUnit.Constants.Path_TestRunner = "/Unit/TestRunner";
-EVUIUnit.Constants.Class_TestOutput = "testOutput";
+EVUIUnit.Constants.Class_TestOutput = "testOutputContainer";
+EVUIUnit.Constants.Class_TestOutput_Error = "output-error";
+EVUIUnit.Constants.Class_TestOutput_Critical = "output-critical";
+EVUIUnit.Constants.Class_TestOutput_Normal = "output-normal";
+EVUIUnit.Constants.Class_TestOutput_Console = "output-console";

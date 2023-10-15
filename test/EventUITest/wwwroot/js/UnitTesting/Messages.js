@@ -5,6 +5,8 @@ LICENSE file in the root directory of this source tree.*/
 
 EVUIUnit.Resources.TestStatusUpdate = class
 {
+    /**A special code on every message sent to the UnitTestHost that tells it which message it has recieved.
+    @type {String}*/
     messageCode = EVUIUnit.Resources.MessageCodes.None;
 };
 
@@ -24,16 +26,7 @@ EVUIUnit.Resources.OuputMessagePush = class extends EVUIUnit.Resources.TestStatu
         this.messageCode = EVUIUnit.Resources.MessageCodes.OutputMessagePush
     }
 
+    /**A OutputWriterMessage sent by the UnitTestRunner
+    @type {EVUITest.OutputWiterMessage}*/
     message = null;
-};
-
-EVUIUnit.Resources.LogLevel =
-{
-    None: "none",
-    Trace: "trace",
-    Debug: "debug",
-    Info: "info",
-    Warn: "warn",
-    Error: "error",
-    Critial: "critical"
 };
