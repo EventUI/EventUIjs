@@ -3,7 +3,6 @@
 /*#TEST_START("Un-awaited Sequence Test")#*/
 (function()
 {
-    debugger;
     var now = Date.now();
     var test1 = { testNumber: 1, doneAt: -1 };
     var test2 = { testNumber: 2, doneAt: -1 };

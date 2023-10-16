@@ -12,13 +12,12 @@
 {
     <script src="/js/UnitTesting/UnitTestHost.js"></script>
     <script>
-        var args = {
-            runOrder: ["/evuitest/_evuitest/testhost/testHostBasic.js", "/evuitest/_evuitest/testhost/testHostUnAwaited.js"],
-            sessionId: "abc123"
-        }
+        const TestHostServerArgs = @Model.GetHostArgsJSON()
+    </script>
+    <script>
 
         var host = new EVUIUnit.Controllers.HostController();
-        host.initialize(args, document.body);
+        host.initialize(TestHostServerArgs, document.body);
         host.runAllAsync();
 
     </script>

@@ -11,9 +11,6 @@
         const TestRunnerServerArgs = @Model.GetServerArgsJSON();
     </script>
     <script>
-        var args = {
-            testFilePath: "/evuitest/_evuitest/testhost/testHostBasic.js"
-        }
 
         var runner = new EVUIUnit.Controllers.TestRunner();
         runner.initialize(TestRunnerServerArgs);
