@@ -652,7 +652,7 @@ EVUITest.TestHostController = function ()
             for (var x = 0; x < numArgs; x++)
             {
                 var instance = new TestInstance();
-                instance.arguments = [testState.arguments[x]];
+                instance.arguments = (Array.isArray(testState.arguments[x]) === false) ? [testState.arguments[x]] : testState.arguments[x];
                 instance.state = testState;
                 instance.instanceInSet = x + 1;
                 instance.testFn = testState.test.test;

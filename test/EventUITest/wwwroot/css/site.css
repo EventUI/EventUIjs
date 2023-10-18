@@ -21,10 +21,14 @@ body {
   margin-bottom: 60px;
 }
 
+.fullscreen {
+    height: 85vh;
+    max-height: 85vh;
+    width: 100vw;
+}
+
 .testOutputContainer {
     background-color: black;
-    height: 1000px;
-    width: 1700px;
     color: white;
     overflow: scroll;
 }
@@ -51,4 +55,14 @@ body {
     width: 100%;
     color: deepskyblue;
     font-family: "Lucida Console", "Courier New", monospace;
+}
+
+iframe{
+    height: 100vh;
+    width: 100vw;
+}
+
+main
+{
+    overflow: hidden;
 }
