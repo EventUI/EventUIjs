@@ -22,12 +22,9 @@ EVUIUnit.Controllers.TestRunner = class
         this.#runnerArgs = this.#cloneRunnerArgs(testRunnerArgs);
         this.#functionName = "TEST_CODE";
 
-        if (this.#isChildWindow === true)
+        EVUITest.Settings.outputWriter.writeOutput = (outputMessage) =>
         {
-            EVUITest.Settings.outputWriter.writeOutput = (outputMessage) =>
-            {
-                this.writeOutput(outputMessage);
-            }
+            this.writeOutput(outputMessage);
         }
     }
 
@@ -45,7 +42,7 @@ EVUIUnit.Controllers.TestRunner = class
             {
                 message = output.message;
 
-                if (output.level != null) level = output.level;
+                if (output.logLevel != null) level = output.logLevel;
                 if (output.timestamp != null) timestamp = output.timestamp;
             }
 
@@ -83,7 +80,7 @@ EVUIUnit.Controllers.TestRunner = class
             if (typeof this.#runnerArgs.testFilePath !== "string") throw Error("No file path specified.");
 
             var script = await this.#getScriptText();
-            var injectionResult = await this.#injectScript(script);
+            var injectionResult = await this.#injectScript(script, this.#runnerArgs.debug);
             if (injectionResult === false) throw Error("Failed to inject test code.");
 
             this.#sendTestStartMessage();
@@ -128,6 +125,7 @@ EVUIUnit.Controllers.TestRunner = class
 
         var responseText = await response.text();
         if (typeof responseText !== "string" || responseText.trim().length === 0) throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
+        if (this.#runnerArgs.debug === true) responseText = "debugger;" + responseText;
 
         var finalScript = `window["${this.#functionName}"] = async function() {${responseText}};`
 
@@ -171,6 +169,7 @@ EVUIUnit.Controllers.TestRunner = class
     {
         var newArgs = new EVUIUnit.Resources.TestRunnerServerArgs();
         newArgs.testFilePath = serverArgs.testFilePath;
+        newArgs.debug = typeof serverArgs.debug === "boolean" ? serverArgs.debug : false; 
 
         return newArgs;
     }
@@ -216,4 +215,5 @@ EVUIUnit.Controllers.TestRunner = class
 EVUIUnit.Resources.TestRunnerServerArgs = class
 {
     testFilePath = null;
+    debug = false;
 };

@@ -26,6 +26,7 @@ body {
     height: 1000px;
     width: 1700px;
     color: white;
+    overflow: scroll;
 }
 
 .output-normal {

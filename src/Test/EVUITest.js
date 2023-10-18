@@ -330,13 +330,13 @@ EVUITest.TestHostController = function ()
             }
             else if (testResult.error instanceof Error)
             {
-                output += "\nError: " + testResult.error.stack;
+                output += "\n" + testResult.error.stack;
             }
         }
 
         if (testResult.arguments != null && testResult.arguments.length > 0)
         {
-            var argsStr = "\n\nWith Arguments:\n";
+            var argsStr = "\nWith Arguments:\t";
 
             if (typeof arguments === "function")
             {
@@ -351,8 +351,10 @@ EVUITest.TestHostController = function ()
                 argsStr += testResult.arguments.toString();
             }
 
-            output += argsStr;
+            output += argsStr
         }
+
+        output += "\n";
 
         outputMessage.message = output;
         return outputMessage;
@@ -650,7 +652,7 @@ EVUITest.TestHostController = function ()
             for (var x = 0; x < numArgs; x++)
             {
                 var instance = new TestInstance();
-                instance.arguments = testState.arguments[x];
+                instance.arguments = [testState.arguments[x]];
                 instance.state = testState;
                 instance.instanceInSet = x + 1;
                 instance.testFn = testState.test.test;
@@ -677,6 +679,7 @@ EVUITest.TestHostController = function ()
         result.testName = testInstance.state.test.name;
         result.instanceId = testInstance.instanceId;
         result.testSetId = testInstance.instanceInSet;
+        result.reason = testInstance.reason;
 
         return result;
     }

@@ -17,10 +17,14 @@ namespace EventUITest.Pages.Unit
 
         public void OnGet()
         {
-            string filePath = Request.Query["file"];
-            string sessionId = Request.Query["session"];
+            string filePath = Request.Query[EVUIConstants.QueryString_FileName];
+            string debug = Request.Query[EVUIConstants.QueryString_Debug];
 
             ServerArgs.testFilePath = filePath;
+            if (Boolean.TryParse(debug, out bool result) == true)
+            {
+                ServerArgs.debug = result;
+            }
         }
 
         public HtmlString GetServerArgsJSON()

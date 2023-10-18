@@ -122,6 +122,8 @@ namespace EventUITest
         public class TestRunnerServerArgs
         {
             public string testFilePath { get; set; } = null;
+
+            public bool debug { get; set; } = false;
         }
 
         public class TestManifest

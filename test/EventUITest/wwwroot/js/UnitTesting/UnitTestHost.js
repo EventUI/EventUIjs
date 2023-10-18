@@ -98,6 +98,7 @@ EVUIUnit.Controllers.HostController = class
         messageDiv.classList.add(className);
 
         this.#outputElement.append(messageDiv);
+        this.#outputElement.scrollTo(0, this.#outputElement.scrollHeight);
     };
 
     clearMessageArea()
@@ -177,14 +178,19 @@ EVUIUnit.Controllers.HostController = class
         if (message.messageCode === EVUIUnit.Resources.MessageCodes.TestReady)
         {
             session.iframeReadyAt = Date.now();
+            session.lastStatusUpdateAt = Date.now();
+            this.writeMessage("\r\nTEST FILE " + session.fileName);
         }
         else if (message.messageCode === EVUIUnit.Resources.MessageCodes.OutputMessagePush)
         {
+            session.lastStatusUpdateAt = Date.now();
             this.#setTimeout(session);
             this.#writeMessageOutput(session, message.message);
         }
         else if (message.messageCode === EVUIUnit.Resources.MessageCodes.TestComplete)
         {
+            session.lastStatusUpdateAt = Date.now();
+
             if (session.timeoutID !== -1)
             {
                 clearTimeout(session.timeoutID);
@@ -206,6 +212,8 @@ EVUIUnit.Controllers.HostController = class
         session.timeoutID = setTimeout(() =>
         {
             session.timedOut = true;
+            session.lastStatusUpdateAt = Date.now();
+
             this.#finish(session);
 
         }, this.Timeout * 1000);
@@ -213,13 +221,29 @@ EVUIUnit.Controllers.HostController = class
 
     #finish(session)
     {
+        if (session.timedOut === true)
+        {
+            this.writeMessage("TEST FILE \t\t" + session.fileName + " TIMED OUT AFTER " + (session.lastStatusUpdateAt - session.iframeReadyAt) + "ms.")
+        }
+        else
+        {
+            this.writeMessage("TEST FILE \t\t" + session.fileName + " COMPLETED AFTER " + (session.lastStatusUpdateAt - session.iframeReadyAt) + "ms.")
+        }
+
         this.#removeIFrame(session);
         session.completeCallback();
     }
 
     #writeMessageOutput(session, message)
     {
-        this.writeMessage(message.message, message.logLevel);
+        if (typeof message === "object")
+        {
+            this.writeMessage(`${message.timestamp} - [${message.logLevel?.toUpperCase()}]: ${message.message}`, message.logLevel);
+        }
+        else
+        {
+            this.writeMessage(message);
+        }
     };
 
     #TestSession = class
