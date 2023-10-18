@@ -260,6 +260,18 @@ EVUITest.TestHostController = function ()
         enumerable: true
     });
 
+    /**Object. The OutputWriter used by the TestHost.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
+    Object.defineProperty(this, "outputWriter", {
+        get: function ()
+        {
+            return EVUITest.Settings.outputWriter;
+        },
+        configurable: false,
+        enumerable: false
+    });
+
     /**Object. Control options for the test host.
     @type {EVUITest.TestOptions}*/
     this.options = new EVUITest.TestOptions();
@@ -1558,7 +1570,7 @@ EVUITest.Assertion = function (value, settings)
         }
         else if (comparisonResult.options.compareType === EVUITest.ValueCompareType.Predicate)
         {
-            return "returned " + getValueStringForm(comparisonResult.returnValue, _settings.logOptions) + " for";
+            return "returned";
         }
         else
         {
@@ -1652,7 +1664,7 @@ EVUITest.Assertion = function (value, settings)
         logOptions.stringifyObjects = (_settings.logOptions != null) ? _settings.logOptions.stringifyObjects : false;
 
         var message = aName + " " + comparisionVerb + " " + bName + ".";
-        var compareMessage = "\Executed: " + getValueStringForm(predicateComparison.predicate, logOptions) + "\nWith: " + getValueStringForm(predicateComparison.value, logOptions);
+        var compareMessage = "\nExecuted: " + getValueStringForm(predicateComparison.predicate, logOptions) + "\nWith: " + getValueStringForm(predicateComparison.value, logOptions);
 
         if (predicateComparison.success === false)
         {

@@ -124,7 +124,11 @@ EVUIUnit.Controllers.TestRunner = class
         });
 
         var responseText = await response.text();
-        if (typeof responseText !== "string" || responseText.trim().length === 0) throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
+        if (typeof responseText !== "string" || responseText.trim().length === 0)
+        {
+            this.#sendTestStartMessage();
+            throw Error("No code found for test file " + this.#runnerArgs.testFilePath);
+        }
         if (this.#runnerArgs.debug === true) responseText = "debugger;" + responseText;
 
         var finalScript = `window["${this.#functionName}"] = async function() {${responseText}};`
