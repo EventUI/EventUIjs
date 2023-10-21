@@ -3,7 +3,7 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-EVUIUnit.Controllers.TestRunner = class
+EVUIUnit.TestRunner = class
 {
     get #isChildWindow()  { return window.parent != window; }
     
@@ -64,7 +64,7 @@ EVUIUnit.Controllers.TestRunner = class
             message.level = outputLevel;
         }
 
-        var pushMessage = new EVUIUnit.Resources.OuputMessagePush();
+        var pushMessage = new EVUIUnit.OuputMessagePush();
         pushMessage.message = message;
 
         window.parent.postMessage(pushMessage);
@@ -104,7 +104,7 @@ EVUIUnit.Controllers.TestRunner = class
         }
         finally
         {
-            this.#sendTestEndMessage();
+            this.#sendTestEndMessage($evui.testHost.getResults());
         }
     }
 
@@ -171,7 +171,7 @@ EVUIUnit.Controllers.TestRunner = class
 
     #cloneRunnerArgs(serverArgs)
     {
-        var newArgs = new EVUIUnit.Resources.TestRunnerServerArgs();
+        var newArgs = new EVUIUnit.TestRunnerServerArgs();
         newArgs.testFilePath = serverArgs.testFilePath;
         newArgs.debug = typeof serverArgs.debug === "boolean" ? serverArgs.debug : false; 
 
@@ -185,21 +185,21 @@ EVUIUnit.Controllers.TestRunner = class
             return this.writeOutput("Test starting!");
         }
 
-        var pushMessage = new EVUIUnit.Resources.TestStatusUpdate();
-        pushMessage.messageCode = EVUIUnit.Resources.MessageCodes.TestReady;
+        var pushMessage = new EVUIUnit.TestStatusUpdate();
+        pushMessage.messageCode = EVUIUnit.MessageCodes.TestReady;
 
         window.parent.postMessage(pushMessage);
     }
 
-    #sendTestEndMessage()
+    #sendTestEndMessage(results)
     {
         if (this.#isChildWindow === false)
         {
             return this.writeOutput("Test complete!");
         }
 
-        var pushMessage = new EVUIUnit.Resources.TestStatusUpdate();
-        pushMessage.messageCode = EVUIUnit.Resources.MessageCodes.TestComplete;
+        var pushMessage = new EVUIUnit.TestCompleteMessage();
+        pushMessage.testResults = (Array.isArray(results) === false) ? [] : results;
 
         window.parent.postMessage(pushMessage);
     }
@@ -216,7 +216,7 @@ EVUIUnit.Controllers.TestRunner = class
     }
 }
 
-EVUIUnit.Resources.TestRunnerServerArgs = class
+EVUIUnit.TestRunnerServerArgs = class
 {
     testFilePath = null;
     debug = false;

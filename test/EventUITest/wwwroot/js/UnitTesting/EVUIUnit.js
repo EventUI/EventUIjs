@@ -4,8 +4,6 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
 const EVUIUnit = {};
-EVUIUnit.Controllers = {};
-EVUIUnit.Resources = {};
 
 /**The arguments injected from the server into the JS page that is spawning iframes to run tests.
 @type {EVUIUnit.Resources.TestHostServerArgs}*/

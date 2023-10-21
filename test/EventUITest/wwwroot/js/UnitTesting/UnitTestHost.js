@@ -3,14 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-EVUIUnit.Controllers.HostController = class
+EVUIUnit.HostController = class
 {
     #testSessionID = 0;
     #initialized = false;
 
     /**
      * 
-    @type {EVUIUnit.Resources.TestHostServerArgs} */
+    @type {EVUIUnit.TestHostServerArgs} */
     #serverArgs = null;
 
     /**
@@ -46,9 +46,15 @@ EVUIUnit.Controllers.HostController = class
             session.id = this.#testSessionID++;
             session.fileName = fileName;
             session.isCritical = this.#serverArgs.criticalFails.indexOf(fileName) !== -1;
-            session.completeCallback = () =>
+            session.completeCallback = (results) =>
             {
-                resolve();
+                var serverResult = new EVUIUnit.TestHostFileResults();
+                serverResult.fileName = session.fileName;
+                serverResult.timedOut = session.timedOut;
+                serverResult.results = results;
+                serverResult.duration = session.iframeClosedAt - session.iframeReadyAt;
+
+                resolve(serverResult);
             }
 
             this.#attachIFrame(session);
@@ -115,11 +121,15 @@ EVUIUnit.Controllers.HostController = class
 
     async runAllAsync()
     {
+        var allResults = [];
         var numFiles = this.#serverArgs.runOrder.length;
         for (var x = 0; x < numFiles; x++)
         {
-            await this.runFileAsync(this.#serverArgs.runOrder[x]);
+            var fileResults = await this.runFileAsync(this.#serverArgs.runOrder[x]);
+            if (fileResults != null) allResults.push(fileResults);
         }
+
+        return allResults;
     }
 
     #launchIFrame(session)
@@ -140,7 +150,7 @@ EVUIUnit.Controllers.HostController = class
 
     #cloneServerArgs(serverArgs)
     {
-        var newArgs = new EVUIUnit.Resources.TestHostServerArgs();
+        var newArgs = new EVUIUnit.TestHostServerArgs();
         if (serverArgs != null && typeof serverArgs === "object")
         {
             if (Array.isArray(serverArgs.runOrder) === true) newArgs.runOrder = serverArgs.runOrder.slice();
@@ -175,21 +185,22 @@ EVUIUnit.Controllers.HostController = class
         var message = messageEventArgs.data;
         if (message == null || typeof message !== "object") return;
 
-        if (message.messageCode === EVUIUnit.Resources.MessageCodes.TestReady)
+        if (message.messageCode === EVUIUnit.MessageCodes.TestReady)
         {
             session.iframeReadyAt = Date.now();
             session.lastStatusUpdateAt = Date.now();
             this.writeMessage("\r\nTEST FILE " + session.fileName);
         }
-        else if (message.messageCode === EVUIUnit.Resources.MessageCodes.OutputMessagePush)
+        else if (message.messageCode === EVUIUnit.MessageCodes.OutputMessagePush)
         {
             session.lastStatusUpdateAt = Date.now();
             this.#setTimeout(session);
             this.#writeMessageOutput(session, message.message);
         }
-        else if (message.messageCode === EVUIUnit.Resources.MessageCodes.TestComplete)
+        else if (message.messageCode === EVUIUnit.MessageCodes.TestComplete)
         {
             session.lastStatusUpdateAt = Date.now();
+            session.results = message.testResults;
 
             if (session.timeoutID !== -1)
             {
@@ -231,7 +242,7 @@ EVUIUnit.Controllers.HostController = class
         }
 
         this.#removeIFrame(session);
-        session.completeCallback();
+        session.completeCallback(session.results);
     }
 
     #writeMessageOutput(session, message)
@@ -260,12 +271,39 @@ EVUIUnit.Controllers.HostController = class
         timeoutID = -1;
         timedOut = false;
         logHandler = null;
+        results = [];
     }
 };
 
-EVUIUnit.Resources.TestHostServerArgs = class
+EVUIUnit.TestHostServerArgs = class
 {
     sessionId = null;
     runOrder = [];
     criticalFails = [];
+};
+
+EVUIUnit.TestHostFileResults = class
+{
+    fileName = null;
+    results = [];
+    timedOut = false;
+    duration = 0;
+
+    getFailures()
+    {
+        if (this.results == null) return [];
+
+        var fails = [];
+        var numResults = this.results.length;
+        for (var x = 0; x < numResults; x++)
+        {
+            var curResult = this.results[x];
+            if (curResult.success === false)
+            {
+                fails.push(curResult);
+            }
+        }
+
+        return fails;
+    }
 };

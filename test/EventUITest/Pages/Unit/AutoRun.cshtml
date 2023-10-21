@@ -15,11 +15,9 @@
         const TestHostServerArgs = @Model.GetHostArgsJSON()
     </script>
     <script>
-
-        var host = new EVUIUnit.Controllers.HostController();
+        var host = new EVUIUnit.HostController();
         host.initialize(TestHostServerArgs, document.body);
         host.runAllAsync();
-
     </script>
 }
 

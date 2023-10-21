@@ -10,17 +10,17 @@ EVUITest = {};
 EVUITest.Constants = {};
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
-@param {EVUITest.Constants.Fn_TestPass} pass A function to call once the test is complete.
-@param {EVUITest.Constants.Fn_TestFail} fail A function to call if the test fails.
+@param {EVUITest.TestArgs} testArgs An arguments object for the test that contains the functions used to pass or fail the test, as well as some metadata about the test.
 @param {Any} args The arguments passed into the test.*/
-EVUITest.Constants.Fn_Test = function (pass, fail, ...args) { };
+EVUITest.Constants.Fn_Test = function (testArgs, ...args) { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.*/
 EVUITest.Constants.Fn_TestPass = function () { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
-@param {String} reason The reason why the test failed.*/
-EVUITest.Constants.Fn_TestFail = function (reason) { };
+@param {String} reason The reason why the test failed.  
+@param {Boolean} suppressError Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
+EVUITest.Constants.Fn_TestFail = function (reason, suppressError) { };
 
 /**A predicate function that is fed the assertion value and returns true or false. 
 @param {Any} assertionValue The value wrapped by the assertion.
@@ -120,6 +120,10 @@ EVUITest.TestResult = function ()
     @type {Error}*/
     this.error = null;
 
+    /**Boolean. Whether or not this test was intentionally failed and not a result of the test failing organically.
+    @type {Boolean}*/
+    this.intentionalFailure = false;
+
     /**Number. The number of milliseconds the test took.
     @type {Number}*/
     this.duration = 0;
@@ -214,6 +218,8 @@ EVUITest.OutputWiterMessage = function ()
     this.timestamp = new Date(Date.now()).toISOString();
 };
 
+/**The importance level of a log message.
+@enum*/
 EVUITest.LogLevel =
 {
     None: "none",
@@ -247,6 +253,8 @@ EVUITest.TestHostController = function ()
     var _testQueue = [];
     var _idCounter = 0;
     var _instanceCounter = 0;
+    var _outputWriter = null;
+    var _testResults = [];
 
     /**Boolean. Whether or not the Host is currently running.
     @type {Boolean}*/
@@ -266,7 +274,13 @@ EVUITest.TestHostController = function ()
     Object.defineProperty(this, "outputWriter", {
         get: function ()
         {
-            return EVUITest.Settings.outputWriter;
+            if (_outputWriter == null) return EVUITest.Settings.outputWriter;
+            return _outputWriter;
+        },
+        set: function (value)
+        {
+            if (typeof value !== "object" || value == null) throw Error("Object expected.")
+            _outputWriter = value;
         },
         configurable: false,
         enumerable: false
@@ -279,7 +293,7 @@ EVUITest.TestHostController = function ()
     /**Awaitable. Runs a test function based on the Test passed in.
     @param {String|EVUITest.Constants.Fn_Test|EVUITest.Test} name The name of the test being run, a test function to run, or a Test yolo to run.
     @param {EVUITest.Constants.Fn_Test|EVUITest.Test} test The test function to run, or a Test yolo to run.
-    @returns {Promise}*/
+    @returns {Promise<EVUITest.TestResult[]>}*/
     this.runAsync = function (name, test)
     {
         var resolvedTest = getTestAmbiguously(name, test);
@@ -293,18 +307,18 @@ EVUITest.TestHostController = function ()
 
             return new Promise(function (resolve)
             {
-                resolvedTest.callback = function ()
+                resolvedTest.callback = function (testState)
                 {
-                    resolve();
+                    resolve(testState.results);
                 }
             });
         }
 
         return new Promise(function (resolve)
         {
-            executeTest(resolvedTest, function ()
+            executeTest(resolvedTest, function (testState)
             {
-                resolve();
+                resolve(testState.results);
             });
         });
     };
@@ -314,6 +328,19 @@ EVUITest.TestHostController = function ()
     this.writeOutput = function (...args)
     {
         writeOutput(...args);
+    };
+
+    /**Gets a copy of the internal TestResults list.
+    @returns {EVUITest.TestResult[]}*/
+    this.getResults = function ()
+    {
+        return _testResults.slice();
+    };
+
+    /**Clears the internal TestResults list of all rsults.*/
+    this.clearResults = function ()
+    {
+        _testResults.splice(0, _testResults.length);
     };
 
     /**Formats a testResult into a loggable string.
@@ -333,8 +360,16 @@ EVUITest.TestHostController = function ()
         }
         else
         {
-            outputMessage.logLevel = EVUITest.LogLevel.Error;
-            output += "FAILED  in " + testResult.duration.toFixed(3) + "ms.";
+            if (testResult.intentionalFailure === true)
+            {
+                outputMessage.logLevel = EVUITest.LogLevel.Warn;
+                output += "SIMULATED FAILURE  in " + testResult.duration.toFixed(3) + "ms.";
+            }
+            else
+            {
+                outputMessage.logLevel = EVUITest.LogLevel.Error;
+                output += "FAILED  in " + testResult.duration.toFixed(3) + "ms.";
+            }
 
             if (typeof testResult.reason === "string" && testResult.reason.trim().length > 0)
             {
@@ -451,8 +486,8 @@ EVUITest.TestHostController = function ()
     };
 
     /**Utility function for ensuring that there is a valid outputWriter before attempting to write any output about the results of a test instance.
-    @param {TestInstance} testInstance The instance of a test that was just completed.*/
-    var writeTestOutput = function (testInstance)
+    @param {EVUITest.TestResult} testResult The result object representing the test that was just completed..*/
+    var writeTestOutput = function (testResult)
     {
         if (typeof EVUITest.Settings.outputWriter.writeOutput !== "function")
         {
@@ -460,11 +495,9 @@ EVUITest.TestHostController = function ()
         }
         else
         {
-            var result = makeResultFromState(testInstance);
-
             try
             {
-                var testLogMessage = formatTestOutput(result);
+                var testLogMessage = formatTestOutput(testResult);
                 EVUITest.Settings.outputWriter.writeOutput(testLogMessage);
             }
             catch (ex)
@@ -482,7 +515,7 @@ EVUITest.TestHostController = function ()
     @param {Any} args Any values to write as output.*/
     var writeOutput = function (...args)
     {
-        if (typeof EVUITest.Settings.outputWriter?.writeOutput !== "function")
+        if (typeof _self.outputWriter?.writeOutput !== "function")
         {
             console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function that accepts an ...args set of arguments.");
         }
@@ -490,7 +523,7 @@ EVUITest.TestHostController = function ()
         {
             try
             {
-                EVUITest.Settings.outputWriter.writeOutput(...args);
+                _self.outputWriter.writeOutput(...args);
             }
             catch (ex)
             {
@@ -514,7 +547,7 @@ EVUITest.TestHostController = function ()
             {
                 try
                 {
-                    callback();
+                    callback(testState);
                 }
                 catch (ex)
                 {
@@ -540,7 +573,12 @@ EVUITest.TestHostController = function ()
 
             executeInstance(testState.instances[index], function (testInstance)
             {
-                writeTestOutput(testInstance);
+                var testResult = makeResultFromState(testInstance);
+                testState.results.push(testResult);
+
+                _testResults.push(testResult);
+
+                writeTestOutput(testResult);
                 runTest(++index);
             });
         };
@@ -577,12 +615,13 @@ EVUITest.TestHostController = function ()
             finish();
         };
 
-        var fail = function (reasonOrEx) //function to call when the test fails
+        var fail = function (reasonOrEx, expectedFailure) //function to call when the test fails
         {
             if (testFinished === true) return;
             testFinished = true;
 
             testInstance.success = false;
+            testInstance.intentionalFailure = (typeof expectedFailure === "boolean") ? expectedFailure : false;
             testInstance.endTime = performance.now();
 
             if (typeof reasonOrEx === "string")
@@ -595,7 +634,7 @@ EVUITest.TestHostController = function ()
             }
             else //make an error so we get a stack trace
             {
-                testInstance.error = new Error("Manually failed for an unknown reason.");
+                testInstance.error = Error("Manually failed for an unknown reason.");
             }
 
             finish();
@@ -617,13 +656,19 @@ EVUITest.TestHostController = function ()
         {
             try
             {
+                var testArgs = new EVUITest.TestArgs();
+                testArgs.fail = fail;
+                testArgs.pass = pass;
+                testArgs.outputWriter = _self.outputWriter;
+                testArgs.parameters = testInstance.arguments.slice();
+
                 timeoutID = setTimeout(function () //set the timeout failsafe
                 {
                     fail(new Error("Timeout reached after " + timeout + "ms."))
                 }, timeout);
 
                 //make the final args array to use to invoke the test. The first two parameters are always the pass and fail functions
-                var allArgs = [pass, fail].concat(testInstance.arguments);
+                var allArgs = [testArgs].concat(testInstance.arguments);
                 testInstance.startTime = performance.now();
 
                 var result = testInstance.testFn.apply(this, allArgs);
@@ -683,6 +728,7 @@ EVUITest.TestHostController = function ()
     {
         var result = new EVUITest.TestResult();
 
+        result.testId = testInstance.state.testId;
         result.arguments = testInstance.arguments;
         result.duration = testInstance.endTime - testInstance.startTime;
         result.error = testInstance.error;
@@ -692,6 +738,7 @@ EVUITest.TestHostController = function ()
         result.instanceId = testInstance.instanceId;
         result.testSetId = testInstance.instanceInSet;
         result.reason = testInstance.reason;
+        result.intentionalFailure = testInstance.intentionalFailure;
 
         return result;
     }
@@ -804,6 +851,10 @@ EVUITest.TestHostController = function ()
         @type {TestInstance[]}*/
         this.instances = [];
 
+        /**Array. The array of all the test results produced by the source test.
+        @type {EVUITest.TestResult}*/
+        this.results = [];
+
         /**Function. A callback to call once this test has completed running all of its instances.
         @type {Function}*/
         this.callback = null;
@@ -840,6 +891,10 @@ EVUITest.TestHostController = function ()
         @type {Boolean}*/
         this.success = false;
 
+        /**Boolean. Whether or not the failure was intentional.
+        @type {Boolean}*/
+        this.intentionalFailure = false;
+
         /**String. If the test was manually failed, this is the reason why.
         @type {String}*/
         this.reason = null;
@@ -854,7 +909,24 @@ EVUITest.TestHostController = function ()
     }
 };
 
+EVUITest.TestArgs = function ()
+{
+    /**
+    @type {EVUITest.Constants.Fn_TestPass}*/
+    this.pass = function () { };
 
+    /**
+    @type {EVUITest.Constants.Fn_TestFail}*/
+    this.fail = function (reasonOrEx, suppressError) { };
+
+    /**
+    @type {[]}*/
+    this.parameters = null;
+
+    /**
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
+};
 
 
 

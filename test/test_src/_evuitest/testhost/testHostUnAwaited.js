@@ -8,28 +8,28 @@
     var test2 = { testNumber: 2, doneAt: -1 };
     var test3 = { testNumber: 3, doneAt: -1 };
 
-    $evui.testAsync("un-awaited 1", function (pass, fail)
+    $evui.testAsync("un-awaited 1", function (testArgs)
     {
         test1.doneAt = Date.now();
         $evui.testHost.writeOutput("Test 1 complete:" + test1.doneAt);
 
-        pass();
+        testArgs.pass();
     });
 
-    $evui.testAsync("un-awaited 2", function (pass, fail)
+    $evui.testAsync("un-awaited 2", function (testArgs)
     {
         test2.doneAt = Date.now();
         $evui.testHost.writeOutput("Test 2 complete:" + test2.doneAt);
 
-        pass();
+        testArgs.pass();
     });
 
-    $evui.testAsync("un-awaited 3", function (pass, fail)
+    $evui.testAsync("un-awaited 3", function (testArgs)
     {
         test3.doneAt = Date.now();
         $evui.testHost.writeOutput("Test 3 complete:" + test3.doneAt);
 
-        pass();
+        testArgs.pass();
     });
 
     var checkResults = function ()
