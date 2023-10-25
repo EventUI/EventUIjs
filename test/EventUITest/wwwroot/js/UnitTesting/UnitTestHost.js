@@ -3,33 +3,40 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
+/**The controller which launches TestRunner iframes and collects/displays their results.
+@class*/
 EVUIUnit.HostController = class
 {
+    /**ID couinter for TestSessions run by this host.
+    @type {Number}*/
     #testSessionID = 0;
+
+    /**Whether or not the test runner has been initialized and loaded with tests.*/
     #initialized = false;
 
-    /**
-     * 
+    /**The arguments telling this host what files to run.
     @type {EVUIUnit.TestHostServerArgs} */
     #serverArgs = null;
 
-    /**
-    @type {#TestSession[]}*/
-    #fileSessions = [];
-
+    /**The root element to look for child elements inside of.
+    @type {Element}*/
     #rootElement = null;
+
+    /**The element into which log message divs will be appended.
+    @type {Element}*/
     #outputElement = null;
 
+    /**The maximum amount of time to wait between status updates before failing a test.
+    @type {Number}*/
     Timeout = 10;
 
-    /**
-     * 
-     * @param {any} serverArgs
-     */
+    /**Initializes the controller with the arugments it will run and the root element under which the required child elements can be found.
+    @param {EVUIUnit.TestHostServerArgs} serverArgs The arguments as to what tests will be run.
+    @param {Element} rootElement The root element to search under for the other elements used by the host.*/
     initialize(serverArgs, rootElement)
     {
         if (serverArgs == null || typeof serverArgs !== "object") throw Error("Object expected.");
-        if (this.#initialized === true) throw Error("Already initialized.");
+        if (this.#initialized === true) throw Error("Already initialized."); //we basically don't want this re-initialized with new data while it's in the middle of running itself, its designed to be an intentional one-time use object.
 
         this.#initialized = true;
         this.#serverArgs = this.#cloneServerArgs(serverArgs);
@@ -38,12 +45,15 @@ EVUIUnit.HostController = class
         if (this.#rootElement != null) this.#outputElement = this.#rootElement.querySelector("." + EVUIUnit.Constants.Class_TestOutput);
     };
 
+    /**Runs a test file asynchronously.
+    @param {String} fileName THe name of a file to test the code of.
+    @returns {Promise<EVUIUnit.TestHostFileResults>} */
     runFileAsync(fileName)
     {
         return new Promise((resolve) =>
         {
             var session = new this.#TestSession();
-            session.id = this.#testSessionID++;
+            session.id = this.#serverArgs.sessionId + ":" + (this.#testSessionID++).toString();
             session.fileName = fileName;
             session.isCritical = this.#serverArgs.criticalFails.indexOf(fileName) !== -1;
             session.completeCallback = (results) =>
@@ -62,10 +72,14 @@ EVUIUnit.HostController = class
         });
     }
 
+    /**Writes a messager to the output element.
+    @param {String} message The message to log.
+    @param {String} logLevel  A value from the EVUITest.LogLevel indicating the severity of the log message.*/
     writeMessage(message, logLevel)
     {
         if (this.#outputElement == null) return console.log(message, logLevel);
 
+        //make a DIV and stuff it with an element that will contain the actual text - the divs act as separators between the inner log statements.
         var messageDiv = document.createElement("div");
         var innerNode = null;
         var className = null;
@@ -100,13 +114,18 @@ EVUIUnit.HostController = class
             }
         }
 
+        //if we had an inner node to stuff the div with, insert it into the message DIV
         if (innerNode != null) messageDiv.append(innerNode);
+
+        //tag the div with the class that will color it according to its importance.
         messageDiv.classList.add(className);
 
+        //append to the output element and scroll to the bottom.
         this.#outputElement.append(messageDiv);
         this.#outputElement.scrollTo(0, this.#outputElement.scrollHeight);
     };
 
+    /**Clears the message area of all content.*/
     clearMessageArea()
     {
         if (this.#outputElement == null) return;
@@ -119,19 +138,25 @@ EVUIUnit.HostController = class
         }
     }
 
+    /**Runs all the tests that were passed into the initialize function's serverArgs parameter in order.
+    @returns {EVUIUnit.TestHostFileResults[]}*/
     async runAllAsync()
     {
         var allResults = [];
-        var numFiles = this.#serverArgs.runOrder.length;
+
+        var files = this.#serverArgs.runOrder.slice();
+        var numFiles = files.length;
         for (var x = 0; x < numFiles; x++)
         {
-            var fileResults = await this.runFileAsync(this.#serverArgs.runOrder[x]);
+            var fileResults = await this.runFileAsync(files[x]);
             if (fileResults != null) allResults.push(fileResults);
         }
 
         return allResults;
     }
 
+    /**Inserts the test iframe into the DOM (appended to the body) so that it begins to load and run, then starts the timeout for the test file.
+    @param {#TestSession} session The session whose iframe is being launched.*/
     #launchIFrame(session)
     {
         this.#setTimeout(session);
@@ -140,6 +165,8 @@ EVUIUnit.HostController = class
         document.body.append(session.iframe);
     };
 
+    /**Removes a test iframe from the DOM.
+    @param {#TestSession} session The session to stop.*/
     #removeIFrame(session)
     {
         session.iframe.remove();
@@ -148,6 +175,9 @@ EVUIUnit.HostController = class
         window.removeEventListener("message", session.logHandler);
     };
 
+    /**Clones the serverArgs passed in by the user so that it cannot be tempered with while tests are executing.
+    @param {EVUIUnit.TestHostServerArgs} serverArgs The user's serverArgs
+    @returns {EVUIUnit.TestHostServerArgs}*/
     #cloneServerArgs(serverArgs)
     {
         var newArgs = new EVUIUnit.TestHostServerArgs();
@@ -155,15 +185,19 @@ EVUIUnit.HostController = class
         {
             if (Array.isArray(serverArgs.runOrder) === true) newArgs.runOrder = serverArgs.runOrder.slice();
             if (Array.isArray(serverArgs.criticalFails) === true) newArgs.criticalFails = serverArgs.criticalFails.slice();
+            if (typeof serverArgs === "string") newArgs.sessionId = serverArgs.sessionId;
         }
 
+        if (newArgs.sessionId == null) newArgs.sessionId = Math.round((Math.random() * 10000000)).toString(36);
         return newArgs;
     }
 
+    /**Builds the iframe. Points it at the right URL and hooks upp the message handlers.
+    @param {$TestSession} session The test session to build the iframe for.*/
     #attachIFrame(session)
     {
         var iframe = document.createElement("iframe");
-        iframe.src = EVUIUnit.Constants.Path_TestRunner + "?" + EVUIUnit.Constants.QS_TestFile + "=" + encodeURIComponent(session.fileName) + "&" + EVUIUnit.Constants.QS_TestSession + "=" + encodeURIComponent(this.#serverArgs.sessionId);
+        iframe.src = EVUIUnit.Constants.Path_TestRunner + "?" + EVUIUnit.Constants.QS_TestFile + "=" + encodeURIComponent(session.fileName) + "&" + EVUIUnit.Constants.QS_TestSession + "=" + encodeURIComponent(session.id);
         var onMessageHandler = (args) =>
         {
             this.#handleIFrameMessage(session, args);
@@ -175,29 +209,33 @@ EVUIUnit.HostController = class
         session.logHandler = onMessageHandler;
     };
 
-    /**
+    /**Takes a message event from an iframe and takes the appropraite action.
      * 
-     * @param {any} session
-     * @param {MessageEvent} messageEventArgs
+     * @param {#TestSession} session The session whose messages are being handled.
+     * @param {MessageEvent} messageEventArgs The event args produced by the window when it received this message.
      */
     #handleIFrameMessage(session, messageEventArgs)
     {
         var message = messageEventArgs.data;
         if (message == null || typeof message !== "object") return;
+        if (message.testSessionId !== session.id) return; //since there may at some point be more than one message listener on the window, we want to make sure only tests related to this one get processed here
 
-        if (message.messageCode === EVUIUnit.MessageCodes.TestReady)
+        messageEventArgs.stopImmediatePropagation(); //if this is the right handler for this message, there's no need for it to propagate further
+        messageEventArgs.stopPropagation();
+
+        if (message.messageCode === EVUIUnit.MessageCodes.TestReady) //test file has loaded and is being executed
         {
             session.iframeReadyAt = Date.now();
             session.lastStatusUpdateAt = Date.now();
             this.writeMessage("\r\nTEST FILE " + session.fileName);
         }
-        else if (message.messageCode === EVUIUnit.MessageCodes.OutputMessagePush)
+        else if (message.messageCode === EVUIUnit.MessageCodes.OutputPushMessage) //getting a message to write to the output area. Also, push back the timeout since this iframe is still alive
         {
             session.lastStatusUpdateAt = Date.now();
             this.#setTimeout(session);
             this.#writeMessageOutput(session, message.message);
         }
-        else if (message.messageCode === EVUIUnit.MessageCodes.TestComplete)
+        else if (message.messageCode === EVUIUnit.MessageCodes.TestComplete) //test all done, collect rhe results, clear the timeout, and finish the job
         {
             session.lastStatusUpdateAt = Date.now();
             session.results = message.testResults;
@@ -206,12 +244,14 @@ EVUIUnit.HostController = class
             {
                 clearTimeout(session.timeoutID);
                 session.timeoutID = -1;
-
-                this.#finish(session);
             }
+
+            this.#finish(session);
         }
     };
 
+    /**Sets (or rests) the timeout for a test file.
+    @param {#TestSession} session The session to set the timeout for.*/
     #setTimeout(session)
     {
         if (session.timeoutID !== -1)
@@ -224,14 +264,20 @@ EVUIUnit.HostController = class
         {
             session.timedOut = true;
             session.lastStatusUpdateAt = Date.now();
+            session.timeoutID = -1;
 
             this.#finish(session);
 
         }, this.Timeout * 1000);
     };
 
+    /**Completes the test file and removes the iframe from the DOM.
+    @param {#TestSession} session*/
     #finish(session)
     {
+        if (session.finished === true) return;
+        session.finished = true;
+
         if (session.timedOut === true)
         {
             this.writeMessage("TEST FILE \t\t" + session.fileName + " TIMED OUT AFTER " + (session.lastStatusUpdateAt - session.iframeReadyAt) + "ms.")
@@ -245,6 +291,9 @@ EVUIUnit.HostController = class
         session.completeCallback(session.results);
     }
 
+    /**Internal switch for formatting log statements.
+    @param {#TestSession} session The test session having a message written.
+    @param {EVUITest.OutputWriterMessage} message THe message being written to output.*/
     #writeMessageOutput(session, message)
     {
         if (typeof message === "object")
@@ -270,6 +319,7 @@ EVUIUnit.HostController = class
         iframeClosedAt = 0;
         timeoutID = -1;
         timedOut = false;
+        finished = false;
         logHandler = null;
         results = [];
     }

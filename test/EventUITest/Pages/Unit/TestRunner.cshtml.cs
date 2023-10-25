@@ -19,8 +19,11 @@ namespace EventUITest.Pages.Unit
         {
             string filePath = Request.Query[EVUIConstants.QueryString_FileName];
             string debug = Request.Query[EVUIConstants.QueryString_Debug];
+            string session = Request.Query[EVUIConstants.QueryString_Session];
 
             ServerArgs.testFilePath = filePath;
+            ServerArgs.testSessionId = session;
+
             if (Boolean.TryParse(debug, out bool result) == true)
             {
                 ServerArgs.debug = result;

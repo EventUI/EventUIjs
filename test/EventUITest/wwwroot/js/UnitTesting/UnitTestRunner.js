@@ -64,7 +64,8 @@ EVUIUnit.TestRunner = class
             message.level = outputLevel;
         }
 
-        var pushMessage = new EVUIUnit.OuputMessagePush();
+        var pushMessage = new EVUIUnit.OuputPushMessage();
+        pushMessage.testSessionId = this.#runnerArgs.testSessionId;
         pushMessage.message = message;
 
         window.parent.postMessage(pushMessage);
@@ -105,6 +106,7 @@ EVUIUnit.TestRunner = class
         finally
         {
             this.#sendTestEndMessage($evui.testHost.getResults());
+            this.#testRunning = false;
         }
     }
 
@@ -174,6 +176,7 @@ EVUIUnit.TestRunner = class
         var newArgs = new EVUIUnit.TestRunnerServerArgs();
         newArgs.testFilePath = serverArgs.testFilePath;
         newArgs.debug = typeof serverArgs.debug === "boolean" ? serverArgs.debug : false; 
+        newArgs.testSessionId = serverArgs.testSessionId;
 
         return newArgs;
     }
@@ -187,6 +190,7 @@ EVUIUnit.TestRunner = class
 
         var pushMessage = new EVUIUnit.TestStatusUpdate();
         pushMessage.messageCode = EVUIUnit.MessageCodes.TestReady;
+        pushMessage.testSessionId = this.#runnerArgs.testSessionId;
 
         window.parent.postMessage(pushMessage);
     }
@@ -200,6 +204,7 @@ EVUIUnit.TestRunner = class
 
         var pushMessage = new EVUIUnit.TestCompleteMessage();
         pushMessage.testResults = (Array.isArray(results) === false) ? [] : results;
+        pushMessage.testSessionId = this.#runnerArgs.testSessionId;
 
         window.parent.postMessage(pushMessage);
     }
@@ -219,5 +224,6 @@ EVUIUnit.TestRunner = class
 EVUIUnit.TestRunnerServerArgs = class
 {
     testFilePath = null;
+    testSessionId = null;
     debug = false;
 };

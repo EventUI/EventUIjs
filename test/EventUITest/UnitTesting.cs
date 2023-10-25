@@ -124,6 +124,8 @@ namespace EventUITest
             public string testFilePath { get; set; } = null;
 
             public bool debug { get; set; } = false;
+
+            public string testSessionId { get; set; } = null;
         }
 
         public class TestManifest

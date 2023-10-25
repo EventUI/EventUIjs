@@ -16,6 +16,9 @@ await $evui.testHost.runAsync({
     test: function (testArgs)
     {
         $evui.testHost.writeOutput("timing out");
+    },
+    options: {
+        shouldFail: true
     }
 });
 
@@ -49,6 +52,9 @@ await $evui.testAsync({
     {
         if (typeof number !== "number") testArgs.fail("No parameter provided.")
         testArgs.outputWriter.writeOutput("Parameter: " + number);
+    },
+    options: {
+        shouldFail: true
     }
 });
 

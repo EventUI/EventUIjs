@@ -14,6 +14,7 @@ namespace EventUITest
         public const string TestManifestName = "testmanifest.json";
         public const string Page_TestRunner = "/Unit/TestRunner";
         public const string QueryString_FileName = "file";
-        public const string QueryString_Debug = "debug";    
+        public const string QueryString_Debug = "debug";
+        public const string QueryString_Session = "session";
     }
 }
