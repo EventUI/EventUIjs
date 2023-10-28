@@ -4,16 +4,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - EventUITest</title>
-    <link href="/css/site.css" rel="stylesheet"/>
+    <link href="/css/site.css" rel="stylesheet" />
     @RenderSection("CSS", required: false)
 </head>
 <body>
     <header>
         <h1>EventUI Test Harness</h1>
     </header>
-    <div class="container">
+    <div class="container fullscreen">
         <main role="main" class="pb-3">
             @RenderBody()
+
+            <div class="testOutput">
+
+            </div>
         </main>
     </div>
     <footer class="border-top footer text-muted">
@@ -46,6 +50,9 @@
     <script src="/evuisrc/raw/Modules/TreeView.js"></script>
     <script src="/evuisrc/raw/Modules/UIHandler.js"></script>
     <script src="/evuisrc/test/EVUITest.js"></script>
+
+    <script src="/js/UnitTesting/EVUIUnit.js"></script>
+    <script src="/js/UnitTesting/Messages.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

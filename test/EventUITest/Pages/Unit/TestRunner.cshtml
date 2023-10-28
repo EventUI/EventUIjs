@@ -1,0 +1,19 @@
+﻿@page
+@model EventUITest.Pages.Unit.TestRunnerModel
+@{
+    Layout = "_EVUITestLayout";
+}
+
+@section Scripts
+{
+    <script src="/js/UnitTesting/UnitTestRunner.js"></script>
+    <script>
+        const TestRunnerServerArgs = @Model.GetServerArgsJSON();
+    </script>
+    <script>
+        var runner = new EVUIUnit.TestRunner();
+        runner.initialize(TestRunnerServerArgs);
+        runner.run();
+
+    </script>
+}

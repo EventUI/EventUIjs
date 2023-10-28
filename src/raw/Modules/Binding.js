@@ -5099,7 +5099,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             contentEntry.pending = true;
 
             //run the request and return the response into a string.
-            _services.httpManager.executeRequest(httpOptions, function (completedRequest)
+            _services.httpManager.send(httpOptions, function (completedRequest)
             {
                 contentEntry.pending = false;
                 if (completedRequest == null)
