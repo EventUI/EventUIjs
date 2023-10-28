@@ -1,4 +1,0 @@
-$evui.vow(function (args)
-{
-
-});

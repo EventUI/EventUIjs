@@ -1,5 +1,5 @@
-$evui.testHost.runAsync(function (pass, fail)
+$evui.testHost.runAsync(function (testArgs)
 {
-    $evui.assert("1").equals("2");
-    pass(); //will never be hit, the assertion above will blow up
+    $evui.assert("1").doesNotEqual("2");
+    testArgs.pass(); //will never be hit, the assertion above will blow up
 });

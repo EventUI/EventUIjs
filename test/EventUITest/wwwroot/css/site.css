@@ -20,3 +20,49 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+.fullscreen {
+    height: 85vh;
+    max-height: 85vh;
+    width: 100vw;
+}
+
+.testOutputContainer {
+    background-color: black;
+    color: white;
+    overflow: scroll;
+}
+
+.output-normal {
+    width: 100%;
+    color: white;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+.output-error {
+    width: 100%;
+    color: red;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+.output-critical {
+    width: 100%;
+    color: darkred;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+.output-console {
+    width: 100%;
+    color: deepskyblue;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+iframe{
+    height: 100vh;
+    width: 100vw;
+}
+
+main
+{
+    overflow: hidden;
+}
