@@ -1336,6 +1336,9 @@ EVUI.Modules.Modals.Manager = null;
 
 Object.freeze(EVUI.Modules.Modals);
 
+/**Constructor reference for the ModalManager.*/
+EVUI.Constructors.Modals = EVUI.Modules.Modals.ModalManager;
+
 delete $evui.modals;
 
 /**Global instance of the ModalManager, used for creating and using simple modals that are positioned relative to a point or another element.

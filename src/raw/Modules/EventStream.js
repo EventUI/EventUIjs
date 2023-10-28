@@ -2216,12 +2216,9 @@ $evui.vow = function (jobOrConfig, job)
     return es;
 };
 
-/**Returns a new EventStream in its default state.
-@param {EVUI.Modules.EventStream.EventStreamConfig} config Configuration options for the never EventStream.
-@returns {EVUI.Modules.EventStream.EventStream}*/
-$evui.eventStream = function (config)
-{
-    return new EVUI.Modules.EventStream.EventStream(config);
-};
+Object.freeze(EVUI.Modules.EventStream);
+
+/**Constructor reference for the EventStream.*/
+EVUI.Constructors.EventStream = EVUI.Modules.EventStream.EventStream;
 
 /*#ENDWRAP(ES)#*/
