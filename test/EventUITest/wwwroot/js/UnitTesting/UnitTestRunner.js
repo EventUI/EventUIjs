@@ -48,6 +48,9 @@ EVUIUnit.TestRunner = class
         }
     }
 
+    /**Writes output to the parent iframe in the form of a message or logs a message to the console if not running in an iframe.
+    @param {String|EVUITest.OutputWiterMessage} output The ooutput to send or log.
+    @param {any} outputLevel The LogLevel enum value indicating the importance of the msaage being logged.*/
     writeOutput(output, outputLevel)
     {
         if (output == null) return;
@@ -91,6 +94,7 @@ EVUIUnit.TestRunner = class
         window.parent.postMessage(pushMessage);
     }
 
+    /**Runs the test file by stuffing it into a new scipt tag and exeucting it within a function wrapper.*/
     async run()
     {
         if (this.#testRunning === true) return;
@@ -130,6 +134,8 @@ EVUIUnit.TestRunner = class
         }
     }
 
+    /**Makes a request to the local server for the script text to run and wraps it in a function.
+    @returns {String}*/
     async #getScriptText()
     {
         var url = this.#runnerArgs?.testFilePath;
@@ -158,7 +164,10 @@ EVUIUnit.TestRunner = class
         return finalScript;
     };
 
-    #injectScript(scriptText)
+    /**Injects the wrapped script into a script tag and attaches it to the body of the document.
+    @param {String} scriptText The function-wrapped string of code to run.
+    @returns {Boolean}*/
+    async #injectScript(scriptText)
     {
         var success = true;
         var errorHandler = (errorArgs) =>
@@ -167,6 +176,7 @@ EVUIUnit.TestRunner = class
             success = false;           
         };
 
+        //we add a global error handler to catch parse errors in the script when its being read by the browser after being inserted
         window.addEventListener("error", errorHandler);
 
         var scriptTag = document.createElement("script");
@@ -191,6 +201,9 @@ EVUIUnit.TestRunner = class
         });
     };   
 
+    /**Clones the user's TestRunnerServerArgs into a real instance of TestRunnerServerArgs.
+    @param {EVUIUnit.TestRunnerServerArgs} serverArgs The user's server arguments object.
+    @returns {EVUIUnit.TestRunnerServerArgs}*/
     #cloneRunnerArgs(serverArgs)
     {
         var newArgs = new EVUIUnit.TestRunnerServerArgs();
@@ -201,6 +214,7 @@ EVUIUnit.TestRunner = class
         return newArgs;
     }
 
+    /**Sends a message to the parent iframe indicating that the test code is about to be executed.*/
     #sendTestStartMessage()
     {
         if (this.#isChildWindow === false)
@@ -215,6 +229,8 @@ EVUIUnit.TestRunner = class
         window.parent.postMessage(pushMessage);
     }
 
+    /**Sends a message to the parent iframe indicating the test is complete and carries the batch of test results.
+    @param {EVUITest.TestResult[]} results The results of the tests run in the code file.*/
     #sendTestEndMessage(results)
     {
         if (this.#isChildWindow === false)
@@ -229,6 +245,8 @@ EVUIUnit.TestRunner = class
         window.parent.postMessage(pushMessage);
     }
 
+    /**Waits for the given number of milliseconds before resolving the underlying promise.
+    @param {Number} duration The amount of time to wait.*/
     #waitAsync(duration)
     {
         return new Promise((resolve) =>
@@ -241,9 +259,18 @@ EVUIUnit.TestRunner = class
     }
 }
 
+/**Arguments to feed into the test runner.*/
 EVUIUnit.TestRunnerServerArgs = class
 {
+    /**String. The resolvable path to the test code file to run.
+    @type {String}*/
     testFilePath = null;
+
+    /**String. The ID of the test session running this iframe.
+    @type {String}*/
     testSessionId = null;
+
+    /**Boolean. Whether or not a "debugger" statement should be inserted at the beginning of the codefile.
+    @type {Boolean}*/
     debug = false;
 };
