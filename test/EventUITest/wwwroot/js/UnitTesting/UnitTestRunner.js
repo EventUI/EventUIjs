@@ -3,22 +3,42 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
+/**Controller that manages the loading and execution of a single test file.
+@class*/
 EVUIUnit.TestRunner = class
 {
+    /**Special getter to determine if we are running in an iframe.
+    @type {Boolean}*/
     get #isChildWindow()  { return window.parent != window; }
-    
+
+    /**The arguments passed into the test runner.
+    @type {EVUIUnit.TestRunnerServerArgs}*/
     #runnerArgs = null;
+
+    /**Indicates if the test is currently running or not.
+    @type {Boolean}*/
     #testRunning = false;
+
+    /**Whether or not the controller has had its parameters set.
+    @type {Boolean}*/
     #initialized = false;
+
+    /**The name of the function to run in order to execute the test code.
+    @type {String}*/
     #functionName = null;
+
+    /**The length of the timeout for the test file in seconds.
+    @type {Number}*/
     #timeout = 10;
 
+    /**Initializes the test runner with a set of arguments.
+    @param {EVUIUnit.TestRunnerServerArgs} testRunnerArgs The arguments to feed th rest runner.*/
     initialize(testRunnerArgs)
     {
         if (testRunnerArgs == null || typeof testRunnerArgs !== "object") throw Error("Object expected.");
         if (this.#initialized === true) throw Error("Already initialized.");
-
         this.#initialized = true;
+
         this.#runnerArgs = this.#cloneRunnerArgs(testRunnerArgs);
         this.#functionName = "TEST_CODE";
 
@@ -169,7 +189,7 @@ EVUIUnit.TestRunner = class
                 resolve(success);
             }, 10);
         });
-    };
+    };   
 
     #cloneRunnerArgs(serverArgs)
     {

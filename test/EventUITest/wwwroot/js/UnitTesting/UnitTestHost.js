@@ -306,39 +306,107 @@ EVUIUnit.HostController = class
         }
     };
 
+    /**State object for a test file in progress.
+    @class */
     #TestSession = class
     {
+        /**Number. The ID of the test session.
+        @type {Number}*/
         id = -1;
+
+        /**String. The name of the file being tested.
+        @type {String}*/
         fileName = null;
+
+        /**Object. The IFrame element running the test.
+        @type {IFrameElement}*/
         iframe = null;
+
+        /**Boolean. Whether or not an error in this file consititutes a critical failure that should stop the testing process.
+        @type {Boolean}*/
         isCritical = false;
+
+        /**Function. The callback function that signals the test is complete.
+        @type {Function}*/
         completeCallback = null;
+
+        /**Number. Timestamp from when the iframe was initially launched.
+        @type {Number}*/
         iframeLaunchedAt = 0;
+
+        /**Number. Timestamp from when the iframe signaled that it was ready to begin running test code.
+        @type {Number}*/
         iframeReadyAt = 0;
+
+        /**Number. Timestamp of the last time the iframe sent a message to the host.
+        @type {Number}*/
         lastStatusUpdateAt = 0;
+
+        /**Number. Timestamp of when the iframe has completed and been closed.
+        @type {Number}*/
         iframeClosedAt = 0;
+
+        /**Number. The ID of the timeout that is used to determine if the test timed out or not.
+        @type {Number}*/
         timeoutID = -1;
+
+        /**Boolean. Whether or not the timeout was hit.
+        @type {Boolean}*/
         timedOut = false;
+
+        /**Boolean. Whether or not the test file has finished running.
+        @type {Boolean}*/
         finished = false;
+
+        /**Function. The event handler attached to the window's onMessage event.
+        @type {Function}*/
         logHandler = null;
+
+        /**Array. The results of the test.
+        @type {EVUITest.TestResult[]}*/
         results = [];
     }
 };
 
+/**The arugments passed into the host telling it what files to run.
+@class*/
 EVUIUnit.TestHostServerArgs = class
 {
+    /**String. The ID of the test host session.
+    @type {String}*/
     sessionId = null;
+
+    /**Array. An array of file paths relative to the root of the site to run.
+    @type {String}*/
     runOrder = [];
+
+    /**Array. An array of file paths relative to the root of the site that count as critical "do not continue" fails.
+    @type {String[]}*/
     criticalFails = [];
 };
 
+/**The result object produced by the TestHost once it has completed running a file.
+@class */
 EVUIUnit.TestHostFileResults = class
 {
+    /**String. The name of the file that was run.
+    @type {String}*/
     fileName = null;
+
+    /**Array. The array of TestResults produced by the TestRunner.
+    @type {EVUITest.TestResult}*/
     results = [];
+
+    /**Boolean. Whether or not the file timed out.
+    @type {Boolean}*/
     timedOut = false;
+
+    /**Number. THe numbner of milliseconds that elapsed during the test.
+    @type {Number}*/
     duration = 0;
 
+    /**Gets an array of all the failed tests in the file.
+    @returns {EVUITest.TestResult[]}*/
     getFailures()
     {
         if (this.results == null) return [];
