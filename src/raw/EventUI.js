@@ -12,11 +12,11 @@ EVUI = {};
 @namespace*/
 EVUI.Modules = {};
 
+/**Root container for all module controller constructors.
+@static*/
+EVUI.Constructors = {};
+
 /**Root shorthand reference container for EventUI commands. All functions listed here are shorthand for functions found deeper in the API: these merely call the API commands and there is no difference
 between them and the fully qualified function name.
 @static*/
 $evui = {};
-
-/**Root container for all module controller constructors.
-@static*/
-$evui.controllers = {}

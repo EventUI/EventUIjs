@@ -1443,6 +1443,9 @@ EVUI.Modules.PopIns.Manager = null;
 
 Object.freeze(EVUI.Modules.PopIns);
 
+/**Constructor reference for the ModalManager.*/
+EVUI.Constructors.PopIns = EVUI.Modules.PopIns.PopInManager;
+
 delete $evui.popIns;
 
 /**Global instance of the PopInManager, used for creating and using simple popIns that are positioned relative to a point or another element.

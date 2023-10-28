@@ -1475,6 +1475,9 @@ EVUI.Modules.HtmlLoader.Manager = null;
         });
 })();
 
+/**Constructor reference for the HtmlLoaderController.*/
+EVUI.Constructors.HtmlLoader = EVUI.Modules.HtmlLoader.HtmlLoaderController;
+
 delete $evui.htmlLoader;
 
 /**Global instance of the HtmlLoaderController, used to load fragments of Html or inject Html into placeholders in other Html.

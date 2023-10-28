@@ -1464,6 +1464,9 @@ EVUI.Modules.Dialogs.Manager = null;
     });
 })();
 
+/**Constructor reference for the DialogManager.*/
+EVUI.Constructors.Dialogs = EVUI.Modules.Dialogs.DialogManager;
+
 Object.freeze(EVUI.Modules.Dialogs);
 
 delete $evui.dialogs;
@@ -1519,10 +1522,5 @@ $evui.hideDialogAsync = function (dialogOrID, dialogHideArgs)
 {
     return $evui.dialogs.hideDialogAsync(dialogOrID, dialogHideArgs);
 };
-
-/**Class for managing Dialog objects.
-@param {EVUI.Modules.Dialogs.DialogControllerServices} services Optional. Service dependecies to inject into the DialogManager.
-@constructor*/
-$evui.controllers.dialogController = EVUI.Modules.Dialogs.DialogManager;
 
 /*#ENDWRAP(Dialog)#*/

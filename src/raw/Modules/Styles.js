@@ -1680,6 +1680,9 @@ EVUI.Modules.Styles.Manager = null;
     });
 })();
 
+/**Constructor reference for the StylesheetManager.*/
+EVUI.Constructors.Styles = EVUI.Modules.Styles.StyleSheetManager;
+
 delete $evui.styles;
 
 /**Gets the global instance of HttpEventStream, a utility used for making HTTP requests in a sequence.

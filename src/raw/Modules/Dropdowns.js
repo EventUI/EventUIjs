@@ -120,6 +120,7 @@ EVUI.Modules.Dropdowns.Constants.Default_AttributePrefix = "evui-dd";
 Object.freeze(EVUI.Modules.Dropdowns.Constants);
 
 /**Class for managing Dropdown objects.
+@param {EVUI.Modules.Dropdowns.DropdownControllerServices} services Optional service dependencies to inject into the Dropdown manager.
 @class*/
 EVUI.Modules.Dropdowns.DropdownManager = function (services)
 {
@@ -1423,6 +1424,9 @@ EVUI.Modules.Dropdowns.Manager = null;
         configurable: false
     });
 })();
+
+/**Constructor reference for the DropdownManager.*/
+EVUI.Constructors.Dropdowns = EVUI.Modules.Dropdowns.DropdownManager;
 
 Object.freeze(EVUI.Modules.Dropdowns);
 
