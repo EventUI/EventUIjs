@@ -199,7 +199,7 @@ EVUITest.OutputWriter = function ()
         if (typeof message == null) return;
         if (typeof level !== "string") level = EVUITest.LogLevel.Info;
 
-        var logMessage = new EVUITest.OutputWiterMessage();
+        var logMessage = new EVUITest.OutputWriterMessage();
         logMessage.message = message;
         logMessage.logLevel = level;
 
@@ -209,7 +209,7 @@ EVUITest.OutputWriter = function ()
 
 /**Represents an output message from the EVUITest library that ties together a log message with a log level code.
 @class */
-EVUITest.OutputWiterMessage = function ()
+EVUITest.OutputWriterMessage = function ()
 {
     /**A value from the LogLevel enum indicating the level of severity of the log message.
     @type {String}*/
@@ -252,6 +252,10 @@ EVUITest.TestOptions = function ()
     /**Boolean. Whether or not a failing test is considered a successful test (and a non-failing result counts as unsuccessful test).
     @type {Boolean}*/
     this.shouldFail = false;
+
+    /**Boolean. Whether or not a test is consider successful if it finishes without calling TestArgs.pass().
+    @type {Boolean}*/
+    this.implicitSuccess = true;
 };
 
 /**A simple utility that runs a test single delegate that can contain any arbitrary testing code. The entry point to the EVUI unit testing Selenium integration.
@@ -261,10 +265,11 @@ EVUITest.TestHostController = function ()
     var _self = this;
     var _executing = false;
     var _testQueue = [];
-    var _idCounter = 0;
-    var _instanceCounter = 0;
+    var _idCounter = 1;
+    var _instanceCounter = 1;
     var _outputWriter = null;
     var _testResults = [];
+    var _testCounter = 0;
 
     /**Boolean. Whether or not the Host is currently running.
     @type {Boolean}*/
@@ -360,8 +365,8 @@ EVUITest.TestHostController = function ()
     {
         if (testResult == null) return null;
 
-        var outputMessage = new EVUITest.OutputWiterMessage();
-        var output = "Test #" + testResult.testId + " - \"" + testResult.testName + "\" ";
+        var outputMessage = new EVUITest.OutputWriterMessage();
+        var output = "Test #" + testResult.testId + ":" + testResult.instanceId + " - \"" + testResult.testName + "\" ";
 
         if (testResult.success === true)
         {
@@ -372,7 +377,7 @@ EVUITest.TestHostController = function ()
         {
             if (testResult.intentionalFailure === true)
             {
-                outputMessage.logLevel = EVUITest.LogLevel.Warn;
+                outputMessage.logLevel = EVUITest.LogLevel.Debug;
                 output += "SIMULATED FAILURE  in " + testResult.duration.toFixed(3) + "ms.";
             }
             else
@@ -393,7 +398,7 @@ EVUITest.TestHostController = function ()
 
         if (testResult.arguments != null && testResult.arguments.length > 0)
         {
-            var argsStr = "\nWith Arguments:\t";
+            var argsStr = " With Arguments:\t";
 
             if (typeof arguments === "function")
             {
@@ -410,8 +415,6 @@ EVUITest.TestHostController = function ()
 
             output += argsStr
         }
-
-        output += "\n";
 
         outputMessage.message = output;
         return outputMessage;
@@ -512,7 +515,7 @@ EVUITest.TestHostController = function ()
             }
             catch (ex)
             {
-                var errorLogMessage = new EVUITest.OutputWiterMessage();
+                var errorLogMessage = new EVUITest.OutputWriterMessage();
                 errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
                 errorLogMessage.message = "Error generating log message: " + ex.stack;
 
@@ -561,7 +564,7 @@ EVUITest.TestHostController = function ()
                 }
                 catch (ex)
                 {
-                    var errorLogMessage = new EVUITest.OutputWiterMessage();
+                    var errorLogMessage = new EVUITest.OutputWriterMessage();
                     errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
                     errorLogMessage.message = "Error in " + testState.test.name + " callback: " + ex.stack;
 
@@ -613,7 +616,7 @@ EVUITest.TestHostController = function ()
         {
             removeEventListener("error", errorHandler);
 
-            if (timeoutID > 0) clearTimeout(timeoutID);
+            if (timeoutID > -1) clearTimeout(timeoutID);
             callback(testInstance);
         }
 
@@ -664,16 +667,19 @@ EVUITest.TestHostController = function ()
         //add the global error event listener to catch exceptions thrown not on the stack trace of the promise (i.e. in a callback for a native API, like a XMLHttpRequest)
         addEventListener("error", errorHandler);
 
-        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow and allows for log messages to come through mid-test
-        setTimeout(function ()
+        var runTest = function ()
         {
             try
             {
+                _testCounter++;
+                _self.outputWriter.logDebug("RUNNING Test #" + testInstance.state.testId + ":" + testInstance.instanceId + " - \"" + testInstance.state.test.name + "\"");
+
                 var testArgs = new EVUITest.TestArgs();
                 testArgs.fail = fail;
                 testArgs.pass = pass;
                 testArgs.outputWriter = _self.outputWriter;
                 testArgs.parameters = testInstance.arguments.slice();
+                testArgs.options = finalOptions;
 
                 timeoutID = setTimeout(function () //set the timeout failsafe
                 {
@@ -687,17 +693,36 @@ EVUITest.TestHostController = function ()
                 var result = testInstance.testFn.apply(this, allArgs);
                 if (result instanceof Promise)
                 {
+                    result.then(function ()
+                    {
+                        if (testFinished === false && finalOptions.implicitSuccess === true) pass();
+                    });
+
                     result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
                         fail(ex);
                     });
+                }
+                else
+                {
+                    if (testFinished === false && finalOptions.implicitSuccess === true) pass();
                 }
             }
             catch (ex)
             {
                 fail(ex);
             }
-        }, 5);
+        };
+
+        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow and allows for log messages to come through mid-test
+        if (_testCounter > 0 && _testCounter % 5 === 0)
+        {
+            setTimeout(runTest); //run a timeout to let go of the thread and let any pending calls in the event loop fire
+        }
+        else
+        {
+            Promise.resolve().then(runTest); //run the test in the faster promise event queue for better performance
+        }
     };
 
     /**Creates a TestInstance for every set of arguments in the args list provided by the user.
@@ -772,7 +797,8 @@ EVUITest.TestHostController = function ()
 
     /**Performs an inheritance operation on the various option sets we can use to make the final options set.
     @param {EVUITest.TestOptions} testOptions The options settings that apply to the whole test.
-    @param {EVUITest.TestOptions} hostOptions The options settings that applies to all tests in the test runner.*/
+    @param {EVUITest.TestOptions} hostOptions The options settings that applies to all tests in the test runner.
+    @returns {EVUITest.TestOptions}*/
     var makeFinalOptions = function (testOptions, hostOptions)
     {
         var finalOptions = new EVUITest.TestOptions();
@@ -780,7 +806,7 @@ EVUITest.TestHostController = function ()
         extend(finalOptions, hostOptions);
         extend(finalOptions, testOptions);
 
-        return Object.freeze(finalOptions);
+        return finalOptions;
     };
 
     /**Determines whether or not the script reported in the global error handler is one of the relevant scripts being watched for exceptions and not a random 3rd party library.
@@ -959,6 +985,10 @@ EVUITest.TestArgs = function ()
     /**Object. The OutputWriter that belongs to the TestHost running the test.
     @type {EVUITest.OutputWriter}*/
     this.outputWriter = null;
+
+    /**Object. The options being used for this test.
+    @type {EVUITest.TestOptions}*/
+    this.options = null;
 };
 
 
@@ -1237,7 +1267,7 @@ EVUITest.Assertion = function (value, settings)
         var logOnSuccess = typeof settings.logOnSuccess === "boolean" ? settings.logOnSuccess : _settings.logOnSuccess;
         var throwOnFailure = typeof settings.throwOnFailure === "boolean" ? settings.throwOnFailure : _settings.throwOnFailure;
 
-        var outputMessage = new EVUITest.OutputWiterMessage();
+        var outputMessage = new EVUITest.OutputWriterMessage();
         outputMessage.message = logMessage;
 
         if (comparisonResult.success === true)
