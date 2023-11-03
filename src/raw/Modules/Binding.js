@@ -7851,7 +7851,7 @@ EVUI.Modules.Binding.Binder = null;
 })();
 
 /**Constructor reference for the BidningController.*/
-EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
+//EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
 
 Object.freeze(EVUI.Modules.Binding)
 

@@ -565,7 +565,7 @@ EVUI.Modules.Enums.ValueGetter = null;
 })();
 
 /**Constructor reference for the EnumValueGetter.*/
-EVUI.Constructors.Enums = EVUI.Modules.Enums.ValueGetter;
+EVUI.Constructors.Enums = EVUI.Modules.Enums.EnumValueGetter;
 
 /**Gets either an enum object or a value from an enum object.
 @param {String|Object} enumNameOrModule Either the path to an enum, an enum's name, a module object, or the name of a module.

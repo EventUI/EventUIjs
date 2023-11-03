@@ -2414,6 +2414,8 @@ $evui.uncacheProps = function (obj)
 EVUI.Modules.Core.Utils.createController = function (name, args)
 {
     if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(name) === true) throw Error("String expected.");
+    if ((/s$/i).test(name) === true) name = name.substring(0, name.length - 1); //if it ends in an "s" already, cut it off since the regex below handles that case
+
     var controllerRegex = new RegExp(`^${name}$|^${name}s$`, "i");
 
     for (var ctor in EVUI.Constructors)
