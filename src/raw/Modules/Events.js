@@ -806,6 +806,9 @@ EVUI.Modules.Events.Manager = null;
     });
 })();
 
+/**Constructor reference for the EventManager.*/
+EVUI.Constructors.Events = EVUI.Modules.Events.EventManager;
+
 delete $evui.events;
 
 /**Global instance of the EventManager, used for consuming and emitting custom events without binding them to the DOM.
@@ -877,5 +880,7 @@ $evui.askAsync = function (eventNameOrTriggerArgs, data, triggerName)
 {
     return $evui.events.askAsync(eventNameOrTriggerArgs, data, triggerName)
 };
+
+Object.freeze(EVUI.Modules.Events);
 
 /*#ENDWRAP(Event)#*/

@@ -18,7 +18,8 @@ await $evui.testHost.runAsync({
         $evui.testHost.writeOutput("timing out");
     },
     options: {
-        shouldFail: true
+        shouldFail: true,
+        implicitSuccess: false
     }
 });
 
@@ -54,7 +55,8 @@ await $evui.testAsync({
         testArgs.outputWriter.writeOutput("Parameter: " + number);
     },
     options: {
-        shouldFail: true
+        shouldFail: true,
+        implicitSuccess: false
     }
 });
 

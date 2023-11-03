@@ -999,6 +999,8 @@ EVUI.Modules.DomEvents.AsyncDomEventArgs = function ()
     this.state = null;
 };
 
+Object.freeze(EVUI.Modules.DomEvents);
+
 /**Adds an event listener to the stack of managed async event handlers.
 @param {EventTarget} eventTarget The target to attach the event to.
 @param {String} type The type of event to listen for.

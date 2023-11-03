@@ -2407,6 +2407,37 @@ $evui.uncacheProps = function (obj)
     return EVUI.Modules.Core.Utils.uncacheProperties(obj);
 };
 
+/**Creates a module's main feature controller based on the name of the module.
+@param {String} name The name of the module that contains the controller to create.
+@param {Object} args The arguments object to pass the controller's constructor. Varies by the controller being instantiated.
+@returns {Any}*/
+EVUI.Modules.Core.Utils.createController = function (name, args)
+{
+    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(name) === true) throw Error("String expected.");
+    if ((/s$/i).test(name) === true) name = name.substring(0, name.length - 1); //if it ends in an "s" already, cut it off since the regex below handles that case
+
+    var controllerRegex = new RegExp(`^${name}$|^${name}s$`, "i");
+
+    for (var ctor in EVUI.Constructors)
+    {
+        if (controllerRegex.test(ctor) === true)
+        {
+            return new EVUI.Constructors[ctor](args);
+        }
+    }
+
+    return null;
+};
+
+/**Creates a module's main feature controller based on the name of the module.
+@param {String} name The name of the module that contains the controller to create.
+@param {Object} args The arguments object to pass the controller's constructor. Varies by the controller being instantiated.
+@returns {Any}*/
+$evui.createController = function (name, args)
+{
+    return EVUI.Modules.Core.Utils.createController(name, args);
+};
+
 Object.freeze(EVUI.Modules.Core);
 Object.freeze(EVUI.Modules.Core.Constants);
 Object.freeze(EVUI.Modules.Core.Utils);

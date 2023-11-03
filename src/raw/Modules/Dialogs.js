@@ -137,7 +137,8 @@ EVUI.Modules.Dialogs.Constants.Default_AttributePrefix = "evui-dlg";
 
 Object.freeze(EVUI.Modules.Dialogs.Constants);
 
-/**Class for managing Dialog object.
+/**Class for managing Dialog objects.
+@param {EVUI.Modules.Dialogs.DialogControllerServices} services Optional. Service dependecies to inject into the DialogManager.
 @class*/
 EVUI.Modules.Dialogs.DialogManager = function (services)
 {
@@ -1462,6 +1463,9 @@ EVUI.Modules.Dialogs.Manager = null;
         configurable: false
     });
 })();
+
+/**Constructor reference for the DialogManager.*/
+EVUI.Constructors.Dialogs = EVUI.Modules.Dialogs.DialogManager;
 
 Object.freeze(EVUI.Modules.Dialogs);
 

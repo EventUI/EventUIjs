@@ -98,6 +98,20 @@ EVUIUnit.HostController = class
 
             className = EVUIUnit.Constants.Class_TestOutput_Error;
         }
+        else if (logLevel === EVUITest.LogLevel.Warn)
+        {
+            innerNode = document.createElement("span");
+            innerNode.innerText = message;
+
+            className = EVUIUnit.Constants.Class_TestOutput_Warn;
+        }
+        else if (logLevel === EVUITest.LogLevel.Debug)
+        {
+            innerNode = document.createElement("span");
+            innerNode.innerText = message;
+
+            className = EVUIUnit.Constants.Class_TestOutput_Debug;
+        }
         else
         {
             innerNode = document.createElement("span");

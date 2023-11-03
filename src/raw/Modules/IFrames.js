@@ -1568,6 +1568,8 @@ EVUI.Modules.IFrames.Manager = null;
     });
 })();
 
+/**Constructor reference for the DropdownManager.*/
+EVUI.Constructors.IFrames = EVUI.Modules.IFrames.IFrameManager
 
 delete $evui.iframes;
 
