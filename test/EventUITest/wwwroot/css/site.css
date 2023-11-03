@@ -35,7 +35,19 @@ body {
 
 .output-normal {
     width: 100%;
+    color: dimgrey;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+.output-debug {
+    width: 100%;
     color: white;
+    font-family: "Lucida Console", "Courier New", monospace;
+}
+
+.output-warn {
+    width: 100%;
+    color: yellow;
     font-family: "Lucida Console", "Courier New", monospace;
 }
 

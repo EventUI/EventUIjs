@@ -31,11 +31,17 @@ EVUIUnit.Constants.Path_TestRunner = "/Unit/TestRunner";
 /**The CSS class used to find and style an output "console" log-like element.*/
 EVUIUnit.Constants.Class_TestOutput = "testOutputContainer";
 
+/**The CSS class for formatting LogLevel.Critical messages.*/
+EVUIUnit.Constants.Class_TestOutput_Critical = "output-critical";
+
 /**The CSS class for formatting LogLevel.Error messages.*/
 EVUIUnit.Constants.Class_TestOutput_Error = "output-error";
 
-/**The CSS class for formatting LogLevel.Critical messages.*/
-EVUIUnit.Constants.Class_TestOutput_Critical = "output-critical";
+/**The CSS class for formatting LogLevel.Warn messages.*/
+EVUIUnit.Constants.Class_TestOutput_Warn = "output-warn";
+
+/**The CSS class for formatting LogLevel.Debug messages.*/
+EVUIUnit.Constants.Class_TestOutput_Debug = "output-debug";
 
 /**The CSS class for formatting LogLevel.Info, Debug, or Trace messages.*/
 EVUIUnit.Constants.Class_TestOutput_Normal = "output-normal";
