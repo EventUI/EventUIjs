@@ -52,9 +52,9 @@ EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
 EVUI.Modules.Binding.Constants.Attr_BindingTemplateName = "evui-binder-template-name";
 
 EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
-EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "gethtmlContent";
+EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "gethtmlcontent";
 EVUI.Modules.Binding.Constants.Event_OnGetBindings = "getbindings";
-EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent = "bindhtmlContent";
+EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent = "bindhtmlcontent";
 EVUI.Modules.Binding.Constants.Event_OnBindChildren = "bindchildren";
 EVUI.Modules.Binding.Constants.Event_OnBoundChildren = "boundchildren";
 EVUI.Modules.Binding.Constants.Event_OnBound = "bound";
