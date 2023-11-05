@@ -5,22 +5,26 @@ LICENSE file in the root directory of this source tree.*/
 
 if ($evui == null) $evui = {};
 
+/**Root namespace for the EventUI Test library.
+@namespace*/
 EVUITest = {};
 
+/**Constants table for the EventUI Test library.
+@static*/
 EVUITest.Constants = {};
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
-@param {EVUITest.Constants.Fn_TestPass} pass A function to call once the test is complete.
-@param {EVUITest.Constants.Fn_TestFail} fail A function to call if the test fails.
+@param {EVUITest.TestArgs} testArgs An arguments object for the test that contains the functions used to pass or fail the test, as well as some metadata about the test.
 @param {Any} args The arguments passed into the test.*/
-EVUITest.Constants.Fn_Test = function (pass, fail, ...args) { };
+EVUITest.Constants.Fn_Test = function (testArgs, ...args) { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.*/
 EVUITest.Constants.Fn_TestPass = function () { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
-@param {String} reason The reason why the test failed.*/
-EVUITest.Constants.Fn_TestFail = function (reason) { };
+@param {String} reason The reason why the test failed.  
+@param {Boolean} intentionalFailure Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
+EVUITest.Constants.Fn_TestFail = function (reason, intentionalFailure) { };
 
 /**A predicate function that is fed the assertion value and returns true or false. 
 @param {Any} assertionValue The value wrapped by the assertion.
@@ -31,6 +35,8 @@ EVUITest.Constants.Fn_Predicate = function (assertionValue) { };
 @param {EVUITest.ValueEqualityContext} equalityContext The comparison context of the values.
 @returns {Boolean}*/
 EVUITest.Constants.Fn_EqualityComparer = function (equalityContext) { };
+
+Object.freeze(EVUITest.Constants);
 
 /**Default settings for the Assertions module.
 @class*/
@@ -71,10 +77,6 @@ EVUITest.Settings.outputWriter = null;
 @class*/
 EVUITest.Test = function ()
 {
-    /**Number. The Id of the test.
-    @type {Number}*/
-    this.id = null;
-
     /**String. The name of the test. Used for logging purposes.
     @type {String}*/
     this.name = null;
@@ -120,6 +122,10 @@ EVUITest.TestResult = function ()
     @type {Error}*/
     this.error = null;
 
+    /**Boolean. Whether or not this test was intentionally failed and not a result of the test failing organically.
+    @type {Boolean}*/
+    this.intentionalFailure = false;
+
     /**Number. The number of milliseconds the test took.
     @type {Number}*/
     this.duration = 0;
@@ -131,42 +137,254 @@ EVUITest.TestResult = function ()
     /**Number. The ordinal of this test in the set of tests that contained it.
     @type {Number}*/
     this.testSetId = 0;
+
+    /**Object. The TestOptions used for the test.
+    @type {EVUITest.TestOptions}*/
+    this.options = null;
 };
 
 /**Simple utility class used for writing output from the TestHost. The default implementation writes to the console, but it can be overwritten to write to anything.
 @class*/
 EVUITest.OutputWriter = function ()
 {
-    /**Writes the output of a TestResult.
-    @param {EVUITest.TestResult} testResult The result of a test.*/
-    this.writeTestOuput = function (testResult)
-    {
-        var output = this.formatTestOutput(testResult);
-        this.writeOutput(output);
-    };
+    var _self = this;
 
-    /**Writes arbitrary output.
+    /**Writes arbitrary output. Override to implement custom logging behavior.
     @param {Any} args Any arguments to write to output.*/
     this.writeOutput = function (...args)
     {
         console.log(...args);
     };
 
+    /**Logs a "critical" level log message.
+    @param {String} message The message to log.*/
+    this.logCritical = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Critical);
+    };
+
+    /**Logs a "error" level log message.
+    @param {String} message The message to log.*/
+    this.logError = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Error);
+    };
+
+    /**Logs a "warning" level log message.
+    @param {String} message The message to log.*/
+    this.logWarning = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Warn); 
+    };
+
+    /**Logs a "debug" level log message.
+    @param {String} message The message to log.*/
+    this.logDebug = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Debug);
+    };
+
+    /**Logs a "info" level log message.
+    @param {String} message The message to log.*/
+    this.logInfo = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Info);
+    };
+
+    /**Logs a message by creating a OutputWriterMessage and passing it to writeOutput.
+    @param {String} message The message to log.
+    @param {String} level The LogLevel enum value to associate with the log message.*/
+    this.log = function (message, level)
+    {
+        if (typeof message == null) return;
+        if (typeof level !== "string") level = EVUITest.LogLevel.Info;
+
+        var logMessage = new EVUITest.OutputWriterMessage();
+        logMessage.message = message;
+        logMessage.logLevel = level;
+
+        _self.writeOutput(logMessage)
+    }
+};
+
+/**Represents an output message from the EVUITest library that ties together a log message with a log level code.
+@class */
+EVUITest.OutputWriterMessage = function ()
+{
+    /**A value from the LogLevel enum indicating the level of severity of the log message.
+    @type {String}*/
+    this.logLevel = EVUITest.LogLevel.Info;
+
+    /**The message to log. Must be able to be sent in an iframe message.
+    @type {Any}*/
+    this.message = null;
+
+    /**The UTC ISO timestamp for when this log statement was made.
+    @type {String}*/
+    this.timestamp = new Date(Date.now()).toISOString();
+};
+
+/**The importance level of a log message.
+@enum*/
+EVUITest.LogLevel =
+{
+    None: "none",
+    Trace: "trace",
+    Debug: "debug",
+    Info: "info",
+    Warn: "warn",
+    Error: "error",
+    Critical: "critical"
+};
+
+/**Settings for running tests.
+@class*/
+EVUITest.TestOptions = function ()
+{
+    /**Number. The number of milliseconds to wait before automatically failing the test.
+    @type {Number}*/
+    this.timeout = 100;
+
+    /**Array. In the event of an asynchronous portion of a test crashing without a try-catch capturing the error, this is the window's onerror handler's list of code files to associate with the error. If an error comes from a file that meets the filter, it is associated with the test. If not, the error is ignored.
+    @type {String|RegExp|String[]|RegExp[]}*/
+    this.fileFilter = new RegExp(/.*\.js/ig);
+
+    /**Boolean. Whether or not a failing test is considered a successful test (and a non-failing result counts as unsuccessful test).
+    @type {Boolean}*/
+    this.shouldFail = false;
+
+    /**Boolean. Whether or not a test is consider successful if it finishes without calling TestArgs.pass().
+    @type {Boolean}*/
+    this.implicitSuccess = true;
+};
+
+/**A simple utility that runs a test single delegate that can contain any arbitrary testing code. The entry point to the EVUI unit testing Selenium integration.
+@class*/
+EVUITest.TestHostController = function ()
+{
+    var _self = this;
+    var _executing = false;
+    var _testQueue = [];
+    var _idCounter = 1;
+    var _instanceCounter = 1;
+    var _outputWriter = null;
+    var _testResults = [];
+    var _testCounter = 0;
+
+    /**Boolean. Whether or not the Host is currently running.
+    @type {Boolean}*/
+    this.executing = false;
+    Object.defineProperty(this, "executing", {
+        get: function ()
+        {
+            return _executing;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**Object. The OutputWriter used by the TestHost.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
+    Object.defineProperty(this, "outputWriter", {
+        get: function ()
+        {
+            if (_outputWriter == null) return EVUITest.Settings.outputWriter;
+            return _outputWriter;
+        },
+        set: function (value)
+        {
+            if (typeof value !== "object" || value == null) throw Error("Object expected.")
+            _outputWriter = value;
+        },
+        configurable: false,
+        enumerable: false
+    });
+
+    /**Object. Control options for the test host.
+    @type {EVUITest.TestOptions}*/
+    this.options = new EVUITest.TestOptions();
+
+    /**Awaitable. Runs a test function based on the Test passed in.
+    @param {String|EVUITest.Constants.Fn_Test|EVUITest.Test} name The name of the test being run, a test function to run, or a Test yolo to run.
+    @param {EVUITest.Constants.Fn_Test|EVUITest.Test} test The test function to run, or a Test yolo to run.
+    @returns {Promise<EVUITest.TestResult[]>}*/
+    this.runAsync = function (name, test)
+    {
+        var resolvedTest = getTestAmbiguously(name, test);
+        if (resolvedTest == null) throw Error("Test YOLO or function expected.");
+
+        resolvedTest.instances = getTestInstances(resolvedTest);
+
+        if (_executing === true)
+        {
+            _testQueue.push(resolvedTest);
+
+            return new Promise(function (resolve)
+            {
+                resolvedTest.callback = function (testState)
+                {
+                    resolve(testState.results);
+                }
+            });
+        }
+
+        return new Promise(function (resolve)
+        {
+            executeTest(resolvedTest, function (testState)
+            {
+                resolve(testState.results);
+            });
+        });
+    };
+
+    /**Uses the outputWriter to write arbitrary output.
+    @param {Any} args Any arguments to write as output.*/
+    this.writeOutput = function (...args)
+    {
+        writeOutput(...args);
+    };
+
+    /**Gets a copy of the internal TestResults list.
+    @returns {EVUITest.TestResult[]}*/
+    this.getResults = function ()
+    {
+        return _testResults.slice();
+    };
+
+    /**Clears the internal TestResults list of all rsults.*/
+    this.clearResults = function ()
+    {
+        _testResults.splice(0, _testResults.length);
+    };
+
     /**Formats a testResult into a loggable string.
-    @param {EVUITest.TestResult} testResult The result of a test.*/
-    this.formatTestOutput = function (testResult)
+    @param {EVUITest.TestResult} testResult The result of a test.
+    @returns {EVUITest.OutputWiterMessage}*/
+    var formatTestOutput = function (testResult)
     {
         if (testResult == null) return null;
 
-        var output = "Test #" + testResult.testId + " - \"" + testResult.testName + "\" ";
+        var outputMessage = new EVUITest.OutputWriterMessage();
+        var output = "Test #" + testResult.testId + ":" + testResult.instanceId + " - \"" + testResult.testName + "\" ";
 
         if (testResult.success === true)
         {
-            output += "SUCCEDED in " + testResult.duration + "ms."
+            outputMessage.logLevel = EVUITest.LogLevel.Debug;
+            output += "SUCCEDED in " + testResult.duration.toFixed(3) + "ms."
         }
         else
         {
-            output += "FAILED  in " + testResult.duration + "ms.";
+            if (testResult.intentionalFailure === true)
+            {
+                outputMessage.logLevel = EVUITest.LogLevel.Debug;
+                output += "SIMULATED FAILURE  in " + testResult.duration.toFixed(3) + "ms.";
+            }
+            else
+            {
+                outputMessage.logLevel = EVUITest.LogLevel.Error;
+                output += "FAILED  in " + testResult.duration.toFixed(3) + "ms.";
+            }
 
             if (typeof testResult.reason === "string" && testResult.reason.trim().length > 0)
             {
@@ -174,13 +392,13 @@ EVUITest.OutputWriter = function ()
             }
             else if (testResult.error instanceof Error)
             {
-                output += "\nError: " + testResult.error.stack;
+                output += "\n" + testResult.error.stack;
             }
         }
 
         if (testResult.arguments != null && testResult.arguments.length > 0)
         {
-            var argsStr = "\n\nWith Arguments:\n";
+            var argsStr = " With Arguments:\t";
 
             if (typeof arguments === "function")
             {
@@ -195,90 +413,11 @@ EVUITest.OutputWriter = function ()
                 argsStr += testResult.arguments.toString();
             }
 
-            output += argsStr;
+            output += argsStr
         }
 
-        return output;
-    };
-};
-
-/**Settings for running tests.
-@class*/
-EVUITest.TestOptions = function ()
-{
-    /**Number. The number of milliseconds to wait before automatically failing the test.
-    @type {Number}*/
-    this.timeout = 100;
-
-    /**Array. In the event of an asynchronous portion of a test crashing without a try-catch capturing the error, this is the window's onerror handler's list of code files to associate with the error. If an error comes from a file that meets the filter, it is associated with the test. If not, the error is ignored.
-    @type {String|RegExp|String[]|RegExp[]}*/
-    this.fileFilter = new RegExp(/.*\.js/ig);
-};
-
-/**A simple utility that runs a test single delegate that can contain any arbitrary testing code. The entry point to the EVUI unit testing Selenium integration.
-@class*/
-EVUITest.TestHostController = function ()
-{
-    var _self = this;
-    var _executing = false;
-    var _testQueue = [];
-    var _idCounter = 0;
-    var _instanceCounter = 0;
-
-    /**Boolean. Whether or not the Host is currently running.
-    @type {Boolean}*/
-    this.executing = false;
-    Object.defineProperty(this, "executing", {
-        get: function ()
-        {
-            return _executing;
-        },
-        configurable: false,
-        enumerable: true
-    });
-
-    /**Object. Control options for the test host.
-    @type {EVUITest.TestOptions}*/
-    this.options = new EVUITest.TestOptions();
-
-    /**Awaitable. Runs a test function based on the Test passed in.
-    @param {String|EVUITest.Constants.Fn_Test|EVUITest.Test} name The name of the test being run, a test function to run, or a Test yolo to run.
-    @param {EVUITest.Constants.Fn_Test|EVUITest.Test} test The test function to run, or a Test yolo to run.
-    @returns {Promise}*/
-    this.runAsync = function (name, test)
-    {
-        var resolvedTest = getTestAmbiguously(name, test);
-        if (resolvedTest == null) throw Error("Test YOLO or function expected.");
-
-        resolvedTest.instances = getTestInstances(resolvedTest);
-
-        if (_executing === true)
-        {
-            _testQueue.push(resolvedTest);
-
-            return new Promise(function (resolve)
-            {
-                resolvedTest.callback = function ()
-                {
-                    resolve();
-                }
-            });
-        }
-
-        return new Promise(function (resolve)
-        {
-            executeTest(resolvedTest, function ()
-            {
-                resolve();
-            });
-        });
-    };
-
-    /**Uses the ouputWriter to write arbitrary output.
-    @param {Any} args Any arguments to write as output.*/
-    this.writeOutput = function (...args)
-    {
-        writeOutput(...args);
+        outputMessage.message = output;
+        return outputMessage;
     };
 
     /**Takes ambiguous user input and makes a TestState object from it.
@@ -360,24 +499,27 @@ EVUITest.TestHostController = function ()
     };
 
     /**Utility function for ensuring that there is a valid outputWriter before attempting to write any output about the results of a test instance.
-    @param {TestInstance} testInstance The instance of a test that was just completed.*/
-    var writeTestOutput = function (testInstance)
+    @param {EVUITest.TestResult} testResult The result object representing the test that was just completed..*/
+    var writeTestOutput = function (testResult)
     {
-        if (typeof EVUITest.Settings.outputWriter?.writeTestOuput !== "function")
+        if (typeof EVUITest.Settings.outputWriter.writeOutput !== "function")
         {
-            console.log("Invalid outputWriter! The outputWriter must have a \"writeTestOutput\" function that accepts a TestResult as a parameter.");
+            console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function.");
         }
         else
         {
-            var result = makeResultFromState(testInstance);
-
             try
             {
-                EVUITest.Settings.outputWriter.writeTestOuput(result);
+                var testLogMessage = formatTestOutput(testResult);
+                EVUITest.Settings.outputWriter.writeOutput(testLogMessage);
             }
             catch (ex)
             {
-                writeOutput(ex);
+                var errorLogMessage = new EVUITest.OutputWriterMessage();
+                errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
+                errorLogMessage.message = "Error generating log message: " + ex.stack;
+
+                writeOutput(errorLogMessage);
             }
         }
     };
@@ -386,16 +528,15 @@ EVUITest.TestHostController = function ()
     @param {Any} args Any values to write as output.*/
     var writeOutput = function (...args)
     {
-        if (typeof EVUITest.Settings.outputWriter?.writeOutput !== "function")
+        if (typeof _self.outputWriter?.writeOutput !== "function")
         {
             console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function that accepts an ...args set of arguments.");
         }
         else
         {
-
             try
             {
-                EVUITest.Settings.outputWriter.writeOutput(...args);
+                _self.outputWriter.writeOutput(...args);
             }
             catch (ex)
             {
@@ -419,11 +560,15 @@ EVUITest.TestHostController = function ()
             {
                 try
                 {
-                    callback();
+                    callback(testState);
                 }
                 catch (ex)
                 {
-                    writeOutput("Error in " + testState.test.name + " callback!", ex);
+                    var errorLogMessage = new EVUITest.OutputWriterMessage();
+                    errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
+                    errorLogMessage.message = "Error in " + testState.test.name + " callback: " + ex.stack;
+
+                    writeOutput(errorLogMessage);
                 }
 
                 var next = getNextTest();
@@ -441,7 +586,12 @@ EVUITest.TestHostController = function ()
 
             executeInstance(testState.instances[index], function (testInstance)
             {
-                writeTestOutput(testInstance);
+                var testResult = makeResultFromState(testInstance);
+                testState.results.push(testResult);
+
+                _testResults.push(testResult);
+
+                writeTestOutput(testResult);
                 runTest(++index);
             });
         };
@@ -459,11 +609,14 @@ EVUITest.TestHostController = function ()
         var timeout = typeof finalOptions.timeout !== "number" ? 100 : finalOptions.timeout; //timeout before the test auto-fails.
         var timeoutID = -1; //id of the setTimeout return value. Used to cancel the timeout in the event the test completes before it expires.
 
+        finalOptions.timeout = timeout;
+        testInstance.options = finalOptions;
+
         var finish = function () //final function to call on all exit paths from this function
         {
             removeEventListener("error", errorHandler);
 
-            if (timeoutID > 0) clearTimeout(timeoutID);
+            if (timeoutID > -1) clearTimeout(timeoutID);
             callback(testInstance);
         }
 
@@ -478,12 +631,13 @@ EVUITest.TestHostController = function ()
             finish();
         };
 
-        var fail = function (reasonOrEx) //function to call when the test fails
+        var fail = function (reasonOrEx, expectedFailure) //function to call when the test fails
         {
             if (testFinished === true) return;
             testFinished = true;
 
             testInstance.success = false;
+            testInstance.intentionalFailure = (typeof expectedFailure === "boolean") ? expectedFailure : false;
             testInstance.endTime = performance.now();
 
             if (typeof reasonOrEx === "string")
@@ -496,7 +650,7 @@ EVUITest.TestHostController = function ()
             }
             else //make an error so we get a stack trace
             {
-                testInstance.error = new Error("Manually failed for an unknown reason.");
+                testInstance.error = Error("Manually failed for an unknown reason.");
             }
 
             finish();
@@ -513,34 +667,62 @@ EVUITest.TestHostController = function ()
         //add the global error event listener to catch exceptions thrown not on the stack trace of the promise (i.e. in a callback for a native API, like a XMLHttpRequest)
         addEventListener("error", errorHandler);
 
-        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow
-        Promise.resolve().then(function ()
+        var runTest = function ()
         {
             try
             {
+                _testCounter++;
+                _self.outputWriter.logDebug("RUNNING Test #" + testInstance.state.testId + ":" + testInstance.instanceId + " - \"" + testInstance.state.test.name + "\"");
+
+                var testArgs = new EVUITest.TestArgs();
+                testArgs.fail = fail;
+                testArgs.pass = pass;
+                testArgs.outputWriter = _self.outputWriter;
+                testArgs.parameters = testInstance.arguments.slice();
+                testArgs.options = finalOptions;
+
                 timeoutID = setTimeout(function () //set the timeout failsafe
                 {
                     fail(new Error("Timeout reached after " + timeout + "ms."))
                 }, timeout);
 
                 //make the final args array to use to invoke the test. The first two parameters are always the pass and fail functions
-                var allArgs = [pass, fail].concat(testInstance.arguments);
+                var allArgs = [testArgs].concat(testInstance.arguments);
                 testInstance.startTime = performance.now();
 
                 var result = testInstance.testFn.apply(this, allArgs);
                 if (result instanceof Promise)
                 {
+                    result.then(function ()
+                    {
+                        if (testFinished === false && finalOptions.implicitSuccess === true) pass();
+                    });
+
                     result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
                         fail(ex);
                     });
+                }
+                else
+                {
+                    if (testFinished === false && finalOptions.implicitSuccess === true) pass();
                 }
             }
             catch (ex)
             {
                 fail(ex);
             }
-        });
+        };
+
+        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow and allows for log messages to come through mid-test
+        if (_testCounter > 0 && _testCounter % 5 === 0)
+        {
+            setTimeout(runTest); //run a timeout to let go of the thread and let any pending calls in the event loop fire
+        }
+        else
+        {
+            Promise.resolve().then(runTest); //run the test in the faster promise event queue for better performance
+        }
     };
 
     /**Creates a TestInstance for every set of arguments in the args list provided by the user.
@@ -565,7 +747,7 @@ EVUITest.TestHostController = function ()
             for (var x = 0; x < numArgs; x++)
             {
                 var instance = new TestInstance();
-                instance.arguments = testState.arguments[x];
+                instance.arguments = (Array.isArray(testState.arguments[x]) === false) ? [testState.arguments[x]] : testState.arguments[x];
                 instance.state = testState;
                 instance.instanceInSet = x + 1;
                 instance.testFn = testState.test.test;
@@ -584,6 +766,7 @@ EVUITest.TestHostController = function ()
     {
         var result = new EVUITest.TestResult();
 
+        result.testId = testInstance.state.testId;
         result.arguments = testInstance.arguments;
         result.duration = testInstance.endTime - testInstance.startTime;
         result.error = testInstance.error;
@@ -592,13 +775,30 @@ EVUITest.TestHostController = function ()
         result.testName = testInstance.state.test.name;
         result.instanceId = testInstance.instanceId;
         result.testSetId = testInstance.instanceInSet;
+        result.reason = testInstance.reason;
+        result.intentionalFailure = testInstance.intentionalFailure;
+        result.options = testInstance.options;
+
+        if (testInstance.options.shouldFail === true) //if we were supposed to fail the test, invert the success/fail flags but mark the fail as intentional
+        {
+            if (result.success === true)
+            {
+                result.success = false;
+                if (typeof result.reason !== "string") result.reason = "Test PASSED but was expected to FAIL.";
+            }
+            else
+            {
+                result.intentionalFailure = true;
+            }
+        }
 
         return result;
     }
 
     /**Performs an inheritance operation on the various option sets we can use to make the final options set.
     @param {EVUITest.TestOptions} testOptions The options settings that apply to the whole test.
-    @param {EVUITest.TestOptions} hostOptions The options settings that applies to all tests in the test runner.*/
+    @param {EVUITest.TestOptions} hostOptions The options settings that applies to all tests in the test runner.
+    @returns {EVUITest.TestOptions}*/
     var makeFinalOptions = function (testOptions, hostOptions)
     {
         var finalOptions = new EVUITest.TestOptions();
@@ -606,7 +806,7 @@ EVUITest.TestHostController = function ()
         extend(finalOptions, hostOptions);
         extend(finalOptions, testOptions);
 
-        return Object.freeze(finalOptions);
+        return finalOptions;
     };
 
     /**Determines whether or not the script reported in the global error handler is one of the relevant scripts being watched for exceptions and not a random 3rd party library.
@@ -704,6 +904,10 @@ EVUITest.TestHostController = function ()
         @type {TestInstance[]}*/
         this.instances = [];
 
+        /**Array. The array of all the test results produced by the source test.
+        @type {EVUITest.TestResult}*/
+        this.results = [];
+
         /**Function. A callback to call once this test has completed running all of its instances.
         @type {Function}*/
         this.callback = null;
@@ -740,6 +944,10 @@ EVUITest.TestHostController = function ()
         @type {Boolean}*/
         this.success = false;
 
+        /**Boolean. Whether or not the failure was intentional.
+        @type {Boolean}*/
+        this.intentionalFailure = false;
+
         /**String. If the test was manually failed, this is the reason why.
         @type {String}*/
         this.reason = null;
@@ -751,10 +959,37 @@ EVUITest.TestHostController = function ()
         /**Function. The actual test being run.
         @type {EVUITest.Constants.Fn_Test}*/
         this.testFn = null;
+
+        /**Object. The options used for the test.
+        @type {EVUITest.TestOptions}*/
+        this.options = null;
     }
 };
 
+/**The arguments made by EventUI Test that are injected as the first parameter into every test.
+@class*/
+EVUITest.TestArgs = function ()
+{
+    /**Function. Indicates that the test has passed.
+    @type {EVUITest.Constants.Fn_TestPass}*/
+    this.pass = function () { };
 
+    /**Function. Indicates that the test has failed (and, optionally, that the failure was expected).
+    @type {EVUITest.Constants.Fn_TestFail}*/
+    this.fail = function (reasonOrEx, intentionalFailure) { };
+
+    /**Array. The array of parameters provided to the test that were passed into the test function.
+    @type {[]}*/
+    this.parameters = null;
+
+    /**Object. The OutputWriter that belongs to the TestHost running the test.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
+
+    /**Object. The options being used for this test.
+    @type {EVUITest.TestOptions}*/
+    this.options = null;
+};
 
 
 
@@ -840,13 +1075,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if two values are NOT equal.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.doesNotEqual = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -857,13 +1092,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if the predicate function returns true when executed and passed the Assertion's value as a parameter.
     @param {EVUITest.Constants.Fn_Predicate} predicate The function to feed Assertion's value into.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.isTrue = function (predicate, compareOptions)
     {
         var defaultSettings = {};
@@ -873,14 +1108,14 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(predicate, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
 
     /**Determines if the predicate function returns false when executed and passed the Assertion's value as a parameter.
     @param {EVUITest.Constants.Fn_Predicate} predicate The function to feed Assertion's value into.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.isFalse = function (predicate, compareOptions)
     {
         var defaultSettings = {};
@@ -890,13 +1125,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(predicate, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if an Array contains the given value.
     @param {Any} value The value to find in the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.contains = function (value, compareOptions)
     {
         var defaultSettings = {};
@@ -906,13 +1141,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(value, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if an Array does not contain the given value.
     @param {Any} value The value to find in the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.doesNotContain = function (value, compareOptions)
     {
         var defaultSettings = {};
@@ -922,13 +1157,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(value, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if two values are "equivalent" in that, if both are objects, their property values match regardless if the object references differ.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.isEquivalentTo = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -940,13 +1175,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if two values are NOT "equivalent" in that, if both are objects, at least one of their property values do not match regardless if the object references differ.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.isNotEquivalentTo = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -958,17 +1193,17 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if two values are "roughly" the same in that, if both are objects, their property values match regardless if the object references differ. If an object being compared is an array, the order of elements does not matter.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.isRoughly = function (b, compareOptions)
     {
         var defaultSettings = {};
-        defaultSettings.affirmitiveCheck = true;
+        defaultSettings.affirmitiveCheck = false;
         defaultSettings.compareType = EVUITest.ValueCompareType.Equivalency;
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
@@ -977,13 +1212,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Determines if two values are NOT "roughly" the same in that, if both are objects, their at least one of their property values does not match regardless if the object references differ. If an object being compared is an array, the order of elements does not matter.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.isNotRoughly = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -996,13 +1231,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Performs an arbitrary comparison between two values as specified by the compareOptions parameter.
     @param {any} b Any value or predicate function to use in the comparison.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {Boolean}*/
     this.compare = function (b, compareOptions)
     {
         if (compareOptions == null || typeof compareOptions !== "object") throw Error("compareOptions must be an object.");
@@ -1010,7 +1245,7 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, {});
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison.success;
     };
 
     /**Executes the assertion requested by one of the top-level public functions.
@@ -1032,14 +1267,20 @@ EVUITest.Assertion = function (value, settings)
         var logOnSuccess = typeof settings.logOnSuccess === "boolean" ? settings.logOnSuccess : _settings.logOnSuccess;
         var throwOnFailure = typeof settings.throwOnFailure === "boolean" ? settings.throwOnFailure : _settings.throwOnFailure;
 
+        var outputMessage = new EVUITest.OutputWriterMessage();
+        outputMessage.message = logMessage;
+
         if (comparisonResult.success === true)
         {
-            if (logOnSuccess !== false) writeOutput(logMessage);
+            outputMessage.logLevel = EVUITest.LogLevel.Debug;
+            if (logOnSuccess !== false) writeOutput(outputMessage);
         }
         else
         {
+            outputMessage.logLevel = EVUITest.LogLevel.Error;
+
             if (throwOnFailure !== false) return Error(logMessage);
-            writeOutput(logMessage);
+            writeOutput(outputMessage);
         }
     };
 
@@ -1319,7 +1560,7 @@ EVUITest.Assertion = function (value, settings)
     var getValueStringForm = function (value, logOptions)
     {
         var valueStr = null;
-        var maxStrLength = (logOptions != null && typeof logOptions.maxStringLength === "number" && logOptions.maxStringLength >= 0) ? logOptions.maxStringLength : 200;
+        var maxStrLength = (logOptions != null && typeof logOptions.maxStringLength === "number" && logOptions.maxStringLength >= 0) ? logOptions.maxStringLength : 1000;
         var typeofVal = typeof value;
 
         if (typeofVal === "object")
@@ -1464,7 +1705,7 @@ EVUITest.Assertion = function (value, settings)
         }
         else if (comparisonResult.options.compareType === EVUITest.ValueCompareType.Predicate)
         {
-            return "returned " + getValueStringForm(comparisonResult.returnValue, _settings.logOptions) + " for";
+            return "returned";
         }
         else
         {
@@ -1558,7 +1799,7 @@ EVUITest.Assertion = function (value, settings)
         logOptions.stringifyObjects = (_settings.logOptions != null) ? _settings.logOptions.stringifyObjects : false;
 
         var message = aName + " " + comparisionVerb + " " + bName + ".";
-        var compareMessage = "\Executed: " + getValueStringForm(predicateComparison.predicate, logOptions) + "\nWith: " + getValueStringForm(predicateComparison.value, logOptions);
+        var compareMessage = "\nExecuted: " + getValueStringForm(predicateComparison.predicate, logOptions) + "\nWith: " + getValueStringForm(predicateComparison.value, logOptions);
 
         if (predicateComparison.success === false)
         {
@@ -1610,7 +1851,7 @@ EVUITest.AssertionLogOptions = function ()
 
     /**Number. The maximum length for a string (a raw string or stringified object/function) in an error message.
     @type {Number}*/
-    this.maxStringLength = 200;
+    this.maxStringLength = 1000;
 };
 
 /**Object for making various kinds of comparisons between values, objects, and functions.

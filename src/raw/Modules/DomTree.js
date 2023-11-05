@@ -2488,6 +2488,9 @@ EVUI.Modules.DomTree.Converter = null;
     });
 })();
 
+/**Constructor reference for the DomTreeConverter.*/
+EVUI.Constructors.DomTree = EVUI.Modules.DomTree.DomTreeConverter;
+
 delete $evui.dromTree;
 
 /**Global instance of the DomTreeConverter.

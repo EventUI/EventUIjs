@@ -1182,6 +1182,9 @@ EVUI.Modules.Http.Http = null;
     });
 })();
 
+/**Constructor reference for the HttpManager.*/
+EVUI.Constructors.Http = EVUI.Modules.Http.HttpManager;
+
 delete $evui.httpEventStream;
 
 /**The global instance of HttpManager, a utility used for making Http requests.
@@ -1212,5 +1215,7 @@ $evui.httpAsync = function (requestArgs)
 {
     return $evui.httpManager.sendAsync(requestArgs);
 };
+
+Object.freeze(EVUI.Modules.Http);
 
 /*#ENDWRAP(Http)#*/

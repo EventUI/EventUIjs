@@ -1,5 +1,5 @@
 ﻿/**Copyright (c) 2023 Richard H Stannard
-
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
@@ -7904,6 +7904,9 @@ Object.defineProperty($evui, "panes", {
 });
 
 Object.freeze(EVUI.Modules.Panes);
+
+/**Constructor reference for the PaneManager.*/
+EVUI.Constructors.Panes = EVUI.Modules.Panes.PaneManager;
 
 /**Adds a Pane to the PaneManager.
 @param {EVUI.Modules.Panes.Pane} yoloPane A YOLO object representing a Pane object. This object is copied onto a real Pane object is then discarded.

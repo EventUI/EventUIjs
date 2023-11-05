@@ -4014,6 +4014,10 @@ Object.defineProperty($evui, "treeViews", {
     }
 });
 
+/**Constructor reference for the TreeViewController.*/
+EVUI.Constructors.TreeView = EVUI.Modules.TreeView.TreeViewController;
+
+Object.freeze(EVUI.Modules.TreeView);
 
 /**Creates and adds a TreeView to the controller's list of managed TreeViews.
 @param {String|EVUI.Modules.TreeView.AddTreeViewArgs|EVUI.Modules.TreeView.TreeView} makeTreeViewArgsOrId Either the string name of the TreeView to make, a YOLO TreeView object describing the tree, or a YOLO AddTreeViewArgs object describing the tree.

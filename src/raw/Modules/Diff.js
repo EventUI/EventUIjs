@@ -1190,6 +1190,9 @@ EVUI.Modules.Diff.Comparer = null;
     })
 })();
 
+/**Constructor reference for the DiffController.*/
+EVUI.Constructors.Diff = EVUI.Modules.Diff.DiffController;
+
 /**Performs a deep compare on two objects and returns data on what is different and the same between the two values.
 @param {Any} a A value to compare.
 @param {Any} b A value to compare.
@@ -1217,5 +1220,7 @@ $evui.getValueHashCode = function (value, options)
 {
     return EVUI.Modules.Diff.Comparer.getValueHashCode(value, options);
 };
+
+Object.freeze(EVUI.Modules.Diff);
 
 /*#ENDWRAP(Diff)#*/
