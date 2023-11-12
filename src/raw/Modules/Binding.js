@@ -1151,6 +1151,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         session.eventStream.eventState = session.context;
         session.eventStream.bubblingEvents = _bubblingEvents;
         session.eventStream.context = session.bindingHandle.binding;
+        session.eventStream.extendSteps = false;
 
         //set up the factory to create the biding event args
         session.eventStream.processInjectedEventArgs = function (eventStreamArgs)
@@ -1212,16 +1213,22 @@ EVUI.Modules.Binding.BindingController = function (services)
         addFinalStep(session);
     };
 
+    /**Gets the standard formatted job name for a job step in the Binder's EventStream.
+    @param {String} jobName The shorthand name of the job to get the full name of
+    @returns {String}*/
     var getJobName = function (jobName)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(jobName) === true) throw Error("Missing jobName");
         return EVUI.Modules.Binding.Constants.StepPrefix + ".job." + jobName;
     };
 
+    /**Gets the standard formatted event name for a event step in the Binder's EventStream.
+    @param {String} eventName The shorthand name of the event to get the full name of
+    @returns {String}*/
     var getEventName = function (eventName)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("Missing jobName");
-        return EVUI.Modules.Binding.Constants.StepPrefix + ".job." + eventName;
+        return EVUI.Modules.Binding.Constants.StepPrefix + "." + eventName;
     }
 
     /**Triggers the onBind events and then performs the state swap that begins the binding process.
@@ -1233,54 +1240,71 @@ EVUI.Modules.Binding.BindingController = function (services)
 
 
         if (session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) //no child events, just fire the onBindJob step
-        {
-            session.eventStream.addJob(onBindJobName, EVUI.Modules.Binding.Constants.Job_BeginBind, function (jobArgs)
-            {
-                onBindJob(session, jobArgs);
-            });            
+        {     
+            session.eventStream.addStep({
+                name: onBindJobName,
+                key: EVUI.Modules.Binding.Constants.Job_BeginBind,
+                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+                handler: function (jobArgs)
+                {
+                    onBindJob(session, jobArgs);
+                }
+            });
         }
         else
         {
-            session.eventStream.addJob(onBindJobName, EVUI.Modules.Binding.Constants.Job_BeginBind, function (jobArgs)
-            {
-                onBindJob(session, jobArgs);
-            });
-
-            //otherwise we do the first two events before modifying anything and the once those have passed we modify the state into 
-            session.eventStream.addEvent(onBindEventName, EVUI.Modules.Binding.Constants.Event_OnBind, function (eventArgs)
-            {
-                if (validateSession(session, eventArgs) === false) return;
-                if (typeof session.bindingHandle.binding.onBind === "function")
+            session.eventStream.addStep({
+                name: onBindJobName,
+                key: EVUI.Modules.Binding.Constants.Job_BeginBind,
+                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+                handler: function (jobArgs)
                 {
-                    eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                    if (eventArgs.reBinding === true)
-                    {
-                        eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                        eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                    }
-
-                    return session.bindingHandle.binding.onBind(eventArgs);
+                    onBindJob(session, jobArgs);
                 }
             });
 
-            session.eventStream.addEvent(onBindEventName, EVUI.Modules.Binding.Constants.Event_OnBind, function (eventArgs)
-            {
-                if (validateSession(session, eventArgs) === false) return;
-
-                if (typeof _self.onBind === "function")
+            session.eventStream.addStep({
+                name: onBindEventName,
+                key: EVUI.Modules.Binding.Constants.Event_OnBind,
+                type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+                handler: function (eventArgs)
                 {
-                    eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                    if (eventArgs.reBinding === true)
+                    if (validateSession(session, eventArgs) === false) return;
+                    if (typeof session.bindingHandle.binding.onBind === "function")
                     {
-                        eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                        eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
+                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
+                        if (eventArgs.reBinding === true)
+                        {
+                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
+                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
+                        }
+
+                        return session.bindingHandle.binding.onBind.call(this, eventArgs);
                     }
-
-                    return _self.onBind(eventArgs);
                 }
-            });        
+            });
 
+            session.eventStream.addStep({
+                name: onBindEventName,
+                key: EVUI.Modules.Binding.Constants.Event_OnBind,
+                type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+                handler: function (eventArgs)
+                {
+                    if (validateSession(session, eventArgs) === false) return;
 
+                    if (typeof _self.onBind === "function")
+                    {
+                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
+                        if (eventArgs.reBinding === true)
+                        {
+                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
+                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
+                        }
+
+                        return _self.onBind(eventArgs);
+                    }
+                }
+            }); 
         }
     };
 
@@ -1313,32 +1337,46 @@ EVUI.Modules.Binding.BindingController = function (services)
         var onGetHtmlJobName = getJobName(EVUI.Modules.Binding.Constants.Job_GetHtmlContent);
         var onSetHtmlEventName = getEventName(EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent);
 
-        //get the htmlContent so that it can be edited in the next steps
-        session.eventStream.addJob(onGetHtmlJobName, EVUI.Modules.Binding.Constants.Job_GetHtmlContent, function (jobArgs)
-        {
-            onGetHtmlContent(session, jobArgs);
+        session.eventStream.addStep({
+            name: onGetHtmlJobName,
+            key: EVUI.Modules.Binding.Constants.Job_GetHtmlContent,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onGetHtmlContent(session, jobArgs);
+            }
         });
 
         if (session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) return;
 
-        session.eventStream.addEvent(onSetHtmlEventName, EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-            if (typeof session.bindingHandle.binding.onSetHtmlContent === "function")
+        session.eventStream.addStep({
+            name: onSetHtmlEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                return session.bindingHandle.binding.onSetHtmlContent(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+                if (typeof session.bindingHandle.binding.onSetHtmlContent === "function")
+                {
+                    return session.bindingHandle.binding.onSetHtmlContent.call(this, eventArgs);
+                }
             }
         });
 
-        session.eventStream.addEvent(onSetHtmlEventName, EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-
-            if (typeof _self.onSetHtmlContent === "function")
+        session.eventStream.addStep({
+            name: onSetHtmlEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                return _self.onSetHtmlContent(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+
+                if (typeof _self.onSetHtmlContent === "function")
+                {
+                    return _self.onSetHtmlContent(eventArgs);
+                }
             }
-        });        
+        });       
     };
 
     /**Job that resolves ambiguous input into usable htmlContent that can be used for data binding.
@@ -1367,31 +1405,46 @@ EVUI.Modules.Binding.BindingController = function (services)
         var onGetBindingsJobName = getJobName(EVUI.Modules.Binding.Constants.Job_GetBindings);
         var onSetBindingsEventName = getEventName(EVUI.Modules.Binding.Constants.Event_OnSetBindings);
 
-        session.eventStream.addJob(onGetBindingsJobName, EVUI.Modules.Binding.Constants.Job_GetBindings, function (jobArgs)
-        {
-            onGetBindingsJob(session, jobArgs);
+        session.eventStream.addStep({
+            name: onGetBindingsJobName,
+            key: EVUI.Modules.Binding.Constants.Job_GetBindings,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onGetBindingsJob(session, jobArgs);
+            }
         });
 
         if (session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) return;
 
-        session.eventStream.addEvent(onSetBindingsEventName, EVUI.Modules.Binding.Constants.Event_OnSetBindings, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-            if (typeof session.bindingHandle.binding.onSetBindings === "function")
+        session.eventStream.addStep({
+            name: onSetBindingsEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnSetBindings,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                return session.bindingHandle.binding.onSetBindings(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+                if (typeof session.bindingHandle.binding.onSetBindings === "function")
+                {
+                    return session.bindingHandle.binding.onSetBindings.call(this, eventArgs);
+                }
             }
         });
 
-        session.eventStream.addEvent(onSetBindingsEventName, EVUI.Modules.Binding.Constants.Event_OnSetBindings, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-
-            if (typeof _self.onSetBindings === "function")
+        session.eventStream.addStep({
+            name: onSetBindingsEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnSetBindings,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                return _self.onSetBindings(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+
+                if (typeof _self.onSetBindings === "function")
+                {
+                    return _self.onSetBindings(eventArgs);
+                }
             }
-        });        
+        });     
     };
 
     /**Optionally get the html content again if it was changed in the previous events, then checks to see if the Binding needs to be re-bound if this is not the first time it has been bound, then gets the bound tokens from the htmlContent and pairs them with their values from the source object if the Binding needs to be rebound.
@@ -1467,29 +1520,44 @@ EVUI.Modules.Binding.BindingController = function (services)
         var onBindHtmlJobName = getJobName(EVUI.Modules.Binding.Constants.Job_BindHtmlContent);
         var onBindHtmlEventName = getEventName(EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent);
 
-        session.eventStream.addJob(onBindHtmlJobName, EVUI.Modules.Binding.Constants.Job_BindHtmlContent, function (jobArgs)
-        {
-            onBindHtmlContentJob(session, jobArgs);
+        session.eventStream.addStep({
+            name: onBindHtmlJobName,
+            key: EVUI.Modules.Binding.Constants.Job_BindHtmlContent,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onBindHtmlContentJob(session, jobArgs);
+            }
         });
 
         if (session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) return;
 
-        session.eventStream.addEvent(onBindHtmlEventName, EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-            if (typeof session.bindingHandle.binding.onBindHtmlContent === "function")
+        session.eventStream.addStep({
+            name: onBindHtmlEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                return session.bindingHandle.binding.onBindHtmlContent(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+                if (typeof session.bindingHandle.binding.onBindHtmlContent === "function")
+                {
+                    return session.bindingHandle.binding.onBindHtmlContent.call(this, eventArgs);
+                }
             }
         });
 
-        session.eventStream.addEvent(onBindHtmlEventName, EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-
-            if (typeof _self.onBindHtmlContent === "function")
+        session.eventStream.addStep({
+            name: onBindHtmlEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBindHtmlContent,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                return _self.onBindHtmlContent(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+
+                if (typeof _self.onBindHtmlContent === "function")
+                {
+                    return _self.onBindHtmlContent(eventArgs);
+                }
             }
         });
     };
@@ -1553,28 +1621,43 @@ EVUI.Modules.Binding.BindingController = function (services)
         var onBindChildrenJobName = getJobName(EVUI.Modules.Binding.Constants.Job_BindChildren);
         var onBindChildrenEventName = getEventName(EVUI.Modules.Binding.Constants.Event_OnBindChildren);
 
-        session.eventStream.addJob(onBindChildrenJobName, EVUI.Modules.Binding.Constants.Job_BindChildren, function (jobArgs)
-        {
-            onBindChildrenJob(session, jobArgs);
+        session.eventStream.addStep({
+            name: onBindChildrenJobName,
+            key: EVUI.Modules.Binding.Constants.Job_BindChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onBindChildrenJob(session, jobArgs);
+            }
         });
 
         if ((session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) || session.bindingHandle.options.recursive !== true) return;
 
-        session.eventStream.addEvent(onBindChildrenEventName, EVUI.Modules.Binding.Constants.Event_OnBindChildren, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-            if (typeof session.bindingHandle.binding.onBindChildren === "function")
+        session.eventStream.addStep({
+            name: onBindChildrenEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBindChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                return session.bindingHandle.binding.onBindChildren(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+                if (typeof session.bindingHandle.binding.onBindChildren === "function")
+                {
+                    return session.bindingHandle.binding.onBindChildren.call(this, eventArgs);
+                }
             }
         });
 
-        session.eventStream.addEvent(onBindChildrenEventName, EVUI.Modules.Binding.Constants.Event_OnBindChildren, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-            if (typeof _self.onBindChildren === "function")
+        session.eventStream.addStep({
+            name: onBindChildrenEventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBindChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                return _self.onBindChildren(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+                if (typeof _self.onBindChildren === "function")
+                {
+                    return _self.onBindChildren(eventArgs);
+                }
             }
         });
     };
@@ -1623,9 +1706,14 @@ EVUI.Modules.Binding.BindingController = function (services)
     @param {BindingSession} session The BindingSession being executed.*/
     var addProcessChildrenSteps = function (session)
     {
-        session.eventStream.addJob(getJobName(EVUI.Modules.Binding.Constants.Job_ProcessChildren), EVUI.Modules.Binding.Constants.Job_ProcessChildren,  function (jobArgs)
-        {
-            onProcessChildrenJob(session, jobArgs);
+        session.eventStream.addStep({
+            name: getJobName(EVUI.Modules.Binding.Constants.Job_ProcessChildren),
+            key: EVUI.Modules.Binding.Constants.Job_ProcessChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onProcessChildrenJob(session, jobArgs);
+            }
         });
     };
 
@@ -1702,29 +1790,37 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         var eventName = getEventName(EVUI.Modules.Binding.Constants.Event_OnBoundChildren)
 
-        session.eventStream.addEvent(eventName, EVUI.Modules.Binding.Constants.Event_OnBoundChildren, function (eventArgs)
-        {
-            session.bindingHandle.progressState |= EVUI.Modules.Binding.BindingProgressStateFlags.BoundChildren;
-            if (validateSession(session, eventArgs) === false) return;
-            if (session.bindingHandle.currentState.childBindingHandles.length === 0) return;
-            if ((session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) || session.bindingHandle.options.recursive !== true) return;
-
-            if (typeof session.bindingHandle.binding.onChildrenBound === "function")
+        session.eventStream.addStep({
+            name: eventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBindChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                return session.bindingHandle.binding.onChildrenBound(eventArgs);
+                session.bindingHandle.progressState |= EVUI.Modules.Binding.BindingProgressStateFlags.BoundChildren;
+                if (validateSession(session, eventArgs) === false) return;
+                if (session.bindingHandle.currentState.childBindingHandles.length === 0) return;
+                if ((session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) || session.bindingHandle.options.recursive !== true) return;
+
+                if (typeof session.bindingHandle.binding.onChildrenBound === "function")
+                {
+                    return session.bindingHandle.binding.onChildrenBound.call(this, eventArgs);
+                }
             }
         });
 
-        if ((session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) || session.bindingHandle.options.recursive !== true) return;
-
-        session.eventStream.addEvent(eventName, EVUI.Modules.Binding.Constants.Event_OnBoundChildren, function (eventArgs)
-        {
-            if (validateSession(session, eventArgs) === false) return;
-            if (session.bindingHandle.currentState.childBindingHandles.length === 0) return;
-
-            if (typeof _self.onChildrenBound === "function")
+        session.eventStream.addStep({
+            name: eventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBindChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                return _self.onChildrenBound(eventArgs);
+                if (validateSession(session, eventArgs) === false) return;
+                if (session.bindingHandle.currentState.childBindingHandles.length === 0) return;
+
+                if (typeof _self.onChildrenBound === "function")
+                {
+                    return _self.onChildrenBound(eventArgs);
+                }
             }
         });
     };
@@ -1733,31 +1829,46 @@ EVUI.Modules.Binding.BindingController = function (services)
     @param {BindingSession} session The BindingSession being executed.*/
     var addInjectMergeSteps = function (session)
     {
-        session.eventStream.addJob(getJobName(EVUI.Modules.Binding.Constants.Job_Inject), EVUI.Modules.Binding.Constants.Job_Inject, function (jobArgs)
-        {
-            onInjectJob(session, jobArgs);
+        session.eventStream.addStep({
+            name: getJobName(EVUI.Modules.Binding.Constants.Job_Inject),
+            key: EVUI.Modules.Binding.Constants.Job_Inject,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onInjectJob(session, jobArgs);
+            }
         });
 
         if (session.bindingHandle.currentState.parentBindingHandle != null && session.bindingHandle.currentState.parentBindingHandle.options.suppressChildEvents === true) return;
 
         var eventName = getEventName(EVUI.Modules.Binding.Constants.Event_OnBound);
 
-        session.eventStream.addEvent(eventName, EVUI.Modules.Binding.Constants.Event_OnBound, function (eventArgs)
-        {
-            if (session.cancel === true || session.bindingHandle.disposing === true) return eventArgs.cancel();
-            if (typeof session.bindingHandle.binding.onBound === "function")
+        session.eventStream.addStep({
+            name: eventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBound,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                return session.bindingHandle.binding.onBound(eventArgs);
+                if (session.cancel === true || session.bindingHandle.disposing === true) return eventArgs.cancel();
+                if (typeof session.bindingHandle.binding.onBound === "function")
+                {
+                    return session.bindingHandle.binding.onBound.call(eventArgs);
+                }
             }
         });
 
-        session.eventStream.addEvent(eventName, EVUI.Modules.Binding.Constants.Event_OnBound, function (eventArgs)
-        {
-            if (session.cancel === true || session.bindingHandle.disposing === true) return eventArgs.cancel();
-
-            if (typeof _self.onBound === "function")
+        session.eventStream.addStep({
+            name: eventName,
+            key: EVUI.Modules.Binding.Constants.Event_OnBound,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                return _self.onBound(eventArgs);
+                if (session.cancel === true || session.bindingHandle.disposing === true) return eventArgs.cancel();
+
+                if (typeof _self.onBound === "function")
+                {
+                    return _self.onBound(eventArgs);
+                }
             }
         });
     }
@@ -1784,9 +1895,14 @@ EVUI.Modules.Binding.BindingController = function (services)
     @param {BindingSession} session The BindingSession being executed.*/
     var addFinalStep = function (session)
     {
-        session.eventStream.addJob(getJobName(EVUI.Modules.Binding.Constants.Job_FinishBinding), EVUI.Modules.Binding.Constants.Job_FinishBinding, function (jobArgs)
-        {
-            onFinishBindingJob(session, jobArgs);
+        session.eventStream.addStep({
+            name: getJobName(EVUI.Modules.Binding.Constants.Job_FinishBinding),
+            key: EVUI.Modules.Binding.Constants.Job_FinishBinding,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                onFinishBindingJob(session, jobArgs);
+            }
         });
     };
 
