@@ -114,7 +114,7 @@ EVUI.Modules.Dropdowns.Constants.Attribute_DropMode = "evui-dd-mode"
 EVUI.Modules.Dropdowns.Constants.Default_ObjectName = "Dropdown";
 EVUI.Modules.Dropdowns.Constants.Default_ManagerName = "DropdownManager";
 EVUI.Modules.Dropdowns.Constants.Default_CssPrefix = "evui-dd";
-EVUI.Modules.Dropdowns.Constants.Default_EventNamePrefix = "evui.dd";
+EVUI.Modules.Dropdowns.Constants.Default_StepPrefix = "evui.dd";
 EVUI.Modules.Dropdowns.Constants.Default_AttributePrefix = "evui-dd";
 
 Object.freeze(EVUI.Modules.Dropdowns.Constants);
@@ -821,7 +821,7 @@ EVUI.Modules.Dropdowns.DropdownManager = function (services)
     _settings.attributePrefix = EVUI.Modules.Dropdowns.Constants.Default_AttributePrefix;
     _settings.cssPrefix = EVUI.Modules.Dropdowns.Constants.Default_CssPrefix;
     _settings.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
-    _settings.eventNamePrefix = EVUI.Modules.Dropdowns.Constants.Default_EventNamePrefix;
+    _settings.stepPrefix = EVUI.Modules.Dropdowns.Constants.Default_StepPrefix;
     _settings.managerName = EVUI.Modules.Dropdowns.Constants.Default_ManagerName;
     _settings.objectName = EVUI.Modules.Dropdowns.Constants.Default_ObjectName;
     _settings.makeOrExtendObject = makeOrExtendObject;

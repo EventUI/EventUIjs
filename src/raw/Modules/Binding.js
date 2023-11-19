@@ -59,14 +59,14 @@ EVUI.Modules.Binding.Constants.Event_OnBindChildren = "bindchildren";
 EVUI.Modules.Binding.Constants.Event_OnBoundChildren = "boundchildren";
 EVUI.Modules.Binding.Constants.Event_OnBound = "bound";
 
-EVUI.Modules.Binding.Constants.Job_BeginBind = "beginbind";
-EVUI.Modules.Binding.Constants.Job_GetHtmlContent = "gethtmlcontent";
-EVUI.Modules.Binding.Constants.Job_GetBindings = "getbindings";
-EVUI.Modules.Binding.Constants.Job_BindHtmlContent = "bindhtmlcontent";
-EVUI.Modules.Binding.Constants.Job_BindChildren = "bindchildren";
-EVUI.Modules.Binding.Constants.Job_ProcessChildren = "processchildren";
-EVUI.Modules.Binding.Constants.Job_Inject = "inject";
-EVUI.Modules.Binding.Constants.Job_FinishBinding = "finishbinding";
+EVUI.Modules.Binding.Constants.Job_BeginBind = "job.beginbind";
+EVUI.Modules.Binding.Constants.Job_GetHtmlContent = "job.gethtmlcontent";
+EVUI.Modules.Binding.Constants.Job_GetBindings = "job.getbindings";
+EVUI.Modules.Binding.Constants.Job_BindHtmlContent = "job.bindhtmlcontent";
+EVUI.Modules.Binding.Constants.Job_BindChildren = "job.bindchildren";
+EVUI.Modules.Binding.Constants.Job_ProcessChildren = "job.processchildren";
+EVUI.Modules.Binding.Constants.Job_Inject = "job.inject";
+EVUI.Modules.Binding.Constants.Job_FinishBinding = "job.finishbinding";
 
 EVUI.Modules.Binding.Constants.StepPrefix = "evui.binder";
 
@@ -1219,7 +1219,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     var getJobName = function (jobName)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(jobName) === true) throw Error("Missing jobName");
-        return EVUI.Modules.Binding.Constants.StepPrefix + ".job." + jobName;
+        return EVUI.Modules.Binding.Constants.StepPrefix + "." + jobName;
     };
 
     /**Gets the standard formatted event name for a event step in the Binder's EventStream.
@@ -1227,7 +1227,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {String}*/
     var getEventName = function (eventName)
     {
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("Missing jobName");
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("Missing eventName");
         return EVUI.Modules.Binding.Constants.StepPrefix + "." + eventName;
     }
 
@@ -1852,7 +1852,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 if (session.cancel === true || session.bindingHandle.disposing === true) return eventArgs.cancel();
                 if (typeof session.bindingHandle.binding.onBound === "function")
                 {
-                    return session.bindingHandle.binding.onBound.call(eventArgs);
+                    return session.bindingHandle.binding.onBound.call(this, eventArgs);
                 }
             }
         });

@@ -43,9 +43,9 @@ Object.freeze(EVUI.Modules.HtmlLoader.Dependencies);
 
 EVUI.Modules.HtmlLoader.Constants = {};
 
-EVUI.Modules.HtmlLoader.Constants.Job_GetHtml = "evui.htmlLoader.getHtml";
-EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml = "evui.htmlLoader.injectHtml";
-EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren = "evui.htmlLoader.loadChildren";
+EVUI.Modules.HtmlLoader.Constants.Job_GetHtml = "job.getHtml";
+EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml = "job.injectHtml";
+EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren = "job.loadChildren";
 
 EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID = "evui-loader-placeholder-id";
 EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl = "evui-loader-placeholder-src";
@@ -58,7 +58,7 @@ EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren = "loadchildren";
 EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded = "loaded";
 EVUI.Modules.HtmlLoader.Constants.Event_OnComplete = "complete"
 
-EVUI.Modules.HtmlLoader.Constants.EventNamePrefix = "evui.htmlloader";
+EVUI.Modules.HtmlLoader.Constants.StepPrefix = "evui.htmlloader";
 
 /**Callback function that is called when Html is returned from a web request.
 @param {String} html: The Html returned from the web request.*/
@@ -672,7 +672,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     {
         session.eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
             {
@@ -685,7 +685,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         session.eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
             {
@@ -704,7 +704,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         session.eventStream.addStep(
             {
                 key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
-                name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
                 type: EVUI.Modules.EventStream.EventStreamStepType.Event,
                 handler: function (eventArgs)
                 {
@@ -718,7 +718,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         session.eventStream.addStep(
             {
                 key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
-                name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
                 type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
                 handler: function (eventArgs)
                 {
@@ -737,7 +737,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     {
         session.eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
             {
@@ -750,7 +750,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         session.eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
             {
@@ -768,7 +768,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     {
         session.eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
             {
@@ -781,7 +781,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
 
         session.eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
             {
@@ -801,7 +801,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         {
             session.eventStream.addStep({
                 key: EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
-                name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
                 type: EVUI.Modules.EventStream.EventStreamStepType.Event,
                 handler: function (eventArgs)
                 {
@@ -813,8 +813,8 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
             });
 
             session.eventStream.addStep({
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnAllPlaceholdersLoaded,
-                name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                key: EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
                 type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
                 handler: function (eventArgs)
                 {
@@ -844,7 +844,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         //add the "get Html" step that invokes the HttpEventStream to perform the http operation.
         eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Job_GetHtml,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_GetHtml,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_GetHtml,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {
@@ -895,7 +895,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         //launches a volley of parallel event streams to go and load all the child placeholders of this placeholder. Remains in limbo until all the children are done.
         eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {
@@ -947,7 +947,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         //inject the html into the placeholder element
         eventStream.addStep({
             key: EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml,
-            name: EVUI.Modules.HtmlLoader.Constants.EventNamePrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {

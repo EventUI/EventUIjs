@@ -157,7 +157,7 @@ EVUI.Modules.Events.EventManager = function ()
         return addListener(eventListenerOrEventName, handler, priority, handlerName, EventListenerMode.FireOnce);
     };
 
-    /**Removes all the EventListeners with the given event name, callback function and/or exeuctingContext.
+    /**Removes all the EventListeners with the given event name and callback function.
     @param {String} eventNameOrIDOrHandler The name or ID of the event to remove.
     @param {EVUI.Modules.Events.Constants.Fn_Handler} handler The function that gets called when the event is invoked.*/
     this.off = function (eventNameOrId, handler)
@@ -169,16 +169,14 @@ EVUI.Modules.Events.EventManager = function ()
         {
             var curListener = _listeners[x];
 
-            if (curListener.eventListener.handlerId === eventNameOrId || curListener.eventListener.eventName === eventNameOrId)
+            if (curListener.eventListener.handlerId === eventNameOrId)
             {
-                if (typeof handler === "function")
-                {
-                    if (curListener.eventListener.handler === handler) listenersToRemove.push(curListener);
-                }
-                else
-                {
-                    listenersToRemove.push(curListener);
-                }
+                listenersToRemove.push(curListener);
+                break;
+            }
+            else if (curListener.eventListener.eventName === eventNameOrId)
+            {              
+                if (curListener.eventListener.handler === handler) listenersToRemove.push(curListener);  
             }
         }
 
@@ -235,14 +233,6 @@ EVUI.Modules.Events.EventManager = function ()
                 resolve(askResponses);
             });
         });
-    };
-
-    /**Gets all the event listeners with the given event name, callback function and/or exeuctingContext. 
-    @param {String} eventName: The name of the event to get.
-    @returns {EVUI.Modules.Events.EventListener[]}*/
-    this.getEventListeners = function (eventName)
-    {
-        return getListeners(eventName).map(function (listener) { return listener.eventListener });
     };
 
     /**Gets an event listener based on its HandlerID.
@@ -646,11 +636,6 @@ EVUI.Modules.Events.EventListener = function (eventName, handler, priority, hand
     this.handler = null;
     Object.defineProperty(this, "handler", {    
         get: function () { return _handler },
-        set: function (value)
-        {
-            if (value != null && typeof value !== "function") throw Error("handler must be a function.")
-            _handler = value;
-        },
         enumerable: true,
         configurable: false
     });
@@ -660,11 +645,6 @@ EVUI.Modules.Events.EventListener = function (eventName, handler, priority, hand
     this.priority = 0;
     Object.defineProperty(this, "priority", {
         get: function () { return _priority; },
-        set: function (value)
-        {
-            if (typeof value !== "number") throw Error("priority must be a number.");
-            _priority = value;
-        },
         enumerable: true,
         configurable: false
     });
@@ -683,11 +663,6 @@ EVUI.Modules.Events.EventListener = function (eventName, handler, priority, hand
     this.handlerName = null;
     Object.defineProperty(this, "handlerName", {
         get: function () { return _handlerName; },
-        set: function (value)
-        {
-            if (typeof value !== "string") throw Error("handlerName must be a string.");
-            _handlerName = value;
-        },
         configurable: false,
         enumerable: true
     });

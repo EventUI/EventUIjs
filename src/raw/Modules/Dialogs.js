@@ -132,7 +132,7 @@ EVUI.Modules.Dialogs.Constants.Attribute_Classes = "evui-dlg-class";
 EVUI.Modules.Dialogs.Constants.Default_ObjectName = "Dialog";
 EVUI.Modules.Dialogs.Constants.Default_ManagerName = "DialogManager";
 EVUI.Modules.Dialogs.Constants.Default_CssPrefix = "evui-dlg";
-EVUI.Modules.Dialogs.Constants.Default_EventNamePrefix = "evui.dlg";
+EVUI.Modules.Dialogs.Constants.Default_StepPrefix = "evui.dlg";
 EVUI.Modules.Dialogs.Constants.Default_AttributePrefix = "evui-dlg";
 
 Object.freeze(EVUI.Modules.Dialogs.Constants);
@@ -841,7 +841,7 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
     _settings.attributePrefix = EVUI.Modules.Dialogs.Constants.Default_AttributePrefix;
     _settings.cssPrefix = EVUI.Modules.Dialogs.Constants.Default_CssPrefix;
     _settings.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
-    _settings.eventNamePrefix = EVUI.Modules.Dialogs.Constants.Default_EventNamePrefix;
+    _settings.stepPrefix = EVUI.Modules.Dialogs.Constants.Default_StepPrefix;
     _settings.managerName = EVUI.Modules.Dialogs.Constants.Default_ManagerName;
     _settings.objectName = EVUI.Modules.Dialogs.Constants.Default_ObjectName;
     _settings.makeOrExtendObject = makeOrExtendObject;

@@ -113,14 +113,14 @@ EVUI.Modules.Panes.Constants.Job_Preload = "job.preload";
 EVUI.Modules.Panes.Constants.Job_Load = "job.load";
 EVUI.Modules.Panes.Constants.Job_Initialize = "job.init";
 EVUI.Modules.Panes.Constants.Job_Hide = "job.hide";
-EVUI.Modules.Panes.Constants.Job_InitialPosition = "job.initial.position";
-EVUI.Modules.Panes.Constants.Job_FinalPosition = "job.final.position";
+EVUI.Modules.Panes.Constants.Job_InitialPosition = "job.initialposition";
+EVUI.Modules.Panes.Constants.Job_FinalPosition = "job.finalposition";
 EVUI.Modules.Panes.Constants.Job_Unload = "job.unload";
 
 EVUI.Modules.Panes.Constants.Default_ObjectName = "Pane";
 EVUI.Modules.Panes.Constants.Default_ManagerName = "PaneManager";
 EVUI.Modules.Panes.Constants.Default_CssPrefix = "evui-pane";
-EVUI.Modules.Panes.Constants.Default_EventNamePrefix = "evui.pane";
+EVUI.Modules.Panes.Constants.Default_StepPrefix = "evui.pane";
 EVUI.Modules.Panes.Constants.Default_AttributePrefix = "evui-pane";
 
 /**The global Z-index reference for all objects that use the pane manager to determine their z-index.
@@ -2308,7 +2308,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var skipLoad = false;
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_Preload,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Preload,
             key: EVUI.Modules.Panes.Constants.Job_Preload,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2326,7 +2326,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
             key: EVUI.Modules.Panes.Constants.Event_OnLoad,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2341,7 +2341,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
             key: EVUI.Modules.Panes.Constants.Event_OnLoad,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2356,7 +2356,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_Load,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Load,
             key: EVUI.Modules.Panes.Constants.Job_Load,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2397,7 +2397,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
             key: EVUI.Modules.Panes.Constants.Event_OnLoaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2412,7 +2412,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
             key: EVUI.Modules.Panes.Constants.Event_OnLoaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2434,7 +2434,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var addInitSteps = function (eventStream, opSession)
     {
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
             key: EVUI.Modules.Panes.Constants.Event_OnInitialize,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2450,7 +2450,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
             key: EVUI.Modules.Panes.Constants.Event_OnInitialize,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2465,7 +2465,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_Initialize,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Initialize,
             key: EVUI.Modules.Panes.Constants.Job_Initialize,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2483,7 +2483,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var addShowSteps = function (eventStream, opSession)
     {
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
             key: EVUI.Modules.Panes.Constants.Event_OnShow,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2498,7 +2498,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
             key: EVUI.Modules.Panes.Constants.Event_OnShow,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2513,7 +2513,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         addPositionSteps(eventStream, opSession);
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
             key: EVUI.Modules.Panes.Constants.Event_OnShown,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2526,7 +2526,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
             key: EVUI.Modules.Panes.Constants.Event_OnShown,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2548,7 +2548,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var skip = false;
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
             key: EVUI.Modules.Panes.Constants.Event_OnHide,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2568,7 +2568,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
             key: EVUI.Modules.Panes.Constants.Event_OnHide,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2583,7 +2583,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_Hide,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Hide,
             key: EVUI.Modules.Panes.Constants.Job_Hide,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2616,7 +2616,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
             key: EVUI.Modules.Panes.Constants.Event_OnHidden,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2631,7 +2631,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
             key: EVUI.Modules.Panes.Constants.Event_OnHidden,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2656,7 +2656,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var showArgsObserver = null;
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_InitialPosition,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_InitialPosition,
             key: EVUI.Modules.Panes.Constants.Job_InitialPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2673,7 +2673,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
             key: EVUI.Modules.Panes.Constants.Event_OnPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2686,7 +2686,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
             key: EVUI.Modules.Panes.Constants.Event_OnPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2699,7 +2699,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_FinalPosition,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_FinalPosition,
             key: EVUI.Modules.Panes.Constants.Job_FinalPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2772,7 +2772,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     {
         eventStream.addStep({
 
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_Complete,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Complete,
             key: EVUI.Modules.Panes.Constants.Job_Complete,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (args)
@@ -2802,7 +2802,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var skip = false;
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
             key: EVUI.Modules.Panes.Constants.Event_OnUnload,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2829,7 +2829,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
             key: EVUI.Modules.Panes.Constants.Event_OnUnload,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2844,7 +2844,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Job_Unload,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Unload,
             key: EVUI.Modules.Panes.Constants.Job_Unload,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2867,7 +2867,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             key: EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2882,7 +2882,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.eventNamePrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
+            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             key: EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -6152,7 +6152,7 @@ EVUI.Modules.Panes.PaneManagerSettings = function ()
 
     /**String. The prefix for all the events that the PaneManager will raise.
     @type {String}*/
-    this.eventNamePrefix = EVUI.Modules.Panes.Constants.Default_EventNamePrefix;
+    this.stepPrefix = EVUI.Modules.Panes.Constants.Default_StepPrefix;
 
     /**String. The prefix for all the attributes used by the PaneManager.
     @type {String}*/

@@ -115,9 +115,9 @@ EVUI.Modules.PopIns.Constants.Attribute_BottomAnchor = "evui-pop-anchor-bottom";
 
 EVUI.Modules.PopIns.Constants.Default_ObjectName = "PopIn";
 EVUI.Modules.PopIns.Constants.Default_ManagerName = "PopInManager";
-EVUI.Modules.PopIns.Constants.Default_CssPrefix = "evui-pop";
-EVUI.Modules.PopIns.Constants.Default_EventNamePrefix = "evui.pop";
-EVUI.Modules.PopIns.Constants.Default_AttributePrefix = "evui-pop";
+EVUI.Modules.PopIns.Constants.Default_CssPrefix = "evui-popin";
+EVUI.Modules.PopIns.Constants.Default_StepPrefix = "evui.popin";
+EVUI.Modules.PopIns.Constants.Default_AttributePrefix = "evui-popin";
 
 Object.freeze(EVUI.Modules.PopIns.Constants);
 
@@ -809,7 +809,7 @@ EVUI.Modules.PopIns.PopInManager = function (services)
     _settings.attributePrefix = EVUI.Modules.PopIns.Constants.Default_AttributePrefix;
     _settings.cssPrefix = EVUI.Modules.PopIns.Constants.Default_CssPrefix;
     _settings.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
-    _settings.eventNamePrefix = EVUI.Modules.PopIns.Constants.Default_EventNamePrefix;
+    _settings.stepPrefix = EVUI.Modules.PopIns.Constants.Default_StepPrefix;
     _settings.managerName = EVUI.Modules.PopIns.Constants.Default_ManagerName;
     _settings.objectName = EVUI.Modules.PopIns.Constants.Default_ObjectName;
     _settings.makeOrExtendObject = makeOrExtendObject;

@@ -109,7 +109,7 @@ EVUI.Modules.Modals.Constants.Attribute_Backdrop = "evui-m-show-backdrop";
 EVUI.Modules.Modals.Constants.Default_ObjectName = "Modal";
 EVUI.Modules.Modals.Constants.Default_ManagerName = "ModalManager";
 EVUI.Modules.Modals.Constants.Default_CssPrefix = "evui-m";
-EVUI.Modules.Modals.Constants.Default_EventNamePrefix = "evui.m";
+EVUI.Modules.Modals.Constants.Default_StepPrefix = "evui.m";
 EVUI.Modules.Modals.Constants.Default_AttributePrefix = "evui-m";
 
 Object.freeze(EVUI.Modules.Modals.Constants);
@@ -742,7 +742,7 @@ EVUI.Modules.Modals.ModalManager = function (services)
     _settings.attributePrefix = EVUI.Modules.Modals.Constants.Default_AttributePrefix;
     _settings.cssPrefix = EVUI.Modules.Modals.Constants.Default_CssPrefix;
     _settings.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
-    _settings.eventNamePrefix = EVUI.Modules.Modals.Constants.Default_EventNamePrefix;
+    _settings.stepPrefix = EVUI.Modules.Modals.Constants.Default_StepPrefix;
     _settings.managerName = EVUI.Modules.Modals.Constants.Default_ManagerName;
     _settings.objectName = EVUI.Modules.Modals.Constants.Default_ObjectName;
     _settings.makeOrExtendObject = makeOrExtendObject;
