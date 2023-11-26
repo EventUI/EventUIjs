@@ -1159,7 +1159,8 @@ EVUI.Modules.Binding.BindingController = function (services)
             var bindingArgs = new EVUI.Modules.Binding.BinderEventArgs(session);
             bindingArgs.cancel = eventStreamArgs.cancel;
             bindingArgs.context = eventStreamArgs.state;
-            bindingArgs.key = eventStreamArgs.key;
+            bindingArgs.eventType = eventStreamArgs.key;
+            bindingArgs.eventName = eventStreamArgs.name;
             bindingArgs.pause = eventStreamArgs.pause;
             bindingArgs.resume = eventStreamArgs.resume;
             bindingArgs.stopPropagation = eventStreamArgs.stopPropagation;
@@ -1177,7 +1178,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         session.eventStream.onCancel = function (eventStreamArgs)
         {
             session.bindingHandle.completionState = EVUI.Modules.Binding.BindingCompletionState.Canceled;
-            //rollBackStates(session); //roll back to the previous completed state
+            rollBackStates(session); //roll back to the previous completed state
             cancelAllChildren(session); //tell all children to cancel themselves on their next step
             session.eventStream.seek(EVUI.Modules.Binding.Constants.Job_FinishBinding);
         };
@@ -1185,7 +1186,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         session.eventStream.onError = function (eventStreamArgs, ex)
         {
             session.bindingHandle.completionState = EVUI.Modules.Binding.BindingCompletionState.Failed;
-            //rollBackStates(session); //roll back to the previous completed state
+            rollBackStates(session); //roll back to the previous completed state
             cancelAllChildren(session); //tell all children to cancel themselves on their next step
             session.eventStream.seek(EVUI.Modules.Binding.Constants.Job_FinishBinding);
         };
@@ -7833,28 +7834,24 @@ EVUI.Modules.Binding.BinderEventArgs = function (bindSession)
     @type {Boolean}*/
     this.reBinding = _bindSession.bindingHandle.oldStateBound;
 
-    /**Array. If this Binding has been bound more than once, this is the old content that was bound before the current binding operation.
-    @type {Node[]}*/
-    this.originalContent = (_bindSession.bindingHandle.oldState != null && _bindSession.bindingHandle.oldState.boundContent != null) ? _bindSession.bindingHandle.oldState.boundContent.slice() : null;
-
-    /**Object. The original source object that was bound to the Binding previously.
-    @type {Object}*/
-    this.originalSource = (_bindSession.bindingHandle.oldState != null) ? _bindSession.bindingHandle.oldState.source : null;
-
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the Binding's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the Binding's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Cancels the EventStream and aborts the execution of the operation.*/
+    /**Cancels the Binding's action and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Stops the EventStream from calling any other event handlers with the same name.*/
+    /**Stops the Binding from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. Any state value to carry between events.
@@ -7862,7 +7859,7 @@ EVUI.Modules.Binding.BinderEventArgs = function (bindSession)
     this.context = {};
 };
 
-/**The way in which the binding will be inserted into the DOM.
+/**The way in which the Binding will be inserted into the DOM.
 @enum*/
 EVUI.Modules.Binding.BindingMode =
 {
@@ -7874,7 +7871,7 @@ EVUI.Modules.Binding.BindingMode =
 
 Object.freeze(EVUI.Modules.Binding.BindingMode);
 
-/**The way in which the final product of the binding operation will be inserted relative to the Binding's element.
+/**The way in which the final product of the Binding operation will be inserted relative to the Binding's element.
 @enum*/
 EVUI.Modules.Binding.BindingInsertionMode =
 {

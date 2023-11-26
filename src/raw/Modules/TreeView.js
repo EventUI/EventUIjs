@@ -831,8 +831,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
         opSession.eventStream.processInjectedEventArgs = function (eventStreamArgs)
         {
             var treeViewArgs = new EVUI.Modules.TreeView.TreeViewEventArgs(opSession.nodeEntry);
+            treeViewArgs.eventName = eventStreamArgs.name;
+            treeViewArgs.eventType = eventStreamArgs.key;
             treeViewArgs.cancel = function () { return eventStreamArgs.cancel(); };
-            treeViewArgs.key = eventStreamArgs.key;
+            treeViewArgs.eventType = eventStreamArgs.key;
             treeViewArgs.pause = function () { return eventStreamArgs.pause(); };
             treeViewArgs.resume = function () { return eventStreamArgs.resume(); };
             treeViewArgs.stopPropagation = function () { return eventStreamArgs.stopPropagation(); };
@@ -3846,7 +3848,7 @@ EVUI.Modules.TreeView.ExpandCollapseTreeViewNodeArgs = function ()
     @type {EVUI.Modules.TreeView.TreeViewNodeTransition}*/
     this.transition = null;
 
-    /**Object. In the event that the TreeViewNode is being expanded, these are the arugments that contorl how the TreeViewNode or its children will be built.
+    /**Object. In the event that the TreeViewNode is being expanded, these are the arguments that control how the TreeViewNode or its children will be built.
     @type {EVUI.Modules.TreeView.BuildTreeViewNodeArgs}*/
     this.buildArgs = null;
 
@@ -3855,7 +3857,7 @@ EVUI.Modules.TreeView.ExpandCollapseTreeViewNodeArgs = function ()
     this.context = {};
 };
 
-/**Object for containing the CSS details of the transition to apply to a TreeViewNode as it expands or collaposes.
+/**Object for containing the CSS details of the transition to apply to a TreeViewNode as it expands or collapses.
 @class*/
 EVUI.Modules.TreeView.TreeViewNodeTransition = function ()
 {
@@ -3867,12 +3869,12 @@ EVUI.Modules.TreeView.TreeViewNodeTransition = function ()
     @type {String}*/
     this.keyframes = null;
 
-    /**The duration (in milliseconds) of the transition so that the appropate events are only fired once the transition is complete.
+    /**The duration (in milliseconds) of the transition so that the appropriate events are only fired once the transition is complete.
     @type {Number}*/
     this.duration = 0;
 };
 
-/**Event arguements object for all TreeView and TreeViewNode events.
+/**Event arguments object for all TreeView and TreeViewNode events.
 @class*/
 EVUI.Modules.TreeView.TreeViewEventArgs = function (nodeEntry)
 {
@@ -3890,7 +3892,7 @@ EVUI.Modules.TreeView.TreeViewEventArgs = function (nodeEntry)
         enumerable: true
     });
 
-    /**Object. The TreeViewNode that is the subject of the evdent.
+    /**Object. The TreeViewNode that is the subject of the event.
     @type {EVUI.Modules.TreeView.TreeViewNode}*/
     this.node = null;
     Object.defineProperty(this, "node", {
@@ -3902,20 +3904,24 @@ EVUI.Modules.TreeView.TreeViewEventArgs = function (nodeEntry)
         enumerable: true
     });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the TreeViewNode's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the TreeViewNode's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Cancels the EventStream and aborts the execution of the operation.*/
+    /**Cancels theTreeViewNode's action and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Stops the EventStream from calling any other event handlers with the same name.*/
+    /**Stops the TreeViewNode from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. Any state value to carry between events.

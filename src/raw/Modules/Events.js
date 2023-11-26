@@ -400,12 +400,12 @@ EVUI.Modules.Events.EventManager = function ()
 
         es.processInjectedEventArgs = function (eventStreamArgs)
         {
-            var eventManagerArgs = new EVUI.Modules.Events.EventManagerEventArgs(getNextListener(session, index), index + 1);
+            var eventManagerArgs = new EVUI.Modules.Events.EventManagerEventArgs(getNextListener(session, index));
             eventManagerArgs.data = session.triggerArgs.data;
-            eventManagerArgs.totalSteps = numEvents;
             eventManagerArgs.pause = eventStreamArgs.pause;
             eventManagerArgs.resume = eventStreamArgs.resume;
             eventManagerArgs.stopPropagation = eventStreamArgs.stopPropagation;
+            eventManagerArgs.triggerName = session.triggerArgs.triggerName
 
             if (session.mode === SessionMode.Ask)
             {
@@ -691,10 +691,9 @@ EVUI.Modules.Events.EventListenerAddRequest = function ()
 
 /**The object that is injected into each handler as the arguments for the event being executed. Contains the user's custom event data as well as the functionality of the async event chain.
 @class*/
-EVUI.Modules.Events.EventManagerEventArgs = function (listener, currentStepIndex)
+EVUI.Modules.Events.EventManagerEventArgs = function (listener)
 {
     var _listener = listener;
-    var _currentStep = currentStepIndex;
 
     /**Object. The EventListener that is currently being executed.
     @type {EVUI.Modules.Events.EventListener}*/
@@ -709,26 +708,17 @@ EVUI.Modules.Events.EventManagerEventArgs = function (listener, currentStepIndex
     @type {Any}*/
     this.data = null;
 
-    /**Number. The index of the current step in the sequence of events.
-    @type {Number}*/
-    this.currentStep = -1;
-    Object.defineProperty(this, "currentStep", {
-        get: function () { return _currentStep; },
-        configurable: false,
-        enumerable: true
-    });
+    /**String. An identifier given for trigger of this event.
+    @type {String}*/
+    this.triggerName = null;
 
-    /**Number. The total number of events in the event sequence.
-    @type {Number}*/
-    this.totalSteps = -1;
-
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**Function. Pauses the EventListener's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Function. Resumes the EventListener's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Function. Stops the EventManager from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 };
 

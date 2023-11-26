@@ -223,7 +223,8 @@ EVUI.Modules.Http.HttpManager = function ()
             var error = (entry.requestStatus === RequestStatus.Exception || entry.requestStatus === RequestStatus.Failed || entry.requestStatus === RequestStatus.TimedOut) ? entry.error : null;
 
             var httpEventArgs = new EVUI.Modules.Http.HttpEventArgs(request, xhr, error, entry.response);
-            httpEventArgs.key = args.key;
+            httpEventArgs.eventType = args.key;
+            httpEventArgs.eventName = args.name;
             httpEventArgs.stopPropagation = function () { args.stopPropagation(); };
             httpEventArgs.requestStatus = entry.requestStatus;
 
@@ -938,20 +939,24 @@ EVUI.Modules.Http.HttpEventArgs = function (request, xhr, error, response)
     @type {Number}*/
     this.requestStatus = EVUI.Modules.Http.HttpRequestStatus.NotStarted;
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Pauses the EventStream, preventing the next step from executing until Resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the HTTP request, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the HTTP request, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Cancels the EventStream and aborts the execution of the XMLHttpRequest.*/
+    /**Cancels the HTTP request and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Stops the HttpManager from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. Any state value to carry between events.

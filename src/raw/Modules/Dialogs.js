@@ -523,7 +523,8 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
 
         var dialogEventArgs = new EVUI.Modules.Dialogs.DialogEventArgs(argsPackage, args);
         dialogEventArgs.cancel = paneEventArgs.cancel;
-        dialogEventArgs.key = paneEventArgs.key;
+        dialogEventArgs.eventType = paneEventArgs.eventType;
+        dialogEventArgs.eventName = paneEventArgs.eventName;
         dialogEventArgs.pause = paneEventArgs.pause;
         dialogEventArgs.resume = paneEventArgs.resume;
         dialogEventArgs.stopPropagation = paneEventArgs.stopPropagation;
@@ -913,7 +914,7 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
     EVUI.Modules.Core.Utils.wrapProperties(this, _manager, { sourcePath: "onUnloaded", targetPath: "onUnloaded" });
 }
 
-/**Represents a UI component that behaves like a standard, centered dialog dialog with an optional backdrop by default.
+/**Represents a UI component that behaves like a standard, centered dialog with an optional backdrop by default.
  @class*/
 EVUI.Modules.Dialogs.Dialog = function (pane)
 {
@@ -1135,20 +1136,24 @@ EVUI.Modules.Dialogs.DialogEventArgs = function (argsPackage, currentArgs)
         enumerable: true
     });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Function. Pauses the Dialog's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Function. Resumes the Dialog's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Cancels the EventStream and aborts the execution of the Dialog operation.*/
+    /**Function. Cancels the Dialog's action and aborts the execution of the Dialog operation.*/
     this.cancel = function () { }
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Function. Stops the Dialog from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. The position of the Dialog that has been calculated in using the currentShowSettings.
@@ -1161,7 +1166,7 @@ EVUI.Modules.Dialogs.DialogEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**Object. The PaneHide/Show/Load/Unload Arguments being used for the operation.
+    /**Object. The DialogHide/Show/Load/Unload Arguments being used for the operation.
     @type {EVUI.Modules.Dialogs.DialogShowArgs|EVUI.Modules.Dialogs.DialogHideArgs|EVUI.Modules.Dialogs.DialogLoadArgs|EVUI.Modules.Dialogs.DialogUnloadArgs}*/
     this.currentActionArgs = null;
     Object.defineProperty(this, "currentActionArgs", {

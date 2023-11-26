@@ -631,12 +631,13 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         session.eventStream.processInjectedEventArgs = function (eventArgs)
         {
             var htmlArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs();
+            htmlArgs.eventName = eventArgs.name;
+            htmlArgs.eventType = eventArgs.key;
             htmlArgs.cancel = eventArgs.cancel;
             htmlArgs.pause = eventArgs.pause;
             htmlArgs.resume = eventArgs.resume;
             htmlArgs.stopPropagation = eventArgs.stopPropagation;
             htmlArgs.context = eventArgs.state;
-            htmlArgs.key = eventArgs.key + ((eventArgs.stepType === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent) ? ".global" : "");
             htmlArgs.placeholder = session.placeholder;
 
             return htmlArgs;
@@ -1202,25 +1203,32 @@ EVUI.Modules.HtmlLoader.HtmlPartialLoadArgs = function ()
 @class*/
 EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs = function ()
 {
-    /**Object. The HtmlPlaceholderLoadArgs being used to load placeholders.
-    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
+    /**Object. The HtmlPlaceholder being used to load placeholders.
+    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholder}*/
     this.placeholder = null;
 
     /**Object. The context object for this event that gets passed between events. 
     @type {Any}*/
     this.context = null;
 
-    /**Pauses the load/injection process indefinitely until Resume is called.
-    @method Pause*/
+    /**String. The full name of the event.
+    @type {String}*/
+    this.eventName = null;
+
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the HtmlPlaceholder's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
-    /**Resumes a paused load/injection process.
-    @method Resume*/
+
+    /**Resumes the HtmlPlaceholder's action, allowing it to continue to the next step.*/
     this.resume = function () { };
-    /**Cancels the load/injection process at its current state.
-    @method Cancel*/
-    this.cancel = function () { };
-    /**Prevents any further events with the same key from being executed.
-    @method StopPropagation*/
+
+    /**Cancels the HtmlPlaceholder's action and aborts the execution of the operation.*/
+    this.cancel = function () { }
+
+    /**Stops the HtmlPlaceholder from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 };
 

@@ -500,7 +500,8 @@ EVUI.Modules.Modals.ModalManager = function (services)
 
         var modalEventArgs = new EVUI.Modules.Modals.ModalEventArgs(argsPackage, args);
         modalEventArgs.cancel = paneEventArgs.cancel;
-        modalEventArgs.key = paneEventArgs.key;
+        modalEventArgs.eventType = paneEventArgs.eventType;
+        modalEventArgs.eventName = paneEventArgs.eventName;
         modalEventArgs.pause = paneEventArgs.pause;
         modalEventArgs.resume = paneEventArgs.resume;
         modalEventArgs.stopPropagation = paneEventArgs.stopPropagation;
@@ -1050,20 +1051,24 @@ EVUI.Modules.Modals.ModalEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the Modal's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the Modal's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Cancels the EventStream and aborts the execution of the Modal operation.*/
+    /**Cancels the Modal's action and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Stops the Modal from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. The position of the Modal that has been calculated in using the currentShowSettings.
@@ -1076,7 +1081,7 @@ EVUI.Modules.Modals.ModalEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**Object. The PaneHide/Show/Load/Unload Arguments being used for the operation.
+    /**Object. The ModalHide/Show/Load/Unload Arguments being used for the operation.
     @type {EVUI.Modules.Modals.ModalShowArgs|EVUI.Modules.Modals.ModalHideArgs|EVUI.Modules.Modals.ModalLoadArgs|EVUI.Modules.Modals.ModalUnloadArgs}*/
     this.currentActionArgs = null;
     Object.defineProperty(this, "currentActionArgs", {

@@ -506,7 +506,8 @@ EVUI.Modules.Dropdowns.DropdownManager = function (services)
 
         var dropdownEventArgs = new EVUI.Modules.Dropdowns.DropdownEventArgs(argsPackage, args);
         dropdownEventArgs.cancel = paneEventArgs.cancel;
-        dropdownEventArgs.key = paneEventArgs.key;
+        dropdownEventArgs.eventType = paneEventArgs.eventType;
+        dropdownEventArgs.eventName = paneEventArgs.eventName;
         dropdownEventArgs.pause = paneEventArgs.pause;
         dropdownEventArgs.resume = paneEventArgs.resume;
         dropdownEventArgs.stopPropagation = paneEventArgs.stopPropagation;
@@ -1110,20 +1111,24 @@ EVUI.Modules.Dropdowns.DropdownEventArgs = function (argsPackage, currentArgs)
         enumerable: true
     });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Function. Pauses the Dropdown's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Function. Resumes the Dropdown's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Cancels the EventStream and aborts the execution of the Dropdown operation.*/
+    /**Function. Cancels the Dropdown's action and aborts the execution of the Dropdown operation.*/
     this.cancel = function () { }
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Function. Stops the Dropdown from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. The position of the Dropdown that has been calculated in using the currentShowSettings.
@@ -1136,7 +1141,7 @@ EVUI.Modules.Dropdowns.DropdownEventArgs = function (argsPackage, currentArgs)
         enumerable: true
     });
 
-    /**Object. The PaneHide/Show/Load/Unload Arguments being used for the operation.
+    /**Object. The DropdownHide/Show/Load/Unload Arguments being used for the operation.
     @type {EVUI.Modules.Dropdowns.DropdownShowArgs|EVUI.Modules.Dropdowns.DropdownHideArgs|EVUI.Modules.Dropdowns.DropdownLoadArgs|EVUI.Modules.Dropdowns.DropdownUnloadArgs}*/
     this.currentActionArgs = null;
     Object.defineProperty(this, "currentActionArgs", {
