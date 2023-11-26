@@ -48,15 +48,17 @@ EVUI.Modules.Http.Constants = {};
  */
 EVUI.Modules.Http.Constants.Fn_HttpCallback = function (completedRequest) { }
 
-EVUI.Modules.Http.Constants.Event_OnBeforeSend = "evui.http.beforesend";
-EVUI.Modules.Http.Constants.Event_OnSuccess = "evui.http.success";
-EVUI.Modules.Http.Constants.Event_OnError = "evui.http.error";
-EVUI.Modules.Http.Constants.Event_OnComplete = "evui.http.complete";
-EVUI.Modules.Http.Constants.Event_OnAllComplete = "evui.http.complete.all";
+EVUI.Modules.Http.Constants.Event_OnBeforeSend = "beforesend";
+EVUI.Modules.Http.Constants.Event_OnSuccess = "success";
+EVUI.Modules.Http.Constants.Event_OnError = "error";
+EVUI.Modules.Http.Constants.Event_OnComplete = "complete";
+EVUI.Modules.Http.Constants.Event_OnAllComplete = "allcomplete";
 
-EVUI.Modules.Http.Constants.Job_OpenRequest = "evui.http.open";
-EVUI.Modules.Http.Constants.Job_SendRequest = "evui.http.send";
-EVUI.Modules.Http.Constants.Job_RequestComplete = "evui.http.request.complete";
+EVUI.Modules.Http.Constants.Job_OpenRequest = "job.open";
+EVUI.Modules.Http.Constants.Job_SendRequest = "job.send";
+EVUI.Modules.Http.Constants.Job_RequestComplete = "job.requestcomplete";
+
+EVUI.Modules.Http.Constants.StepPrefix = "evui.http";
 
 /**Event handler for bubbling global events attached to the HttpManager.
 @param {EVUI.Modules.Http.HttpEventArgs} httpEventArgs The event arguments for the event.*/
@@ -221,7 +223,8 @@ EVUI.Modules.Http.HttpManager = function ()
             var error = (entry.requestStatus === RequestStatus.Exception || entry.requestStatus === RequestStatus.Failed || entry.requestStatus === RequestStatus.TimedOut) ? entry.error : null;
 
             var httpEventArgs = new EVUI.Modules.Http.HttpEventArgs(request, xhr, error, entry.response);
-            httpEventArgs.key = args.key;
+            httpEventArgs.eventType = args.key;
+            httpEventArgs.eventName = args.name;
             httpEventArgs.stopPropagation = function () { args.stopPropagation(); };
             httpEventArgs.requestStatus = entry.requestStatus;
 
@@ -263,7 +266,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //set up local on before send event
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnBeforeSend,
-            name: "onBeforeSend",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnBeforeSend,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (httpEventArgs)
             {
@@ -277,7 +280,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //set up the global on before send event
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnBeforeSend,
-            name: "onBeforeSend",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnBeforeSend,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
@@ -291,7 +294,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //set up the job that opens and sets all the settings for the XMLHttpRequest
         es.addStep({
             key: EVUI.Modules.Http.Constants.Job_OpenRequest,
-            name: "openRequest",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Job_OpenRequest,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             /**@param {EVUI.Resources.EventStreamJobArgs} jobArgs*/
             handler: function (jobArgs)
@@ -370,7 +373,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //set up the step where we launch the request
         es.addStep({
             key: EVUI.Modules.Http.Constants.Job_SendRequest,
-            name: "sendRequest",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Job_SendRequest,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {
@@ -455,7 +458,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //local event for success
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnSuccess,
-            name: "onSuccess",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnSuccess,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (httpEventArgs)
             {
@@ -469,7 +472,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //global event for success
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnSuccess,
-            name: "onSuccess",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnSuccess,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
@@ -483,7 +486,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //this "job" skips over the error handlers and goes straight to the on complete handlers
         es.addStep({
             key: EVUI.Modules.Http.Constants.Job_RequestComplete,
-            name: "requestComplete",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Job_RequestComplete,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {
@@ -495,7 +498,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //local error handler
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnError,
-            name: "onError",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnError,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (httpEventArgs)
             {
@@ -509,7 +512,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //global error handler
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnError,
-            name: "OnError",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnError,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
@@ -523,7 +526,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //local complete handler
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnComplete,
-            name: "OnComplete",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnComplete,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (httpEventArgs)
             {
@@ -537,7 +540,7 @@ EVUI.Modules.Http.HttpManager = function ()
         //global complete handler
         es.addStep({
             key: EVUI.Modules.Http.Constants.Event_OnComplete,
-            name: "OnComplete",
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnComplete,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (httpEventArgs)
             {
@@ -549,8 +552,8 @@ EVUI.Modules.Http.HttpManager = function ()
         });
 
         es.addStep({
-            key: EVUI.Modules.Http.Constants.Event_OnComplete,
-            name: "onAllComplete",
+            key: EVUI.Modules.Http.Constants.Event_OnAllComplete,
+            name: EVUI.Modules.Http.Constants.StepPrefix + "." + EVUI.Modules.Http.Constants.Event_OnAllComplete,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function ()
             {
@@ -936,20 +939,24 @@ EVUI.Modules.Http.HttpEventArgs = function (request, xhr, error, response)
     @type {Number}*/
     this.requestStatus = EVUI.Modules.Http.HttpRequestStatus.NotStarted;
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Pauses the EventStream, preventing the next step from executing until Resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the HTTP request, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the HTTP request, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Cancels the EventStream and aborts the execution of the XMLHttpRequest.*/
+    /**Cancels the HTTP request and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Stops the HttpManager from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. Any state value to carry between events.

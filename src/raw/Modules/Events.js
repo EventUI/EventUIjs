@@ -157,7 +157,7 @@ EVUI.Modules.Events.EventManager = function ()
         return addListener(eventListenerOrEventName, handler, priority, handlerName, EventListenerMode.FireOnce);
     };
 
-    /**Removes all the EventListeners with the given event name, callback function and/or exeuctingContext.
+    /**Removes all the EventListeners with the given event name and callback function.
     @param {String} eventNameOrIDOrHandler The name or ID of the event to remove.
     @param {EVUI.Modules.Events.Constants.Fn_Handler} handler The function that gets called when the event is invoked.*/
     this.off = function (eventNameOrId, handler)
@@ -169,16 +169,14 @@ EVUI.Modules.Events.EventManager = function ()
         {
             var curListener = _listeners[x];
 
-            if (curListener.eventListener.handlerId === eventNameOrId || curListener.eventListener.eventName === eventNameOrId)
+            if (curListener.eventListener.handlerId === eventNameOrId)
             {
-                if (typeof handler === "function")
-                {
-                    if (curListener.eventListener.handler === handler) listenersToRemove.push(curListener);
-                }
-                else
-                {
-                    listenersToRemove.push(curListener);
-                }
+                listenersToRemove.push(curListener);
+                break;
+            }
+            else if (curListener.eventListener.eventName === eventNameOrId)
+            {              
+                if (curListener.eventListener.handler === handler) listenersToRemove.push(curListener);  
             }
         }
 
@@ -235,14 +233,6 @@ EVUI.Modules.Events.EventManager = function ()
                 resolve(askResponses);
             });
         });
-    };
-
-    /**Gets all the event listeners with the given event name, callback function and/or exeuctingContext. 
-    @param {String} eventName: The name of the event to get.
-    @returns {EVUI.Modules.Events.EventListener[]}*/
-    this.getEventListeners = function (eventName)
-    {
-        return getListeners(eventName).map(function (listener) { return listener.eventListener });
     };
 
     /**Gets an event listener based on its HandlerID.
@@ -410,12 +400,12 @@ EVUI.Modules.Events.EventManager = function ()
 
         es.processInjectedEventArgs = function (eventStreamArgs)
         {
-            var eventManagerArgs = new EVUI.Modules.Events.EventManagerEventArgs(getNextListener(session, index), index + 1);
+            var eventManagerArgs = new EVUI.Modules.Events.EventManagerEventArgs(getNextListener(session, index));
             eventManagerArgs.data = session.triggerArgs.data;
-            eventManagerArgs.totalSteps = numEvents;
             eventManagerArgs.pause = eventStreamArgs.pause;
             eventManagerArgs.resume = eventStreamArgs.resume;
             eventManagerArgs.stopPropagation = eventStreamArgs.stopPropagation;
+            eventManagerArgs.triggerName = session.triggerArgs.triggerName
 
             if (session.mode === SessionMode.Ask)
             {
@@ -646,11 +636,6 @@ EVUI.Modules.Events.EventListener = function (eventName, handler, priority, hand
     this.handler = null;
     Object.defineProperty(this, "handler", {    
         get: function () { return _handler },
-        set: function (value)
-        {
-            if (value != null && typeof value !== "function") throw Error("handler must be a function.")
-            _handler = value;
-        },
         enumerable: true,
         configurable: false
     });
@@ -660,11 +645,6 @@ EVUI.Modules.Events.EventListener = function (eventName, handler, priority, hand
     this.priority = 0;
     Object.defineProperty(this, "priority", {
         get: function () { return _priority; },
-        set: function (value)
-        {
-            if (typeof value !== "number") throw Error("priority must be a number.");
-            _priority = value;
-        },
         enumerable: true,
         configurable: false
     });
@@ -683,11 +663,6 @@ EVUI.Modules.Events.EventListener = function (eventName, handler, priority, hand
     this.handlerName = null;
     Object.defineProperty(this, "handlerName", {
         get: function () { return _handlerName; },
-        set: function (value)
-        {
-            if (typeof value !== "string") throw Error("handlerName must be a string.");
-            _handlerName = value;
-        },
         configurable: false,
         enumerable: true
     });
@@ -716,10 +691,9 @@ EVUI.Modules.Events.EventListenerAddRequest = function ()
 
 /**The object that is injected into each handler as the arguments for the event being executed. Contains the user's custom event data as well as the functionality of the async event chain.
 @class*/
-EVUI.Modules.Events.EventManagerEventArgs = function (listener, currentStepIndex)
+EVUI.Modules.Events.EventManagerEventArgs = function (listener)
 {
     var _listener = listener;
-    var _currentStep = currentStepIndex;
 
     /**Object. The EventListener that is currently being executed.
     @type {EVUI.Modules.Events.EventListener}*/
@@ -734,26 +708,17 @@ EVUI.Modules.Events.EventManagerEventArgs = function (listener, currentStepIndex
     @type {Any}*/
     this.data = null;
 
-    /**Number. The index of the current step in the sequence of events.
-    @type {Number}*/
-    this.currentStep = -1;
-    Object.defineProperty(this, "currentStep", {
-        get: function () { return _currentStep; },
-        configurable: false,
-        enumerable: true
-    });
+    /**String. An identifier given for trigger of this event.
+    @type {String}*/
+    this.triggerName = null;
 
-    /**Number. The total number of events in the event sequence.
-    @type {Number}*/
-    this.totalSteps = -1;
-
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**Function. Pauses the EventListener's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Function. Resumes the EventListener's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Function. Stops the EventManager from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 };
 

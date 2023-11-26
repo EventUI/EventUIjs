@@ -19,7 +19,8 @@ EVUI.Modules.HtmlLoader.Dependencies =
 {
     Core: Object.freeze({ version: "1.0", required: true }),
     EventStream: Object.freeze({ version: "1.0", required: true }),
-    Http: Object.freeze({ version: "1.0", required: true })
+    Http: Object.freeze({ version: "1.0", required: true }),
+    DomTree: Object.freeze({version: "1.0", required: false})
 };
 
 (function ()
@@ -42,20 +43,22 @@ Object.freeze(EVUI.Modules.HtmlLoader.Dependencies);
 
 EVUI.Modules.HtmlLoader.Constants = {};
 
-EVUI.Modules.HtmlLoader.Constants.Job_GetHtml = "evui.htmlLoader.getHtml";
-EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml = "evui.htmlLoader.injectHtml";
-EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren = "evui.htmlLoader.loadChildren";
+EVUI.Modules.HtmlLoader.Constants.Job_GetHtml = "job.getHtml";
+EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml = "job.injectHtml";
+EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren = "job.loadChildren";
 
 EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID = "evui-loader-placeholder-id";
 EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl = "evui-loader-placeholder-src";
 EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState = "evui-loader-content-load-state";
 
-EVUI.Modules.HtmlLoader.Constants.Event_OnBeforePlaceholderLoad = "evui.htmlLoader.onBeforeLoad";
-EVUI.Modules.HtmlLoader.Constants.Event_OnGetPlaceholderHtml = "evui.htmlLoader.onGetPlaceholderHtml";
-EVUI.Modules.HtmlLoader.Constants.Event_OnPlaceholderInject = "evui.htmlLoader.onInject";
-EVUI.Modules.HtmlLoader.Constants.Event_OnBeforeLoadPlaceholderChildren = "evui.htmlLoader.onBeforeLoadChildren";
-EVUI.Modules.HtmlLoader.Constants.Event_OnPlaceholderLoaded = "evui.htmlLoader.onPlaceholderLoaded";
-EVUI.Modules.HtmlLoader.Constants.Event_OnAllPlaceholdersLoaded = "evui.hmlLoader.onAllPlaceholdersLoaded"
+EVUI.Modules.HtmlLoader.Constants.Event_OnLoad = "load";
+EVUI.Modules.HtmlLoader.Constants.Event_OnGetHtml = "gethtml";
+EVUI.Modules.HtmlLoader.Constants.Event_OnInject = "inject";
+EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren = "loadchildren";
+EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded = "loaded";
+EVUI.Modules.HtmlLoader.Constants.Event_OnComplete = "complete"
+
+EVUI.Modules.HtmlLoader.Constants.StepPrefix = "evui.htmlloader";
 
 /**Callback function that is called when Html is returned from a web request.
 @param {String} html: The Html returned from the web request.*/
@@ -628,12 +631,13 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         session.eventStream.processInjectedEventArgs = function (eventArgs)
         {
             var htmlArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs();
+            htmlArgs.eventName = eventArgs.name;
+            htmlArgs.eventType = eventArgs.key;
             htmlArgs.cancel = eventArgs.cancel;
             htmlArgs.pause = eventArgs.pause;
             htmlArgs.resume = eventArgs.resume;
             htmlArgs.stopPropagation = eventArgs.stopPropagation;
             htmlArgs.context = eventArgs.state;
-            htmlArgs.key = eventArgs.key + ((eventArgs.stepType === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent) ? ".global" : "");
             htmlArgs.placeholder = session.placeholder;
 
             return htmlArgs;
@@ -642,7 +646,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         //set up the logic for handling the filtration of child members by the user
         session.eventStream.processReturnedEventArgs = function (htmlArgs, handlerResult, step)
         {
-            if (step.key === EVUI.Modules.HtmlLoader.Constants.Event_OnBeforeLoadPlaceholderChildren)
+            if (step.key === EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren)
             {
                 session.selectedChildPlaceholders = getSelectedChildPlaceholders(session.allChildPlaceholders);
             }
@@ -667,33 +671,31 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @param {PlaceholderLoadSession} session Context data about the placeholder load operation in progress. */
     var addOnBeforeLoadEvents = function (session)
     {
-        session.eventStream.addStep(
+        session.eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnBeforePlaceholderLoad,
-                name: "onBeforePlaceholderLoad",
-                type: EVUI.Modules.EventStream.EventStreamStepType.Event,
-                handler: function (eventArgs)
+                if (typeof session.placeholderArgs.onLoad === "function")
                 {
-                    if (typeof session.placeholderArgs.onBeforePlaceholderLoad === "function")
-                    {
-                        return session.placeholderArgs.onBeforePlaceholderLoad(eventArgs);
-                    }
+                    return session.placeholderArgs.onLoad.call(this, eventArgs);
                 }
-            });
+            }
+        });
 
-        session.eventStream.addStep(
+        session.eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoad,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnBeforePlaceholderLoad,
-                name: "onBeforePlaceholderLoad",
-                type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
-                handler: function (eventArgs)
+                if (typeof _self.onLoad === "function")
                 {
-                    if (typeof _self.onBeforePlaceholderLoad === "function")
-                    {
-                        return _self.onBeforePlaceholderLoad(eventArgs);
-                    }
+                    return _self.onLoad.call(_self, eventArgs);
                 }
-            });
+            }
+        });
     };
 
     /**Adds the "OnBeforeLoadChildren" events that give the user an opportunity to filter the list of child placeholders that will be loaded.
@@ -702,28 +704,28 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     {
         session.eventStream.addStep(
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnBeforeLoadPlaceholderChildren,
-                name: "onBeforeLoadPlaceholderChildren",
+                key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
                 type: EVUI.Modules.EventStream.EventStreamStepType.Event,
                 handler: function (eventArgs)
                 {
-                    if (typeof session.placeholderArgs.onBeforeLoadPlaceholderChildren === "function")
+                    if (typeof session.placeholderArgs.onLoadChildren === "function")
                     {
-                        return session.placeholderArgs.onBeforeLoadPlaceholderChildren(eventArgs);
+                        return session.placeholderArgs.onLoadChildren.call(this, eventArgs);
                     }
                 }
             });
 
         session.eventStream.addStep(
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnBeforeLoadPlaceholderChildren,
-                name: "onBeforeLoadPlaceholderChildren",
+                key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoadChildren,
                 type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
                 handler: function (eventArgs)
                 {
-                    if (typeof _self.onBeforeLoadPlaceholderChildren === "function")
+                    if (typeof _self.onLoadChildren === "function")
                     {
-                        return _self.onBeforeLoadPlaceholderChildren(eventArgs);
+                        return _self.onLoadChildren.call(_self, eventArgs);
                     }
 
                 }
@@ -734,66 +736,62 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @param {PlaceholderLoadSession} session Context data about the placeholder load operation in progress. */
     var addOnInjectEvents = function (session)
     {
-        session.eventStream.addStep(
+        session.eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnPlaceholderInject,
-                name: "onPlaceholderInject",
-                type: EVUI.Modules.EventStream.EventStreamStepType.Event,
-                handler: function (eventArgs)
+                if (typeof session.placeholderArgs.onInject === "function")
                 {
-                    if (typeof session.placeholderArgs.onPlaceholderInject === "function")
-                    {
-                        return session.placeholderArgs.onPlaceholderInject(eventArgs);
-                    }
+                    return session.placeholderArgs.onInject.call(this, eventArgs);
                 }
-            });
+            }
+        });
 
-        session.eventStream.addStep(
+        session.eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnInject,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnPlaceholderInject,
-                name: "onPlaceholderInject",
-                type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
-                handler: function (eventArgs)
+                if (typeof _self.onInject === "function")
                 {
-                    if (typeof _self.onPlaceholderInject === "function")
-                    {
-                        return _self.onPlaceholderInject(eventArgs);
-                    }
+                    return _self.onInject.call(_self, eventArgs);
                 }
-            });
+            }
+        });
     };
 
     /**Adds the "OnPlaceholderLoaded" events that give the user an opportunity to inspect/react to the final loaded result in the session's parent.
     @param {PlaceholderLoadSession} session Context data about the placeholder load operation in progress. */
     var addOnPlaceholderLoadedEvents = function (session)
     {
-        session.eventStream.addStep(
+        session.eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnPlaceholderLoaded,
-                name: "onPlaceholderLoaded",
-                type: EVUI.Modules.EventStream.EventStreamStepType.Event,
-                handler: function (eventArgs)
+                if (typeof session.placeholderArgs.onLoaded === "function")
                 {
-                    if (typeof session.placeholderArgs.onPlaceholderLoaded === "function")
-                    {
-                        return session.placeholderArgs.onPlaceholderLoaded(eventArgs);
-                    }
+                    return session.placeholderArgs.onLoaded.call(this, eventArgs);
                 }
-            });
+            }
+        });
 
-        session.eventStream.addStep(
+        session.eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnLoaded,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Event_OnPlaceholderLoaded,
-                name: "onPlaceholderLoaded",
-                type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
-                handler: function (eventArgs)
+                if (typeof _self.onLoaded === "function")
                 {
-                    if (typeof _self.onPlaceholderLoaded === "function")
-                    {
-                        return _self.onPlaceholderLoaded(eventArgs);
-                    }
+                    return _self.onLoaded.call(_self, eventArgs);
                 }
-            });
+            }
+        });
     };
 
     /**Adds the "OnAllPlaceholderLoaded" events that fire once the highest parent session has completed loading and signals that the operation is complete.
@@ -802,33 +800,31 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     {
         if (session.parentSession == null)
         {
-            session.eventStream.addStep(
+            session.eventStream.addStep({
+                key: EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+                handler: function (eventArgs)
                 {
-                    key: EVUI.Modules.HtmlLoader.Constants.Event_OnAllPlaceholdersLoaded,
-                    name: "onAllPlaceholdersLoaded",
-                    type: EVUI.Modules.EventStream.EventStreamStepType.Event,
-                    handler: function (eventArgs)
+                    if (typeof session.placeholderArgs.onComplete === "function")
                     {
-                        if (typeof session.placeholderArgs.onAllPlaceholdersLoaded === "function")
-                        {
-                            return session.placeholderArgs.onAllPlaceholdersLoaded(eventArgs);
-                        }
+                        return session.placeholderArgs.onComplete.call(this, eventArgs);
                     }
-                });
+                }
+            });
 
-            session.eventStream.addStep(
+            session.eventStream.addStep({
+                key: EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Event_OnComplete,
+                type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+                handler: function (eventArgs)
                 {
-                    key: EVUI.Modules.HtmlLoader.Constants.Event_OnAllPlaceholdersLoaded,
-                    name: "onAllPlaceholdersLoaded",
-                    type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
-                    handler: function (eventArgs)
+                    if (typeof _self.onComplete === "function")
                     {
-                        if (typeof _self.onAllPlaceholdersLoaded === "function")
-                        {
-                            return _self.onAllPlaceholdersLoaded(eventArgs);
-                        }
+                        return _self.onComplete.call(_self, eventArgs);
                     }
-                });
+                }
+            });
         }
     }
 
@@ -847,138 +843,135 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         addOnBeforeLoadEvents(session);
 
         //add the "get Html" step that invokes the HttpEventStream to perform the http operation.
-        eventStream.addStep(
+        eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Job_GetHtml,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_GetHtml,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Job_GetHtml,
-                name: "GetHtml",
-                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-                handler: function (jobArgs)
-                {
-                    var placeholderAttrs = EVUI.Modules.Core.Utils.getElementAttributes(session.placeholderElement);
-                    var loadState = placeholderAttrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState);
+                var placeholderAttrs = EVUI.Modules.Core.Utils.getElementAttributes(session.placeholderElement);
+                var loadState = placeholderAttrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState);
 
-                    //check to make sure the load state isn't already "loaded" - only re-load it if ForceReload is true. Otherwise, just bail and go to the end of the event stream.
-                    if (loadState != null && loadState.toLowerCase() === EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded && session.placeholderArgs.forceReload === false)
+                //check to make sure the load state isn't already "loaded" - only re-load it if ForceReload is true. Otherwise, just bail and go to the end of the event stream.
+                if (loadState != null && loadState.toLowerCase() === EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded && session.placeholderArgs.forceReload === false)
+                {
+                    return jobArgs.cancel();
+                }
+
+                //get the URL off of the element. It doesn't actually have to be there and can be set/changed in the HttpEventStream's EventStream.
+                var url = placeholderAttrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl);
+
+                var htmlArgs = new EVUI.Modules.HtmlLoader.HtmlRequestArgs();
+                htmlArgs.url = url;
+                htmlArgs.httpArgs = session.placeholderArgs.httpArgs;
+
+                _self.loadHtml(htmlArgs, function (html)
+                {
+                    if (html != null) //call worked, we got a string back
                     {
-                        return jobArgs.cancel();
+                        var docFrag = stringToDocFrag(html); //make  a document fragment out of the string
+                        session.loadedFragment = docFrag;
+                        session.html = html;
+                        session.url = htmlArgs.url
+
+                        if (session.placeholderArgs.recursive === true) //we're doing a recursive load, go get all the children flagged with a placeholder ID
+                        {
+                            session.allChildPlaceholders = getLoadableElements(docFrag, session.placeholderArgs.forceReload, session.placeholderArgs.ignoreOnDemand);
+                            session.selectedChildPlaceholders = session.allChildPlaceholders.slice();
+                        }
+                        else //no recursion, just use empty arrays to make the event args generator happy
+                        {
+                            session.allChildPlaceholders = [];
+                            session.selectedChildPlaceholders = [];
+                        }
                     }
 
-                    //get the URL off of the element. It doesn't actually have to be there and can be set/changed in the HttpEventStream's EventStream.
-                    var url = placeholderAttrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_ResourceUrl);
-
-                    var htmlArgs = new EVUI.Modules.HtmlLoader.HtmlRequestArgs();
-                    htmlArgs.url = url;
-                    htmlArgs.httpArgs = session.placeholderArgs.httpArgs;
-
-                    _self.loadHtml(htmlArgs, function (html)
-                    {
-                        if (html != null) //call worked, we got a string back
-                        {
-                            var docFrag = stringToDocFrag(html); //make  a document fragment out of the string
-                            session.loadedFragment = docFrag;
-                            session.html = html;
-                            session.url = htmlArgs.url
-
-                            if (session.placeholderArgs.recursive === true) //we're doing a recursive load, go get all the children flagged with a placeholder ID
-                            {
-                                session.allChildPlaceholders = getLoadableElements(docFrag, session.placeholderArgs.forceReload, session.placeholderArgs.ignoreOnDemand);
-                                session.selectedChildPlaceholders = session.allChildPlaceholders.slice();
-                            }
-                            else //no recursion, just use empty arrays to make the event args generator happy
-                            {
-                                session.allChildPlaceholders = [];
-                                session.selectedChildPlaceholders = [];
-                            }
-                        }
-
-                        return jobArgs.resolve();
-                    });
-                }
-            });
+                    return jobArgs.resolve();
+                });
+            }
+        });
 
         addOnBeforeLoadChildrenEvents(session);
 
         //launches a volley of parallel event streams to go and load all the child placeholders of this placeholder. Remains in limbo until all the children are done.
-        eventStream.addStep(
+        eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Job_LoadChildren,
-                name: "LoadChildren",
-                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-                handler: function (jobArgs)
+                var numChildSessions = session.selectedChildPlaceholders.length;
+                if (numChildSessions === 0) //no children, just continue to the next step
                 {
-                    var numChildSessions = session.selectedChildPlaceholders.length;
-                    if (numChildSessions === 0) //no children, just continue to the next step
-                    {
-                        return jobArgs.resolve();
-                    }
-
-                    var actualChildren = [];
-                    var numLoaded = 0;
-
-                    for (var x = 0; x < numChildSessions; x++)
-                    {
-                        var curChild = session.selectedChildPlaceholders[x];
-                        var attrs = EVUI.Modules.Core.Utils.getElementAttributes(curChild);
-
-                        var placeholderID = attrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID);
-                        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) continue; //no placeholder ID, should not load child (we could, but we wont.)
-
-                        var childSession = makePlaceholderLoadSession(curChild, session.placeholderArgs, session, function (loadResult) //make a child session using this session's arguments
-                        {
-                            numLoaded++;
-                            if (numLoaded === session.childSessions.length) //the loaded results and the number of queued sessions is the same, we're done. This stream can move on to the next step.
-                            {
-                                jobArgs.resolve();
-                            }
-                        });
-
-                        if (childSession == null) continue; //for some reason the child session was not created (usually a validation failure)
-
-                        actualChildren.push(curChild);
-
-                        curChild.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading);
-                        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading;
-                        childSession.eventStream.execute(); //kick off the child load process.
-                    }
-
-                    session.selectedChildPlaceholders = actualChildren;
-                    if (actualChildren.length === 0) //no children were queued to be loaded, just continue to the next step.
-                    {
-                        return jobArgs.resolve();
-                    }
+                    return jobArgs.resolve();
                 }
-            });
+
+                var actualChildren = [];
+                var numLoaded = 0;
+
+                for (var x = 0; x < numChildSessions; x++)
+                {
+                    var curChild = session.selectedChildPlaceholders[x];
+                    var attrs = EVUI.Modules.Core.Utils.getElementAttributes(curChild);
+
+                    var placeholderID = attrs.getValue(EVUI.Modules.HtmlLoader.Constants.Attr_PlaceholderID);
+                    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === true) continue; //no placeholder ID, should not load child (we could, but we wont.)
+
+                    var childSession = makePlaceholderLoadSession(curChild, session.placeholderArgs, session, function (loadResult) //make a child session using this session's arguments
+                    {
+                        numLoaded++;
+                        if (numLoaded === session.childSessions.length) //the loaded results and the number of queued sessions is the same, we're done. This stream can move on to the next step.
+                        {
+                            jobArgs.resolve();
+                        }
+                    });
+
+                    if (childSession == null) continue; //for some reason the child session was not created (usually a validation failure)
+
+                    actualChildren.push(curChild);
+
+                    curChild.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading);
+                    session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loading;
+                    childSession.eventStream.execute(); //kick off the child load process.
+                }
+
+                session.selectedChildPlaceholders = actualChildren;
+                if (actualChildren.length === 0) //no children were queued to be loaded, just continue to the next step.
+                {
+                    return jobArgs.resolve();
+                }
+            }
+        });
 
         addOnInjectEvents(session);
 
         //inject the html into the placeholder element
-        eventStream.addStep(
+        eventStream.addStep({
+            key: EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml,
+            name: EVUI.Modules.HtmlLoader.Constants.StepPrefix + "." + EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
             {
-                key: EVUI.Modules.HtmlLoader.Constants.Job_InjectHtml,
-                name: "InjectHtml",
-                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-                handler: function (jobArgs)
+                if (session.loadedFragment != null) //we have content, blow away old content and replace it with new content
                 {
-                    if (session.loadedFragment != null) //we have content, blow away old content and replace it with new content
-                    {
-                        var eh = new EVUI.Modules.Dom.DomHelper(session.placeholderElement);
-                        eh.empty();
+                    var eh = new EVUI.Modules.Dom.DomHelper(session.placeholderElement);
+                    eh.empty();
 
-                        var injected = eh.append(session.loadedFragment);
-                        session.loadedContent = injected.elements;
+                    var injected = eh.append(session.loadedFragment);
+                    session.loadedContent = injected.elements;
 
-                        eh.attr(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded); //set the load state so this placeholder isn't loaded again
-                        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded;
-                    }
-                    else //no content, flag it as failed
-                    {
-                        session.placeholderElement.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed);
-                        session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed;
-                    }
-
-                    jobArgs.resolve();
+                    eh.attr(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded); //set the load state so this placeholder isn't loaded again
+                    session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Loaded;
                 }
-            });
+                else //no content, flag it as failed
+                {
+                    session.placeholderElement.setAttribute(EVUI.Modules.HtmlLoader.Constants.Attr_ContentLoadState, EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed);
+                    session.loadState = EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadState.Failed;
+                }
+
+                jobArgs.resolve();
+            }
+        });
 
         addOnPlaceholderLoadedEvents(session);
         addOnAllPlaceholderLoadedEvents(session);
@@ -991,6 +984,14 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     @returns {DocumentFragment} */
     var stringToDocFrag = function (str)
     {
+        if (_services.domTree != null)
+        {
+            var frag = _services.domTree.htmlToDocumentFragment(str);
+            if (frag == null) frag = document.createDocumentFragment();
+
+            return frag;
+        }
+
         var div = document.createElement("div");
         div.innerHTML = str;
 
@@ -1005,6 +1006,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         return docFrag;
     };
 
+    /**Ensures that the _services object is populated with the default values if none were specified.*/
     var ensureServices = function ()
     {
         if (_services == null || typeof _services !== "object")
@@ -1023,39 +1025,52 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 enumerable: true
             })
         }
+
+        if (_services.domTree == null || typeof _services.domTree !== "object")
+        {
+            Object.defineProperty(_services, "domTree", {
+                get: function ()
+                {
+                    if (EVUI.Modules.DomTree == null) return null;
+                    return EVUI.Modules.DomTree.Converter;
+                },
+                configurable: false,
+                enumerable: true
+            })
+        }
     };
 
     /**Event that executes before the request to get HTML from the server has been sent and gives the opportunity to stop the operation before it begins.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onBeforePlaceholderLoad = function (args)
+    this.onLoad = function (args)
     {
 
     };
 
     /**Event that executes before the HTML returned from the server is injected into the DOM and gives the user the ability to manipulate the HTML while it is still in a document fragment.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onPlaceholderInject = function (args)
+    this.onInject = function (args)
     {
 
     };
 
     /**Event that executes before any recursive child loads occur and gives the user the opportunity to edit the list of children being theoretically loaded.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgss describing the current load operation.*/
-    this.onBeforeLoadPlaceholderChildren = function (args)
+    this.onLoadChildren = function (args)
     {
 
     };
 
     /**Event that executes after the placeholder - and all of its children - have been injected and the load operation is complete.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onPlaceholderLoaded = function (args)
+    this.onLoaded = function (args)
     {
 
     };
 
     /**Event that executes after all the placeholders have been loaded recursively.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onAllPlaceholdersLoaded = function (args)
+    this.onComplete = function (args)
     {
 
     };
@@ -1188,25 +1203,32 @@ EVUI.Modules.HtmlLoader.HtmlPartialLoadArgs = function ()
 @class*/
 EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs = function ()
 {
-    /**Object. The HtmlPlaceholderLoadArgs being used to load placeholders.
-    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
+    /**Object. The HtmlPlaceholder being used to load placeholders.
+    @type {EVUI.Modules.HtmlLoader.HtmlPlaceholder}*/
     this.placeholder = null;
 
     /**Object. The context object for this event that gets passed between events. 
     @type {Any}*/
     this.context = null;
 
-    /**Pauses the load/injection process indefinitely until Resume is called.
-    @method Pause*/
+    /**String. The full name of the event.
+    @type {String}*/
+    this.eventName = null;
+
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the HtmlPlaceholder's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
-    /**Resumes a paused load/injection process.
-    @method Resume*/
+
+    /**Resumes the HtmlPlaceholder's action, allowing it to continue to the next step.*/
     this.resume = function () { };
-    /**Cancels the load/injection process at its current state.
-    @method Cancel*/
-    this.cancel = function () { };
-    /**Prevents any further events with the same key from being executed.
-    @method StopPropagation*/
+
+    /**Cancels the HtmlPlaceholder's action and aborts the execution of the operation.*/
+    this.cancel = function () { }
+
+    /**Stops the HtmlPlaceholder from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 };
 
@@ -1256,34 +1278,34 @@ EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs = function ()
 
     /**Event that executes before the request to get HTML from the server has been sent and gives the opportunity to stop the operation before it begins.
     les.HtmlLoaderController.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onBeforePlaceholderLoad = function (args)
+    this.onLoad = function (args)
     {
 
     };
 
     /**Event that executes before any recursive child loads occur and gives the user the opportunity to edit the list of children being theoretically loaded.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgss describing the current load operation.*/
-    this.onBeforeLoadPlaceholderChildren = function (args)
+    this.onLoadChildren = function (args)
     {
     };
 
     /**Event that executes before the HTML returned from the server is injected into the DOM and gives the user the ability to manipulate the HTML while it is still in a document fragment.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onPlaceholderInject = function (args)
+    this.onInject = function (args)
     {
 
     };
 
     /**Event that executes after the placeholder - and all of its children - have been injected into its parent and the load operation is complete.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onPlaceholderLoaded = function (args)
+    this.onLoaded = function (args)
     {
 
     };
 
     /**Event that executes after all the placeholders have been loaded and injected into the DOM.
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} args: An instance of EVUI.Modules.HtmlLoaderController.HtmlPlaceholderLoadEventArgs describing the current load operation.*/
-    this.onAllPlaceholdersLoaded = function (args)
+    this.onComplete = function (args)
     {
 
     };
@@ -1454,6 +1476,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderControllerServices = function ()
     /**Object. An instance of Http module's HttpManager object.
     @type {EVUI.Modules.Http.HttpManager}*/
     this.httpManager = null;
+
+    /**Optional. Include to use the DomTree module to convert Html stirngs into DOM nodes.
+    @type {EVUI.Modules.DomTree.DomTreeConverter}*/
+    this.domTree = null;
 };
 
 /**Global instance of a EVUI.Modules.HtmlLoaderController.HtmlLoaderController.

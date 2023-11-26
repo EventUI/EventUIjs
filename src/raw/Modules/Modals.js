@@ -109,7 +109,7 @@ EVUI.Modules.Modals.Constants.Attribute_Backdrop = "evui-m-show-backdrop";
 EVUI.Modules.Modals.Constants.Default_ObjectName = "Modal";
 EVUI.Modules.Modals.Constants.Default_ManagerName = "ModalManager";
 EVUI.Modules.Modals.Constants.Default_CssPrefix = "evui-m";
-EVUI.Modules.Modals.Constants.Default_EventNamePrefix = "evui.m";
+EVUI.Modules.Modals.Constants.Default_StepPrefix = "evui.m";
 EVUI.Modules.Modals.Constants.Default_AttributePrefix = "evui-m";
 
 Object.freeze(EVUI.Modules.Modals.Constants);
@@ -500,7 +500,8 @@ EVUI.Modules.Modals.ModalManager = function (services)
 
         var modalEventArgs = new EVUI.Modules.Modals.ModalEventArgs(argsPackage, args);
         modalEventArgs.cancel = paneEventArgs.cancel;
-        modalEventArgs.key = paneEventArgs.key;
+        modalEventArgs.eventType = paneEventArgs.eventType;
+        modalEventArgs.eventName = paneEventArgs.eventName;
         modalEventArgs.pause = paneEventArgs.pause;
         modalEventArgs.resume = paneEventArgs.resume;
         modalEventArgs.stopPropagation = paneEventArgs.stopPropagation;
@@ -742,7 +743,7 @@ EVUI.Modules.Modals.ModalManager = function (services)
     _settings.attributePrefix = EVUI.Modules.Modals.Constants.Default_AttributePrefix;
     _settings.cssPrefix = EVUI.Modules.Modals.Constants.Default_CssPrefix;
     _settings.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
-    _settings.eventNamePrefix = EVUI.Modules.Modals.Constants.Default_EventNamePrefix;
+    _settings.stepPrefix = EVUI.Modules.Modals.Constants.Default_StepPrefix;
     _settings.managerName = EVUI.Modules.Modals.Constants.Default_ManagerName;
     _settings.objectName = EVUI.Modules.Modals.Constants.Default_ObjectName;
     _settings.makeOrExtendObject = makeOrExtendObject;
@@ -1050,20 +1051,24 @@ EVUI.Modules.Modals.ModalEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the Modal's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the Modal's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Cancels the EventStream and aborts the execution of the Modal operation.*/
+    /**Cancels the Modal's action and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Stops the Modal from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. The position of the Modal that has been calculated in using the currentShowSettings.
@@ -1076,7 +1081,7 @@ EVUI.Modules.Modals.ModalEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**Object. The PaneHide/Show/Load/Unload Arguments being used for the operation.
+    /**Object. The ModalHide/Show/Load/Unload Arguments being used for the operation.
     @type {EVUI.Modules.Modals.ModalShowArgs|EVUI.Modules.Modals.ModalHideArgs|EVUI.Modules.Modals.ModalLoadArgs|EVUI.Modules.Modals.ModalUnloadArgs}*/
     this.currentActionArgs = null;
     Object.defineProperty(this, "currentActionArgs", {

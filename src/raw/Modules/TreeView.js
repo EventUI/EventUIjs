@@ -63,16 +63,24 @@ EVUI.Modules.TreeView.Constants.CSS_ChildNodeList_Visible = "evui-tree-node-chil
 EVUI.Modules.TreeView.Constants.CSS_ChildNodeList_Expanding = "evui-tree-node-children-expanding"
 EVUI.Modules.TreeView.Constants.CSS_ChildNodeList_Collapsing = "evui-tree-node-children-collapsing"
 
-EVUI.Modules.TreeView.Constants.Event_OnBuild = "evui.treenode.build";
-EVUI.Modules.TreeView.Constants.Event_OnBuildChildren = "evui.treenode.build.children";
-EVUI.Modules.TreeView.Constants.Event_OnChildrenBuilt = "evui.treenode.built.children";
-EVUI.Modules.TreeView.Constants.Event_OnBuilt = "evui.treenode.built";
+EVUI.Modules.TreeView.Constants.Event_OnBuild = "build";
+EVUI.Modules.TreeView.Constants.Event_OnBuildChildren = "buildchildren";
+EVUI.Modules.TreeView.Constants.Event_OnBuiltChildren = "builtchildren";
+EVUI.Modules.TreeView.Constants.Event_OnBuilt = "built";
 
-EVUI.Modules.TreeView.Constants.Event_OnExpand = "evui.treenode.expand";
-EVUI.Modules.TreeView.Constants.Event_OnExpanded = "evui.treenode.expanded";
+EVUI.Modules.TreeView.Constants.Event_OnExpand = "expand";
+EVUI.Modules.TreeView.Constants.Event_OnExpanded = "expanded";
 
-EVUI.Modules.TreeView.Constants.Event_OnCollapse = "evui.treenode.collapse";
-EVUI.Modules.TreeView.Constants.Event_OnCollapsed = "evui.treenode.collapsed";
+EVUI.Modules.TreeView.Constants.Event_OnCollapse = "collapse";
+EVUI.Modules.TreeView.Constants.Event_OnCollapsed = "collapsed";
+
+EVUI.Modules.TreeView.Constants.Job_BuildNode = "job.buildnode";
+EVUI.Modules.TreeView.Constants.Job_FinishOperation = "job.finishoperation";
+EVUI.Modules.TreeView.Constants.Job_BuildChildren = "job.buildchildren";
+EVUI.Modules.TreeView.Constants.Job_Collapse = "job.collapse";
+EVUI.Modules.TreeView.Constants.Job_Expand = "job.expand";
+
+EVUI.Modules.TreeView.Constants.StepPrefix = "evui.tv"
 
 /**
  * 
@@ -806,24 +814,27 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
     {
         opSession.eventStream = new EVUI.Modules.EventStream.EventStream();
         opSession.eventStream.context = opSession.nodeEntry.node;
+        opSession.eventStream.extendSteps = false;
 
         opSession.eventStream.onCancel = function ()
         {
             opSession.canceled = true;
-            opSession.eventStream.seek("finishOperation");
+            opSession.eventStream.seek(EVUI.Modules.TreeView.Constants.Job_FinishOperation);
         };
 
         opSession.eventStream.onError = function ()
         {
             opSession.canceled = true;
-            opSession.eventStream.seek("finishOperation");
+            opSession.eventStream.seek(EVUI.Modules.TreeView.Constants.Job_FinishOperation);
         };
 
         opSession.eventStream.processInjectedEventArgs = function (eventStreamArgs)
         {
             var treeViewArgs = new EVUI.Modules.TreeView.TreeViewEventArgs(opSession.nodeEntry);
+            treeViewArgs.eventName = eventStreamArgs.name;
+            treeViewArgs.eventType = eventStreamArgs.key;
             treeViewArgs.cancel = function () { return eventStreamArgs.cancel(); };
-            treeViewArgs.key = eventStreamArgs.key;
+            treeViewArgs.eventType = eventStreamArgs.key;
             treeViewArgs.pause = function () { return eventStreamArgs.pause(); };
             treeViewArgs.resume = function () { return eventStreamArgs.resume(); };
             treeViewArgs.stopPropagation = function () { return eventStreamArgs.stopPropagation(); };
@@ -865,6 +876,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
     {
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuild,
             key: EVUI.Modules.TreeView.Constants.Event_OnBuild,
             handler: function (eventArgs)
             {
@@ -873,13 +885,14 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
                 if (typeof opSession.nodeEntry.node.onBuild === "function")
                 {
-                    return opSession.nodeEntry.node.onBuild(eventArgs);
+                    return opSession.nodeEntry.node.onBuild.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuild,
             key: EVUI.Modules.TreeView.Constants.Event_OnBuild,
             handler: function (eventArgs)
             {
@@ -893,7 +906,8 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-            key: "buildNode",
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Job_BuildNode,
+            key: EVUI.Modules.TreeView.Constants.Job_BuildNode,
             handler: function (jobEventArgs)
             {              
                 if (canContinue(opSession) === false) return jobEventArgs.resolve();
@@ -926,19 +940,21 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuildChildren,
             key: EVUI.Modules.TreeView.Constants.Event_OnBuildChildren,
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onBuildChildren === "function")
                 {
-                    return opSession.nodeEntry.node.onBuildChildren(eventArgs);
+                    return opSession.nodeEntry.node.onBuildChildren.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuildChildren,
             key: EVUI.Modules.TreeView.Constants.Event_OnBuildChildren,
             handler: function (eventArgs)
             {
@@ -952,7 +968,8 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-            key: "buildChildren",
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Job_BuildChildren,
+            key: EVUI.Modules.TreeView.Constants.Job_BuildChildren,
             handler: function (jobEventArgs)
             {
                 if (canContinue(opSession) === false) return jobEventArgs.resolve();
@@ -997,20 +1014,22 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
-            key: EVUI.Modules.TreeView.Constants.Event_OnChildrenBuilt,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuiltChildren,
+            key: EVUI.Modules.TreeView.Constants.Event_OnBuiltChildren,
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onChildrenBuilt === "function")
                 {
-                    return opSession.nodeEntry.node.onChildrenBuilt(eventArgs);
+                    return opSession.nodeEntry.node.onChildrenBuilt.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
-            key: EVUI.Modules.TreeView.Constants.Event_OnChildrenBuilt,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuiltChildren,
+            key: EVUI.Modules.TreeView.Constants.Event_OnBuiltChildren,
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
@@ -1023,6 +1042,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuilt,
             key: EVUI.Modules.TreeView.Constants.Event_OnBuilt,
             handler: function (eventArgs)
             {
@@ -1036,6 +1056,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnBuilt,
             key: EVUI.Modules.TreeView.Constants.Event_OnBuilt,
             handler: function (eventArgs)
             {
@@ -1054,7 +1075,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
     {
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-            key: "finishOperation",
+            key: EVUI.Modules.TreeView.Constants.Job_FinishOperation,
             handler: function (jobEventArgs)
             {
                 onFinishOperation(opSession, function ()
@@ -1185,19 +1206,21 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
     {
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnExpand,
             key: EVUI.Modules.TreeView.Constants.Event_OnExpand,
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onExpand === "function")
                 {
-                    return opSession.nodeEntry.node.onExpand(eventArgs);
+                    return opSession.nodeEntry.node.onExpand.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnExpand,
             key: EVUI.Modules.TreeView.Constants.Event_OnExpand,
             handler: function (eventArgs)
             {
@@ -1214,7 +1237,8 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-            key: "expandNode",
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Job_Expand,
+            key: EVUI.Modules.TreeView.Constants.Job_Expand,
             handler: function (jobArgs)
             {
                 if (canContinue(opSession) === false) return jobArgs.resolve();
@@ -1228,19 +1252,21 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnExpanded,
             key: EVUI.Modules.TreeView.Constants.Event_OnExpanded,
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onExpanded === "function")
                 {
-                    return opSession.nodeEntry.node.onExpanded(eventArgs);
+                    return opSession.nodeEntry.node.onExpanded.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnExpanded,
             key: EVUI.Modules.TreeView.Constants.Event_OnExpanded,
             handler: function (eventArgs)
             {
@@ -1423,6 +1449,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
     {
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnCollapse,
             key: EVUI.Modules.TreeView.Constants.Event_OnCollapse,
             handler: function (eventArgs)
             {
@@ -1431,13 +1458,14 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
                 if (typeof opSession.nodeEntry.node.onCollapse === "function")
                 {
-                    return opSession.nodeEntry.node.onCollapse(eventArgs);
+                    return opSession.nodeEntry.node.onCollapse.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnCollapse,
             key: EVUI.Modules.TreeView.Constants.Event_OnCollapse,
             handler: function (eventArgs)
             {
@@ -1451,7 +1479,8 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-            key: "expandNode",
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Job_Collapse,
+            key: EVUI.Modules.TreeView.Constants.Job_Collapse,
             handler: function (jobArgs)
             {
                 if (canContinue(opSession) === false) return jobArgs.resolve();
@@ -1465,19 +1494,21 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnCollapsed,
             key: EVUI.Modules.TreeView.Constants.Event_OnCollapseed,
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onCollapseed === "function")
                 {
-                    return opSession.nodeEntry.node.onCollapseed(eventArgs);
+                    return opSession.nodeEntry.node.onCollapseed.call(this, eventArgs);
                 }
             }
         });
 
         opSession.eventStream.addStep({
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.TreeView.Constants.StepPrefix + "." + EVUI.Modules.TreeView.Constants.Event_OnCollapsed,
             key: EVUI.Modules.TreeView.Constants.Event_OnCollapseed,
             handler: function (eventArgs)
             {
@@ -3817,7 +3848,7 @@ EVUI.Modules.TreeView.ExpandCollapseTreeViewNodeArgs = function ()
     @type {EVUI.Modules.TreeView.TreeViewNodeTransition}*/
     this.transition = null;
 
-    /**Object. In the event that the TreeViewNode is being expanded, these are the arugments that contorl how the TreeViewNode or its children will be built.
+    /**Object. In the event that the TreeViewNode is being expanded, these are the arguments that control how the TreeViewNode or its children will be built.
     @type {EVUI.Modules.TreeView.BuildTreeViewNodeArgs}*/
     this.buildArgs = null;
 
@@ -3826,7 +3857,7 @@ EVUI.Modules.TreeView.ExpandCollapseTreeViewNodeArgs = function ()
     this.context = {};
 };
 
-/**Object for containing the CSS details of the transition to apply to a TreeViewNode as it expands or collaposes.
+/**Object for containing the CSS details of the transition to apply to a TreeViewNode as it expands or collapses.
 @class*/
 EVUI.Modules.TreeView.TreeViewNodeTransition = function ()
 {
@@ -3838,12 +3869,12 @@ EVUI.Modules.TreeView.TreeViewNodeTransition = function ()
     @type {String}*/
     this.keyframes = null;
 
-    /**The duration (in milliseconds) of the transition so that the appropate events are only fired once the transition is complete.
+    /**The duration (in milliseconds) of the transition so that the appropriate events are only fired once the transition is complete.
     @type {Number}*/
     this.duration = 0;
 };
 
-/**Event arguements object for all TreeView and TreeViewNode events.
+/**Event arguments object for all TreeView and TreeViewNode events.
 @class*/
 EVUI.Modules.TreeView.TreeViewEventArgs = function (nodeEntry)
 {
@@ -3861,7 +3892,7 @@ EVUI.Modules.TreeView.TreeViewEventArgs = function (nodeEntry)
         enumerable: true
     });
 
-    /**Object. The TreeViewNode that is the subject of the evdent.
+    /**Object. The TreeViewNode that is the subject of the event.
     @type {EVUI.Modules.TreeView.TreeViewNode}*/
     this.node = null;
     Object.defineProperty(this, "node", {
@@ -3873,20 +3904,24 @@ EVUI.Modules.TreeView.TreeViewEventArgs = function (nodeEntry)
         enumerable: true
     });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the TreeViewNode's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the TreeViewNode's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Cancels the EventStream and aborts the execution of the operation.*/
+    /**Cancels theTreeViewNode's action and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Stops the EventStream from calling any other event handlers with the same name.*/
+    /**Stops the TreeViewNode from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. Any state value to carry between events.
