@@ -241,7 +241,7 @@ EVUITest.LogLevel =
 @class*/
 EVUITest.TestOptions = function ()
 {
-    /**Number. The number of milliseconds to wait before automatically failing the test.
+    /**Number. The number of milliseconds to wait before automatically failing the test. 100ms by default.
     @type {Number}*/
     this.timeout = 100;
 
@@ -249,11 +249,11 @@ EVUITest.TestOptions = function ()
     @type {String|RegExp|String[]|RegExp[]}*/
     this.fileFilter = new RegExp(/.*\.js/ig);
 
-    /**Boolean. Whether or not a failing test is considered a successful test (and a non-failing result counts as unsuccessful test).
+    /**Boolean. Whether or not a failing test is considered a successful test (and a non-failing result counts as unsuccessful test). False by default.
     @type {Boolean}*/
     this.shouldFail = false;
 
-    /**Boolean. Whether or not a test is consider successful if it finishes without calling TestArgs.pass().
+    /**Boolean. Whether or not a test is consider successful if it finishes without calling TestArgs.pass(). True by default.
     @type {Boolean}*/
     this.implicitSuccess = true;
 };
@@ -1076,6 +1076,24 @@ EVUITest.Assertion = function (value, settings)
         if (error != null) throw new Error(error.message);
 
         return _lastComparison.success;
+    };
+
+    /**Determines if two values are equal.
+    @param {any} b The value to compare against the Assertion's value.
+    @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
+    @returns {EVUITest.Assertion}*/
+    this.is = function (b, compareOptions)
+    {
+        return this.equals(b, compareOptions);
+    };
+
+    /**Determines if two values are NOT equal.
+    @param {any} b The value to compare against the Assertion's value.
+    @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
+    @returns {Boolean}*/
+    this.isNot = function (b, compareOptions)
+    {
+        return this.doesNotEqual(b, compareOptions)
     };
 
     /**Determines if two values are NOT equal.
