@@ -195,13 +195,13 @@ $evui.init(function ()
             {
                 var now = Date.now();
 
-                var index = binding.parentBinding.source.indexOf(binding.source);
+                var index = _self.data.indexOf(binding.source);
                 if (index > -1)
                 {
                     if (_self.selectedBinding == binding) _self.selectedBinding = null;
 
-                    binding.parentBinding.source.splice(index, 1);
-                    await binding.parentBinding.updateAsync();
+                    _self.data.splice(index, 1);
+                    await _self.activeBinding.updateAsync();
                 }
 
                 console.log("Remove: " + (Date.now() - now));
@@ -217,7 +217,6 @@ $evui.init(function ()
                     if (_self.selectedBinding != null) //first selection, don't de-select
                     {
                         _self.selectedBinding.source.selected = "";
-                        await _self.selectedBinding.updateAsync();
                     }
 
                     _self.selectedBinding = binding;
@@ -227,7 +226,7 @@ $evui.init(function ()
                     binding.source.selected = "";
                 }
 
-                await binding.updateAsync();
+                await _self.activeBinding.updateAsync();
 
                 console.log("Highlight: " + (Date.now() - now));
             }
