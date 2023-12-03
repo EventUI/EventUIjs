@@ -37,6 +37,6 @@ await $evui.testAsync({
 		await bindResult.updateAsync();
 
 		var newDomContent = bindResult.getBoundContent();
-		$evui.assert(domContent[0]).is(newDomContent[0]);
+		$evui.assert(domContent).isEquivalentTo(newDomContent);
 	}
 });
