@@ -28,11 +28,11 @@ var argFn = function ()
 }
 
 $evui.testHost.runAsync({
-    name: "Assertion - doesNotEqual",
+    name: "Assertion - isNot - ArgArray",
     testArgs: argArray,
-    test: function (testArgs, a, b, shouldFail)
+    test: function (testArgs, a, b, valuesMatch)
     {
-        testArgs.options.shouldFail = shouldFail;
+        testArgs.options.shouldFail = valuesMatch;
         var result = null;
 
         try
@@ -49,11 +49,11 @@ $evui.testHost.runAsync({
 });
 
 $evui.testHost.runAsync({
-    name: "Assertion - isNot",
+    name: "Assertion - isNot - ArgGenerator",
     testArgs: argGenerator,
-    test: function (testArgs, a, b, shouldFail)
+    test: function (testArgs, a, b, valuesMatch)
     {
-        testArgs.options.shouldFail = shouldFail;
+        testArgs.options.shouldFail = valuesMatch;
         var result = null;
 
         try
@@ -70,11 +70,11 @@ $evui.testHost.runAsync({
 });
 
 $evui.testHost.runAsync({
-    name: "Assertion - isNot",
+    name: "Assertion - isNot - ArgFunction",
     testArgs: argFn,
-    test: function (testArgs, a, b, shouldFail)
+    test: function (testArgs, a, b, valuesMatch)
     {
-        testArgs.options.shouldFail = shouldFail;
+        testArgs.options.shouldFail = valuesMatch;
         var result = null;
 
         try
@@ -92,10 +92,23 @@ $evui.testHost.runAsync({
 
 $evui.testHost.runAsync({
     name: "Assertion - is",
-    args: [],
-    test: function (testArgs, a, b)
+    args: argArray,
+    test: function (testArgs, a, b, valuesMatch)
     {
-        var result = $evui.assert("1").is("1");
-        testArgs.outputWriter.logInfo(result.message);
+        testArgs.options.shouldFail = !valuesMatch;
+        var result = null;
+
+        try
+        {
+            result = $evui.assert(a).is(b);
+            testArgs.outputWriter.logInfo(result.message);
+        }
+        catch (ex)
+        {
+            testArgs.outputWriter.logInfo(ex.message);
+            throw ex;
+        }
     }
 });
+
+$evui.testHost.getResults();

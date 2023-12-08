@@ -505,6 +505,10 @@ EVUITest.TestHostController = function ()
                         {
                             args = [returnedArgs];
                         }
+                        else
+                        {
+                            args = returnedArgs;
+                        }
                     }
                 }
                 else //wasnt even an object, wrap it in an array
