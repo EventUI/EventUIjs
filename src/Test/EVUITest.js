@@ -1092,7 +1092,7 @@ EVUITest.Assertion = function (value, settings)
         return false;
     };
 
-    /**Determines if two values are equal.
+    /**Determines if two values are equal using strict ValueCompareOptions rules by default.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
@@ -1109,7 +1109,7 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if two values are NOT equal.
+    /**Determines if two values are NOT equal using strict ValueCompareOptions rules by default.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
@@ -1126,7 +1126,7 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if the predicate function returns true when executed and passed the Assertion's value as a parameter.
+    /**Determines if the predicate function returns true (as determined by a strict comparison to the boolean 'true' by default) when executed and passed the Assertion's value as a parameter.
     @param {EVUITest.Constants.Fn_Predicate} predicate The function to feed Assertion's value into.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValuePredicateResult}*/
@@ -1142,7 +1142,7 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if the predicate function returns false when executed and passed the Assertion's value as a parameter.
+    /**Determines if the predicate function returns false (as determined by a strict comparison to the boolean 'false' by default) when executed and passed the Assertion's value as a parameter.
     @param {EVUITest.Constants.Fn_Predicate} predicate The function to feed Assertion's value into.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValuePredicateResult}*/
@@ -1158,7 +1158,7 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if an Array contains the given value.
+    /**Determines if an Array contains the given value based on strict ValueCompareOptions by default.
     @param {Any} value The value to find in the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueContainmentResult}*/
@@ -1174,7 +1174,7 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if an Array does not contain the given value.
+    /**Determines if an Array does not contain the given value based on strict ValueCompareOptions by default.
     @param {Any} value The value to find in the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueContainmentResult}*/
@@ -1190,8 +1190,11 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if two values are "equivalent" in that, if both are objects, their property values match regardless if the object references differ.
-    @param {any} b The value to compare against the Assertion's value.
+    /**Determines if two values are "equivalent" in that
+    1. If both are objects, at least one of their property values do not match regardless if the object references differ.
+    
+    Otherwise equivlanecy is based on strict ValueCompareOptions by default.
+    @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
     this.isEquivalentTo = function (b, compareOptions)
@@ -1208,8 +1211,11 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if two values are NOT "equivalent" in that, if both are objects, at least one of their property values do not match regardless if the object references differ.
-    @param {any} b The value to compare against the Assertion's value.
+    /**Determines if two values are NOT "equivalent" in that:
+    1. If both are objects, at least one of their property values do not match regardless if the object references differ.
+    
+    Otherwise equivlanecy is based on strict ValueCompareOptions by default.
+    @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
     this.isNotEquivalentTo = function (b, compareOptions)
@@ -1226,18 +1232,25 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if two values are "roughly" the same in that, if both are objects, their property values match regardless if the object references differ. If an object being compared is an array, the order of elements does not matter.
-    @param {any} b The value to compare against the Assertion's value.
+    /**Determines if two values are "roughly" the same in that:
+    1. If both are objects, their property values match regardless if the object references differ. 
+    2. If an object being compared is an array, the order of elements does not matter.
+    3. If strings are being compared, their case does not matter.
+
+    Otherwise, loose equality is used by default.
+    @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
     this.isRoughly = function (b, compareOptions)
     {
         var defaultSettings = {};
-        defaultSettings.affirmitiveCheck = false;
+        defaultSettings.affirmitiveCheck = true;
         defaultSettings.compareType = EVUITest.ValueCompareType.Equivalency;
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
         defaultSettings.ignoreOrder = true;
+        defaultSettings.strictEquals = false;
+        defaultSettings.ignoreCase = true;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1245,7 +1258,12 @@ EVUITest.Assertion = function (value, settings)
         return _lastComparison;
     };
 
-    /**Determines if two values are NOT "roughly" the same in that, if both are objects, their at least one of their property values does not match regardless if the object references differ. If an object being compared is an array, the order of elements does not matter.
+    /**Determines if two values are NOT "roughly" the same in that:
+    1. If both are objects, their property values match regardless if the object references differ. 
+    2. If an object being compared is an array, the order of elements does not matter.
+    3. If strings are being compared, their case does not matter.
+
+    Otherwise, loose equality is used by default.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
@@ -1257,6 +1275,8 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
         defaultSettings.ignoreOrder = true;
+        defaultSettings.strictEquals = false;
+        defaultSettings.ignoreCase = true;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1265,12 +1285,12 @@ EVUITest.Assertion = function (value, settings)
     };
 
     /**Performs an arbitrary comparison between two values as specified by the compareOptions parameter.
-    @param {any} b Any value or predicate function to use in the comparison.
+    @param {Any} b Any value or predicate function to use in the comparison.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult|EVUITest.ValueContainmentResult|EVUITest.ValuePredicateResult}*/
     this.compare = function (b, compareOptions)
     {
-        if (compareOptions == null || typeof compareOptions !== "object") throw Error("compareOptions must be an object.");
+        if (compareOptions == null || typeof compareOptions !== "object") compareOptions = {};
 
         var error = executeAssertion(b, compareOptions, {});
         if (error != null) throw new Error(error.message);
@@ -3025,35 +3045,35 @@ EVUITest.ValueCompareOptions = function ()
     @type {String}*/
     this.compareType = EVUITest.ValueCompareType.None;
 
-    /**Boolean. Whether or not the expected result of the operation should be true. This is used for switching calls between "does a equal b" and "does b NOT equal a".
+    /**Boolean. Whether or not the expected result of the operation should be true. This is used for switching calls between "does a equal b" and "does b NOT equal a". True by default.
     @type {Boolean}*/
     this.affirmitiveCheck = true;
 
-    /**Boolean. Whether or not the "===" equality comparer should be used instead of the "==" equality comparer.
+    /**Boolean. Whether or not the "===" equality comparer should be used instead of the "==" equality comparer. True by default.
     @type {Boolean}*/
     this.strictEquals = true;
 
-    /**Boolean. Whether or not to differentiate between null and undefined - if true, null and undefined are both considered equal.
+    /**Boolean. Whether or not to differentiate between null and undefined - if true, null and undefined are both considered equal. True by default.
     @type {Boolean}*/
     this.nullCheckOnly = true;
 
-    /**Boolean. Whether or not to case-normalize strings before comparing them.
+    /**Boolean. Whether or not to case-normalize strings before comparing them. False by default.
     @type {Boolean}*/
     this.ignoreCase = false;
 
-    /**Boolean. Whether or not differences in object references are ignored. If references are ignored, objects are compared based on their property values.
+    /**Boolean. Whether or not differences in object references are ignored. If references are ignored, objects are compared based on their property values. False by default.
     @type {Boolean}*/
     this.ignoreReferences = false;
 
-    /**Boolean. Whether or not differences between the indexes of the elements in an array should be ignored when comparing two arrays.
+    /**Boolean. Whether or not differences between the indexes of the elements in an array should be ignored when comparing two arrays. False by default.
     @type {Boolean}*/
     this.ignoreOrder = false;
 
-    /**Boolean. Whether or not the comparison between two objects should be recursive and dig into child objects.
+    /**Boolean. Whether or not the comparison between two objects should be recursive and dig into child objects. True by default.
     @type {Boolean}*/
     this.recursive = true;
 
-    /**Boolean. Whether or not to stop the comparison process as soon as the first difference is found between two objects.
+    /**Boolean. Whether or not to stop the comparison process as soon as the first difference is found between two objects. True by default.
     @type {Boolean}*/
     this.shortCircuit = true;
 

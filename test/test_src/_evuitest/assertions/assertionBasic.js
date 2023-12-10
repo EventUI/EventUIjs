@@ -92,7 +92,7 @@ $evui.testHost.runAsync({
 
 $evui.testHost.runAsync({
     name: "Assertion - is",
-    args: argArray,
+    testArgs: argArray,
     test: function (testArgs, a, b, valuesMatch)
     {
         testArgs.options.shouldFail = !valuesMatch;
