@@ -609,7 +609,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 {
                     if (typeof parentSession.context === "object")
                     {
-                        session.context = EVUI.Modules.Core.Utils.shallowExtend(session.context, parentSession.context);
+                        session.context = EVUI.Modules.Core.Utils.deepExtend(session.context, parentSession.context);
                     }
                     else
                     {
@@ -696,7 +696,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 {
                     if (typeof parentSession.context === "object")
                     {
-                        session.context = EVUI.Modules.Core.Utils.shallowExtend(session.context, parentSession.context);
+                        session.context = EVUI.Modules.Core.Utils.deepExtend(session.context, parentSession.context);
                     }
                     else
                     {
@@ -2092,7 +2092,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 else //we have an object to inject that is not an array, add it's contents to the DOM.
                 {
                     //if the bound htmlContent fragment has never been created, we need to make it now to inject the whole set of DOM nodes at once.
-                    if (session.bindingHandle.currentState.boundContentFragment == null) session.bindingHandle.currentState.boundContentFragment = toDomNode(session.bindingHandle.currentState.boundContentTree); //session.bindingHandle.currentState.boundContentTree.toNode();
+                    if (session.bindingHandle.currentState.boundContentFragment == null) session.bindingHandle.currentState.boundContentFragment = toDomNode(session.bindingHandle.currentState.boundContentTree, session.bindingHandle); //session.bindingHandle.currentState.boundContentTree.toNode();
 
                     //grab the child node references BEFORE insertion since the document fragment will be empty once its children are in the DOM.
                     var nodeChildren = getNodeListFromFragment(session.bindingHandle.currentState.boundContentFragment);
@@ -2738,7 +2738,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (session.bindingHandle.binding.bindingMode === EVUI.Modules.Binding.BindingMode.Overwrite) //overwriting, replace the text node
             {
-                parent.a.node.replaceWith(toDomNode(parentNode.b)); //parentNode.b.toNode());
+                parent.a.node.replaceWith(toDomNode(parentNode.b, session.bindingHandle)); //parentNode.b.toNode());
             }
             else //otherwise just update it's text content
             {
@@ -2755,7 +2755,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             {
                 if (bType === "object") //new is a node
                 {
-                    if (bTarget == null) bTarget = toDomNode(parentNode.b); //parentNode.b.toNode(); //lazily create the node
+                    if (bTarget == null) bTarget = toDomNode(parentNode.b, session.bindingHandle); //parentNode.b.toNode(); //lazily create the node
                     if (isDomTreeElement(diffB) === true)
                     {
                         aTarget.replaceWith(bTarget);
@@ -2774,7 +2774,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             {
                 if (aType === "object") //old is a node
                 {
-                    if (bTarget == null) bTarget = toDomNode(parentNode.b); //parentNode.b.toNode(); //lazily create the node
+                    if (bTarget == null) bTarget = toDomNode(parentNode.b, session.bindingHandle); //parentNode.b.toNode(); //lazily create the node
                     if (isDomTreeElement(diffA) === true)
                     {
                         bTarget.replaceWith(aTarget);
@@ -2804,7 +2804,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                     if (aTree != null && bTree != null) //both are nodes, swap them
                     {
-                        toDomNode(bTree); //bTree.toNode();
+                        toDomNode(bTree, session.bindingHandle); //bTree.toNode();
                         aTree.node.replaceWith(bTree.node);
                     }
                     else if (bTree == null) //b is not there, remove existing
@@ -2813,7 +2813,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     }
                     else if (aTree == null) //existing is not there, add the missing b node
                     {
-                        toDomNode(bTree); //bTree.toNode();
+                        toDomNode(bTree, session.bindingHandle); //bTree.toNode();
                         insertMissingNode2(session, bTree.node);
                     }
                 }
@@ -2821,7 +2821,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             else //we have a parent
             {
                 var aTarget = parentNode.a.node;
-                var bTarget = toDomNode(parentNode.b); //parentNode.b.toNode();
+                var bTarget = toDomNode(parentNode.b, session.bindingHandle); //parentNode.b.toNode();
 
                 if (aType === "object") //parent existing was there, but there is no new matching node
                 {                   
@@ -2829,8 +2829,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     treeDiff.a.node.remove();
                 }
                 else if (bType === "object") 
-                {
-                    
+                {                    
 
                     if (aTarget.lastChild == null)
                     {
@@ -2838,7 +2837,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     }
                     else
                     {
-                        injectNode(session, EVUI.Modules.Binding.BindingInsertionMode.InsertAfter, aTarget.lastChild, toDomNode(treeDiff.b)); //.toNode());
+                        injectNode(session, EVUI.Modules.Binding.BindingInsertionMode.InsertAfter, aTarget.lastChild, toDomNode(treeDiff.b, session.bindingHandle)); //.toNode());
                     }
                 }
             }
@@ -2871,7 +2870,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (tagDiff != null || session.bindingHandle.binding.insertionMode === EVUI.Modules.Binding.BindingMode.Overwrite) //tags are different, they have to be different elements or we are overwriting the old content with new content explicitly
             {
                 var aTarget = treeDiff.a.node;
-                var bTarget = toDomNode(treeDiff.b); //.toNode();
+                var bTarget = toDomNode(treeDiff.b, session.bindingHandle); //.toNode();
                 aTarget.replaceWith(bTarget);
 
                 if (session.bindingHandle.binding.insertionMode === EVUI.Modules.Binding.BindingMode.Overwrite && contentDiff != null && session.bindingHandle.currentState.childBindingHandles.length > 0) //if we're overwriting it's possible to have children that were already merged, so attempt to merge in the existing content under this one
@@ -2919,7 +2918,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         var attributeData = buildAttributeDictionary(attrDiff);
         var currentMeta = getElementMetadata(attrDiff.parentComparison.a.node);
-        var newMeta = getElementMetadata(toDomNode(attrDiff.parentComparison.b));
+        var newMeta = getElementMetadata(toDomNode(attrDiff.parentComparison.b, session.bindingHandle));
 
         var numKeys = attributeData.keys.length;
         for (var x = 0; x < numKeys; x++)
@@ -3431,7 +3430,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                         {
                             if (session.parentSession != null)
                             {
-                                if (session.parentSession.bindingHandle.currentState.boundContentFragment == null) session.parentSession.bindingHandle.currentState.boundContentFragment = toDomNode(session.parentSession.bindingHandle.currentState.boundContentTree); // toNode();
+                                if (session.parentSession.bindingHandle.currentState.boundContentFragment == null) session.parentSession.bindingHandle.currentState.boundContentFragment = toDomNode(session.parentSession.bindingHandle.currentState.boundContentTree, session.parentSession.bindingHandle); // toNode();
                                 insertMissingNode2(session.parentSession, session.parentSession.bindingHandle.currentState.boundContentFragment);
                             }
                             else
@@ -3552,10 +3551,18 @@ EVUI.Modules.Binding.BindingController = function (services)
         }
     };
 
-    var toDomNode = function (domTreeEle)
+    /**Turns a DomTreeElement into an actual DOM Node.
+     * 
+     * @param {EVUI.Modules.DomTree.DomTreeElement} domTreeEle The DomTreeElement to turn into a DOM Node.
+     * @param {BindingHandle} bindingHandle
+     * @returns
+     */
+    var toDomNode = function (domTreeEle, bindingHandle)
     {
         var node = domTreeEle.toNode();
-        assignElementMetadata(domTreeEle);
+        var bindOptions = (bindingHandle.options == null) ? null : bindingHandle.options.nodeCreation;
+
+        assignElementMetadata(domTreeEle, bindOptions);
 
         return node;
     };
@@ -4151,7 +4158,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (boundParents != null && boundParents.length > 0) //we found some elements that have the correct attribute, turn the whole tree into a document fragment and go get the bound children out of it like normal.
             {
-                session.bindingHandle.currentState.boundContentFragment = toDomNode(session.bindingHandle.currentState.boundContentTree); //session.bindingHandle.currentState.boundContentTree.toNode();
+                session.bindingHandle.currentState.boundContentFragment = toDomNode(session.bindingHandle.currentState.boundContentTree, session.bindingHandle); //session.bindingHandle.currentState.boundContentTree.toNode();
                 if (session.bindingHandle.currentState.boundContentFragment != null) return getBoundChildren(session);
             }
         }
@@ -5484,7 +5491,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         }
         else
         {
-            addTemplateArgs.options = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Binding.BindOptions(), addTemplateArgs.options);
+            addTemplateArgs.options = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.Binding.BindOptions(), addTemplateArgs.options);
         }
 
         if (useSameLoadSettings === true)
@@ -5493,15 +5500,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         }
         else
         {
-            addTemplateArgs.contentLoadSettings = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Binding.BindingContentLoadSettings(), addTemplateArgs.contentLoadSettings);
-            if (addTemplateArgs.contentLoadSettings.httpRequestArgs != null)
-            {
-                addTemplateArgs.contentLoadSettings.httpRequestArgs = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Http.HttpRequestArgs(), addTemplateArgs.contentLoadSettings.httpRequestArgs);
-                if (addTemplateArgs.contentLoadSettings.httpRequestArgs.headers != null) addTemplateArgs.contentLoadSettings.httpRequestArgs.headers = addTemplateArgs.contentLoadSettings.httpRequestArgs.headers.map(function (header)
-                {
-                    return new EVUI.Modules.Http.HttpRequestHeader(header.key, header.value);
-                });
-            }
+            addTemplateArgs.contentLoadSettings = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.Binding.BindingContentLoadSettings(), addTemplateArgs.contentLoadSettings);
         }
 
         return addTemplateArgs;
@@ -6582,6 +6581,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         @type {validateElement}*/
         this.validateElement = null;
 
+        /**Function for turning a DomTreeElement into a DOM Node object.*/
         this.toDomNode = null;
     };
 
@@ -7310,7 +7310,7 @@ EVUI.Modules.Binding.Binding = function (handle)
                 }
                 else
                 {
-                    _handle.options = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Binding.BindOptions(), value);
+                    _handle.options = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.Binding.BindOptions(), value);
                 }
             }
             else
@@ -7385,7 +7385,7 @@ EVUI.Modules.Binding.Binding = function (handle)
 
             if (_handle.currentState.boundContentTree != null && _handle.newStateBound === false)
             {
-                _handle.currentState.boundTemplateFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree); //_handle.currentState.boundContentTree.toNode();
+                _handle.currentState.boundTemplateFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
             }
 
             return _handle.currentState.boundTemplateFragment;
@@ -7799,6 +7799,10 @@ EVUI.Modules.Binding.BindOptions = function ()
     @type {Boolean}*/
     this.shareContentLoadSettings = true;
 
+    /**Object. An instance of DomTreeElementOptions that controls various settings related to creating to creating the resulting DOM Nodes form the binding process.
+    @type {EVUI.Modules.DomTree.DomTreeElementOptions}*/
+    this.nodeCreation = null;
+
     /**Boolean. When executing recursive Bindings and using a CSS selector to find the Binding's element, this controls whether or not the parent Binding's element is used as the scope for finding the child Binding's element. True by default.
     @type {Boolean}*/
     this.scopedCSSSelectors = true;
@@ -7903,7 +7907,7 @@ EVUI.Modules.Binding.ShareContextMode =
     NewContext: "cxt-new",
     /**The context will be the same object reference or value for each child Binding.*/
     ShareReference: "cxt-ref",
-    /**The context will be a shallow clone of its parent's context.*/
+    /**The context will be a deep clone of its parent's context.*/
     Clone: "cxt-clone"
 };
 
