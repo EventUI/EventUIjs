@@ -2176,12 +2176,12 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         this.omittedAttributesDic = {};
     };
 
-    /**Determins if a tag is an omitted tag or not.
+    /**Determines if a tag is an omitted tag or not.
     @param {String} tagName The name of the tag to check.*/
     DomTreeParseOptions.prototype.isOmittedTag = function (tagName)
     {
         if (typeof tagName !== "string") return true;
-        if (this.omittedAttributesDic[tagName.toLowerCase()] === true) return true;
+        if (this.omittedElementsDic[tagName.toLowerCase()] === true) return true;
 
         return false;
     };
@@ -2466,7 +2466,7 @@ EVUI.Modules.DomTree.DomTreeElementOptions = function ()
     @type {Boolean}*/
     this.noInlineEventHandlers = false;
 
-    /**Object. If noInlineEventHandlers is set to true, this is the "exception case" filter where certain inline handlers are allowed, but must satisfy a RegExp or predicate function in order to be included.
+    /**Object. If noInlineEventHandlers is set to true, this is the "exception case" filter where certain in-line handlers are allowed, but must satisfy a RegExp or predicate function in order to be included.
     @type {RegExp|EVUI.Modules.DomTree.Constants.Fn_AttributeFilter}*/
     this.inlineEventHandlerFilter = null;
 };
