@@ -2266,11 +2266,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             for (var x = 0; x < numNewContent; x++)
             {
                 var contentDiff = diff.rootComparison.childComparisons[x];
-                if (contentDiff.a != null && contentDiff.a.node != null && contentDiff.a.node.isConnected === true)
+                if (contentDiff.a != null && contentDiff.a.node != null && EVUI.Modules.Core.Utils.isOrphanedNode(contentDiff.a.node) === false)
                 {
                     final.push(contentDiff.a.node);
                 }
-                else if (contentDiff.b != null && contentDiff.b.node != null && (contentDiff.b.node.isConnected === true || contentDiff.a == null))
+                else if (contentDiff.b != null && contentDiff.b.node != null && EVUI.Modules.Core.Utils.isOrphanedNode(contentDiff.b.node) === false || contentDiff.a == null)
                 {
                     final.push(contentDiff.b.node);
                 }
