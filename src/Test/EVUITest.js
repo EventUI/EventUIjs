@@ -2025,6 +2025,7 @@ EVUITest.ValueComparer = function ()
 
         context.options = Object.freeze(extend({}, options));
         context.equalityComparers = buildComparerCloneList(context.options);
+        context.numComparers = context.equalityComparers.length;
 
         return context;
     };
@@ -2082,59 +2083,24 @@ EVUITest.ValueComparer = function ()
 
         if (comparison.aType === "object" && comparison.bType === "object" && a != null && b != null)
         {
-            if (context.options.recursive === false && parentComparison != null)
+            var comparisonExecuted = applyCustomComparer(comparison, context);
+            if (comparisonExecuted === false)
             {
-                comparison.valuesEqual = valuesEqual(comparison, context);
-            }
-            else
-            {
-                comparison.valuesEqual = objectsEqual(comparison, context);
+                if (context.options.recursive === false && parentComparison != null)
+                {
+                    comparison.valuesEqual = valuesEqual(comparison, context);
+                }
+                else
+                {
+
+                    comparison.valuesEqual = objectsEqual(comparison, context);
+                }
             }
         }
         else
         {
             comparison.valuesEqual = valuesEqual(comparison, context);
-        }
-
-        var useCustomComparers = false;
-        if (context.options.affirmitiveCheck === false)
-        {
-            if (comparison.valuesEqual === false)
-            {
-                comparison.success = true;
-            }
-            else
-            {
-                useCustomComparers = true;
-            }
-        }
-        else
-        {
-            if (comparison.valuesEqual === true)
-            {
-                comparison.success = true;
-            }
-            else
-            {
-                useCustomComparers = true;
-            }
-        }
-
-        if (useCustomComparers === true && context.equalityComparers.length > 0)
-        {
-            var equalityContext = Object.freeze(buildEqualityContext(comparison, context));
-            var comparers = getEqualityComparers(equalityContext, context);
-
-            var numComparers = comparers.length;
-            for (var x = 0; x < numComparers; x++)
-            {
-                if (comparers[x].equals(equalityContext) === true)
-                {
-                    comparison.valuesEqual = true;
-                    break;
-                }
-            }
-        }
+        }        
 
         if (context.options.affirmitiveCheck === false)
         {
@@ -2150,10 +2116,40 @@ EVUITest.ValueComparer = function ()
 
         if (parentComparison != null)
         {
+            if (parentComparison.childComparisons == null) parentComparison.childComparisons = [];
             parentComparison.childComparisons.push(comparison);
         }
 
         return comparison;
+    };
+
+    /**Looks up to see if there are any custom comparers to be used in this comparison. If so, the custom comparers are used instead of the default compare logic. Returns true if a custom comparer was used.
+    @param {EVUITest.ValueCompareResult} comparison The comparison to check agsinst the custom equality comparers list.
+    @param {ComparisonContext} context The active comparison context.
+    @returns {Boolean}*/
+    var applyCustomComparer = function (comparison, context)
+    {
+        var comparisonExecuted = false;
+        if (context.numComparers > 0)
+        {
+            var getComparersResult = getEqualityComparers(comparison, context);
+            if (getComparersResult != null)
+            {         
+                var numComparers = getComparersResult.comparers.length;
+                for (var x = 0; x < numComparers; x++)
+                {
+                    comparisonExecuted = true;
+                    if (getComparersResult.equalityContext == null) getComparersResult.equalityContext = buildEqualityContext(comparison, context);
+                    if (getComparersResult.comparers[x].equals(getComparersResult.equalityContext) === true)
+                    {
+                        comparison.valuesEqual = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return comparisonExecuted;
     };
 
     /**Determines if a predicate function returns true or not when passed a value as a parameter.
@@ -2270,33 +2266,24 @@ EVUITest.ValueComparer = function ()
     };
 
     /**Gets all the ValueEqualityComparers that apply to a value.
-    @param {EVUITest.ValueEqualityContext} equalityContext The metadata about the equality comparison.
-    @param {ComparisonContext} context The contextual information about the comparison.
-    @returns {EVUITest.ValueEqualityComparer[]}*/
-    var getEqualityComparers = function (equalityContext, context)
+    @param {EVUITest.ValueCompareResult} comparison The comparison being fed into a ValueEqualityComparer.
+    @param {ComparisonContext} context The contextual information about the comparison.*/
+    var getEqualityComparers = function (comparison, context)
     {
-        var aType = typeof equalityContext.a;
-        var comparers = [];
+        var comparers = null;
+        var equalityContext = null;
 
-        var numTotal = context.equalityComparers.length;
+        var numTotal = context.numComparers;
         for (var x = 0; x < numTotal; x++)
         {
             var curComparer = context.equalityComparers[x];
             var flags = typeof curComparer.filterFlags !== "number" ? EVUITest.EqualityFilterFlags.All : curComparer.filterFlags;
 
-            if (flags & EVUITest.EqualityFilterFlags.TypeOf === EVUITest.EqualityFilterFlags.TypeOf)
-            {
-                if (typeof curComparer.typeOfFilter === "string" && curComparer.typeOfFilter !== "any")
-                {
-                    if (aType !== curComparer.typeOfFilter) continue;
-                }
-            }
-
             if (flags & EVUITest.EqualityFilterFlags.Prototype === EVUITest.EqualityFilterFlags.Prototype)
             {
                 if (typeof curComparer.prototypeFilter === "function")
                 {
-                    if (equalityContext.a instanceof curComparer.prototypeFilter === false) continue;
+                    if (comparison.a instanceof curComparer.prototypeFilter === false) continue;
                 }
             }
 
@@ -2304,14 +2291,17 @@ EVUITest.ValueComparer = function ()
             {
                 if (typeof curComparer.predicateFilter === "function")
                 {
+                    if (equalityContext == null) equalityContext = buildEqualityContext(comparison, context);
                     if (curComparer.predicateFilter(equalityContext) === false) continue;
                 }
             }
 
+            if (comparers == null) comparers = [];
             comparers.push(curComparer);
         }
 
-        return comparers;
+        if (comparers == null) return null;
+        return { comparers: comparers, equalityContext: equalityContext };
     };
 
     /**Determines if two values are equal depending on the settings of the ComparisonContext.
@@ -2814,6 +2804,10 @@ EVUITest.ValueComparer = function ()
         @type {EVUITest.ValueEqualityComparer[]}*/
         this.equalityComparers = [];
 
+        /**Nuber. The number of equality comparers present in this context.
+        @type {Number}*/
+        this.numComparers = 0;
+
         /**Object. The comparison options for what determines equality in this compare session.
         @type {EVUITest.ValueCompareOptions}*/
         this.options = null;
@@ -2855,7 +2849,9 @@ EVUITest.ValueComparer.Default = null;
             if (comparer == null)
             {
                 comparer = Object.freeze(new EVUITest.ValueComparer());
+
                 comparer.addEqualityComparer(EVUITest.ValueEqualityComparer.DomNodeComparer);
+                comparer.addEqualityComparer(EVUITest.ValueEqualityComparer.DateComparer)
             }
 
             return comparer;
@@ -2941,7 +2937,7 @@ EVUITest.ValueCompareResult = function (parent)
 
     /**Array. If this comparison was between two objects, these are the child comparisons of the properties of both objects (if the "shortCircuit" option is true this list will stop at the first different property).
     @type {EVUITest.ValueCompareResult[]}*/
-    this.childComparisons = [];
+    this.childComparisons = null;
 
     /**Boolean. Whether or not the comparison was considered a "success" based on the options provided. This is true if the expected equality result (equals/not equals) matches the actual equality comparison's result.
     @type {Boolean}*/
@@ -3088,12 +3084,10 @@ EVUITest.EqualityFilterFlags =
 {
     /**Default.*/
     None: 0,
-    /**The result of the "typeof" operator on the value should be used as a filter.*/
-    TypeOf: 1,
     /**The result of the "instanceof" operator should be used as a filter.*/
-    Prototype: 2,
+    Prototype: 1,
     /**The result of a predicate function should be used as a filter.*/
-    Predicate: 4,
+    Predicate: 2,
     /**All filters should be used.*/
     All: 2147483647
 };
@@ -3129,10 +3123,7 @@ EVUITest.ValueEqualityComparer = function ()
 
 /**A special default ValueEqualityComparer designed to determine if two Nodes are equivalent (equivalent textContent, attributes, and/or childNodes).
 @type {EVUITest.ValueEqualityComparer}*/
-EVUITest.ValueEqualityComparer.DomNodeComparer = null;
-
-//self executing function to make the standard DomNode ValueEqualityComparer.
-(function ()
+EVUITest.ValueEqualityComparer.DomNodeComparer = (function ()
 {
     var compareAttributes = function (aAttr, bAttr, context)
     {
@@ -3197,8 +3188,7 @@ EVUITest.ValueEqualityComparer.DomNodeComparer = null;
     var domCompare = new EVUITest.ValueEqualityComparer();
     domCompare.prototypeFilter = Node;
     domCompare.name = "evui-dom-node";
-    domCompare.typeOfFilter = "object";
-    domCompare.filterFlags |= EVUITest.EqualityFilterFlags.TypeOf | EVUITest.EqualityFilterFlags.Prototype;
+    domCompare.filterFlags |= EVUITest.EqualityFilterFlags.Prototype;
     domCompare.equals = function (context)
     {
         if (context.a == context.b) return true; //nodes are the same node
@@ -3207,16 +3197,26 @@ EVUITest.ValueEqualityComparer.DomNodeComparer = null;
         return compareNodes(context.a, context.b, context);
     }
 
-    domCompare = Object.freeze(domCompare);
+    Object.freeze(domCompare);
+    return domCompare;
+})();
 
-    Object.defineProperty(EVUITest.ValueEqualityComparer, "DomNodeComparer", {
-        get: function ()
-        {
-            return domCompare;
-        },
-        configurable: false,
-        enumerable: true
-    });
+/**A comparer used for comparing Date objects.
+@type {EVUITest.ValueEqualityComparer}*/
+EVUITest.ValueEqualityComparer.DateComparer = (function ()
+{
+    var comparer = new EVUITest.ValueEqualityComparer();
+    comparer.name = "evui-date";
+    comparer.filterFlags |= EVUITest.EqualityFilterFlags.Prototype;
+    comparer.prototypeFilter = Date;
+    comparer.equals = function (context)
+    {
+        if (context.a === context.b) return true;
+        return context.a.getTime() === context.b.getTime();
+    }
+
+    Object.freeze(comparer);
+    return comparer;
 })();
 
 /**Parameter object that is fed into a ValueEqualityComparer's equals function. Contains all the contextual information known about a comparison at a moment in time.
