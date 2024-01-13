@@ -2116,6 +2116,7 @@ EVUITest.ValueComparer = function ()
 
         if (parentComparison != null)
         {
+            if (parentComparison.childComparisons == null) parentComparison.childComparisons = [];
             parentComparison.childComparisons.push(comparison);
         }
 
@@ -2936,7 +2937,7 @@ EVUITest.ValueCompareResult = function (parent)
 
     /**Array. If this comparison was between two objects, these are the child comparisons of the properties of both objects (if the "shortCircuit" option is true this list will stop at the first different property).
     @type {EVUITest.ValueCompareResult[]}*/
-    this.childComparisons = [];
+    this.childComparisons = null;
 
     /**Boolean. Whether or not the comparison was considered a "success" based on the options provided. This is true if the expected equality result (equals/not equals) matches the actual equality comparison's result.
     @type {Boolean}*/
