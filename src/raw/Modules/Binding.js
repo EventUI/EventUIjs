@@ -6100,7 +6100,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     };
 
     /**Duplicates a Html content based on the properties of the object passed in along with the Html content.
-    @param {Object} obj The object that contains the properties to populate the Html content with.
+    @param {BindingSession} session The current state of the bind operation.
     @param {String} htmlContent The Html content to populate with values from the object.
     @param {EVUI.Modules.Binding.BoundProperty[]} mappings An array of TokenMapping representing the tokens to replace in the htmlContent.
     @param {HtmlContentMetadata} contentMetadata The metadata describing the special properties of the htmlContent.
@@ -6128,9 +6128,23 @@ EVUI.Modules.Binding.BindingController = function (services)
                 replacementValue = curProperty.value;
             }
 
-            if (replacementValue == null) replacementValue = "";
-            var boundItemMarker = contentMetadata.attributePaths[curProperty.path];
+            if (replacementValue == null)
+            {
+                replacementValue = "";
+            }
+            else
+            {
+                replacementValue = replacementValue.toString();
+                if (session.bindingHandle.options.safeMode === true) replacementValue = replacementValue.replace(/\<|\>/g, function (value)
+                {
+                    if (value === "<") return "&lt";
+                    if (value === ">") return "&gt";
 
+                    return value;
+                });
+            }
+
+            var boundItemMarker = contentMetadata.attributePaths[curProperty.path];
             if (boundItemMarker != null) replacementValue += boundItemMarker;
 
             try
@@ -6138,7 +6152,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var existing = _escapedPathCahce[curProperty.path];
                 if (existing == null)
                 {
-                    existing = new RegExp("{{" + curProperty.path.replace(_escapeRegexRegex, function (val) { return "\\" + val; }) + "}}", "g");;
+                    existing = new RegExp("{{" + curProperty.path.replace(_escapeRegexRegex, function (val) { return "\\" + val; }) + "}}", "g");
                     _escapedPathCahce[curProperty.path] = existing;
                 }
 
@@ -6180,7 +6194,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         var fn = boundProperty.value;
         var hashKey = getInvocationHash(session, boundProperty);
-        var replacementValue = "$evui.dispatch(event, '" + hashKey + "')";
+        var replacementValue = "$evui.dispatch(event, \`" + hashKey + "\`)";
 
         //look to see if we don't have the same handler there already
         var existing = _invocationDictionary[hashKey];
@@ -7782,6 +7796,9 @@ EVUI.Modules.Binding.BindOptions = function ()
     /**Boolean. Whether or not to execute recursive Bindings under the current Binding if any are detected. True by default.
     @type {Boolean}*/
     this.recursive = true;
+
+    /**Boolean. Prevents the injection of HTML via escaping '<' and '>' in a Binding's BoundProperty values.*/
+    this.safeMode = false;
 
     /**Boolean. When executing recursive Bindings, this controls whether or not the child Bindings get the same event handlers as their parent if the child Binding is not based on a BindingTemplate that has its own events. True by default.
     @type {Boolean}*/

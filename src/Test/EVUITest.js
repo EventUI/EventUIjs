@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -85,7 +85,7 @@ EVUITest.Test = function ()
     @type {[]}*/
     this.testArgs = null;
 
-    /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestExecutionArgs instance
+    /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestArgs instance
     @type {EVUITest.Constants.Fn_Test}*/
     this.test = null;
 
@@ -1782,7 +1782,7 @@ EVUITest.Assertion = function (value, settings)
                 }
             }
 
-            var numChildren = comparison.childComparisons.length;
+            var numChildren = (comparison.childComparisons == null) ? 0 : comparison.childComparisons.length;
             if (numChildren === 0)
             {
                 return comparison;
