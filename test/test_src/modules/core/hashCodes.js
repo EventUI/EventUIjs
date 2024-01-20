@@ -1,4 +1,5 @@
-var getNextCharacter = function(str, depth, chars)
+
+var getNextCharacter = function (str, depth, chars)
 {
     if (depth <= 0) return;
     if (chars == null) chars = [];
@@ -8,57 +9,82 @@ var getNextCharacter = function(str, depth, chars)
         var curStr = str + String.fromCharCode(x);
         chars.push(curStr);
 
-        getNextCharacter(curStr, depth - 1, chars);  
+        getNextCharacter(curStr, depth - 1, chars);
     }
 
     return chars;
 };
 
-var result = getNextCharacter("", 3);
-
-var numResult = result.length;
-
-var numDictionaries = 0;
-var hashDictionaries = [];
-var keyCounter = 0;
-var maxKeys = 100000;
-
-var hashes = {};
-var collisions = {};
-
-for (var x = 0; x < numResult; x++)
-{
-    var curStr = result[x];
-    var curHash = $evui.getHashCode(curStr);
-
-    var existing = hashes[curHash];
-    if (existing == null)
+$evui.testAsync({
+    name: "HashCollision - all 3 character alphanumeric string combinations",
+    test: function (hostArgs)
     {
-        for (var y = 0; y < numDictionaries; y++)
+        var result = getNextCharacter("", 3);
+
+        var numResult = result.length;
+        var hashes = {};
+        var collisions = {};
+
+        for (var x = 0; x < numResult; x++)
         {
-            existing = hashDictionaries[y][curHash];
-            if (existing != null) break;
-        }
-    }
+            var curStr = result[x];
+            var curHash = $evui.getHashCode(curStr);
 
-    if (existing != null)
-    {
-        collisions[curHash] = existing;
-        existing.push(curStr);
-        console.log("Collision! " + curStr + " = " + curHash);
-    }
-    else
-    {
-        if (keyCounter === maxKeys)
-        {
-            numDictionaries = hashDictionaries.push(hashes);
-            hashes = {};
-            keyCounter = 0;
+            var existing = hashes[curHash];
+            if (existing != null)
+            {
+                collisions[curHash] = existing;
+                existing.push(curStr);
+
+                hostArgs.outputWriter.logWarning("Collision! " + curStr + " = " + curHash);
+            }
+            else
+            {
+                hashes[curHash] = [curStr];
+            }
         }
 
-        keyCounter++;
-        hashes[curHash] = [curStr];
-    }
-}
+        hostArgs.outputWriter.logInfo("Total hashes computed: " + numResult);
 
-console.log(collisions);
+        if (Object.keys(collisions).length > 0)
+        {
+            hostArgs.fail("Hash Collisions found:" + JSON.stringify(collisions));
+        }
+    }
+});
+
+$evui.testAsync({
+    name: "HashCollision - 1,000,000 GUIDs",
+    test: function (hostArgs)
+    {
+        var numResult = 1000000;
+        var hashes = {};
+        var collisions = {};
+
+        for (var x = 0; x < numResult; x++)
+        {
+            var curStr = $evui.guid();
+            var curHash = $evui.getHashCode(curStr);
+
+            var existing = hashes[curHash];
+            if (existing != null)
+            {
+                collisions[curHash] = existing;
+                existing.push(curStr);
+
+                hostArgs.outputWriter.logWarning("Collision! " + curStr + " = " + curHash);
+            }
+            else
+            {
+                hashes[curHash] = [curStr];
+            }
+        }
+
+        hostArgs.outputWriter.logInfo("Total hashes computed: " + Object.keys(hashes).length);
+
+        if (Object.keys(collisions).length > 0)
+        {
+            hostArgs.fail("Hash Collisions found:" + JSON.stringify(collisions));
+        }
+    }
+});
