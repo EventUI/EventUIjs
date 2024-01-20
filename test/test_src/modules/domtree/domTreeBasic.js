@@ -13,17 +13,17 @@ var makeDomTreeDocFragment = function ()
 
 var makeDomTreeElement = function (tagName, content, attrs, type, flags)
 {
-    var domType = EVUI.Modules.DomTree.DomTreeElementType.Element;
+    var domType = DomTree.DomTreeElementType.Element;
     if (typeof type === "number")
     {
         domType = type;
     }
     else
     {
-        domType = (typeof content === "string") ? EVUI.Modules.DomTree.DomTreeElementType.Text : EVUI.Modules.DomTree.DomTreeElementType.Element
+        domType = (typeof content === "string") ? DomTree.DomTreeElementType.Text : DomTree.DomTreeElementType.Element
     }
 
-    var domFlags = EVUI.Modules.DomTree.DomTreeElementFlags.HTML;
+    var domFlags = DomTree.DomTreeElementFlags.HTML;
     if (typeof flags === "number")
     {
         domFlags = flags;
@@ -46,7 +46,7 @@ var makeDomTreeElement = function (tagName, content, attrs, type, flags)
         childContent = content;
     }
 
-    var domTreeEle = new EVUI.Modules.DomTree.DomTreeElement();
+    var domTreeEle = new DomTree.DomTreeElement();
     domTreeEle.tagName = tagName;
     domTreeEle.content = childContent;
     domTreeEle.attrs = attrs;
@@ -58,7 +58,7 @@ var makeDomTreeElement = function (tagName, content, attrs, type, flags)
 
 var makeAttribute = function (key, value)
 {
-    var attr = new EVUI.Modules.DomTree.DomTreeElementAttribute();
+    var attr = new DomTree.DomTreeElementAttribute();
     attr.key = key;
     attr.val = value;
 
