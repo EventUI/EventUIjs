@@ -6,6 +6,7 @@ LICENSE file in the root directory of this source tree.*/
 using EventUITest.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.RegularExpressions;
 
 namespace EventUITest.Pages.Unit
 {
@@ -19,8 +20,9 @@ namespace EventUITest.Pages.Unit
             DirectoryInfo rootDirectory = RootDirectoryFinder.GetRootRepositoryDirectory(new string[] { "src", "test", "license" }, true);
 
             var hostArgs = UnitTesting.GetHostArgs(manifest, Path.Combine(rootDirectory.FullName, "test\\test_src\\"));
+            Regex isCommonFile = new Regex("\\.common\\..", RegexOptions.IgnoreCase);
 
-            FilesToRun = hostArgs.runOrder;
+            FilesToRun = hostArgs.runOrder.Where(fileName => isCommonFile.IsMatch(fileName) == false).ToList();
             FilesToRun.Sort();
         }
     }

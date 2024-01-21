@@ -110,5 +110,3 @@ $evui.testHost.runAsync({
         }
     }
 });
-
-$evui.testHost.getResults();
