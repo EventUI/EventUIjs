@@ -2585,7 +2585,7 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
  For example, making a <tr> inside of a div via setting the div's innerHTML doesn't work correctly (the tr element is missing in the result in most browsers). There may be other cases where similar rules are applied, and the reason for the existence of this function is to bypass those rules. 
  
  For more performant code, use innerHTML - for code that may fail based on the browser's parsing rules (i.e. having the need to parse any unknown HTML into DOM nodes), this function becomes an option instead.
-@param {String} htmlString A string of HTML to turn into a DocumentFragment.
+@param {String} html A string of HTML to turn into a DocumentFragment.
 @param {EVUI.Modules.DomTree.DomTreeElementOptions} options Options to control the conversion of the string into Dom Nodes.
 @returns {DocumentFragment} */
 $evui.parseHtml = function (html, options)
@@ -2594,7 +2594,7 @@ $evui.parseHtml = function (html, options)
 };
 
 /**Converts a HTML string into a hierarchy of DomTreeElements representing a DocumentFragment containing the parsed HTML.
-@param {String} htmlString A string of HTML to turn into a hierarchy of DomTreeElements.
+@param {String} html A string of HTML to turn into a hierarchy of DomTreeElements.
 @param {EVUI.Modules.DomTree.DomTreeElementOptions} options Options to control the conversion of the string into DomTreeElements.
 @returns {EVUI.Modules.DomTree.DomTreeElement}*/
 $evui.parseHtmlToDomTree = function (html, options)
