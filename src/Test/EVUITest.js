@@ -3007,6 +3007,7 @@ EVUITest.ValueCompareOptions = function ()
     Date.prototype[EVUITest.Constants.Symbol_EqualityComparer] = function (context)
     {
         if (context.a === context.b) return true;
+        if (context.a instanceof Date === false || context.b instanceof Date === false) return false;
         return context.a.getTime() === context.b.getTime();
     }
 })();
