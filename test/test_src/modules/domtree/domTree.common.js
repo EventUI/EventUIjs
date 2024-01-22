@@ -63,3 +63,90 @@ DomTreeTest.makeAttribute = function (key, value)
 
     return attr;
 };
+
+DomTreeTest.stringToDomTreeArgs = function* ()
+{
+    var message = "Create single element";
+    var htmlstring = "<div></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV")
+    ];  
+
+    yield [htmlstring, result, message];
+
+    message = "Single element with attribute";
+    htmlstring = "<div class='something'></div>";
+    result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [], [
+            DomTreeTest.makeAttribute("class", "something")
+        ])
+    ];
+
+    yield [htmlstring, result, message];
+
+    message = "Single element with child element";
+    htmlstring = "<div><span></span></div>";
+    result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("SPAN")
+        ])
+    ];
+
+    yield [htmlstring, result, message];
+
+    message = "Single element with child element with text";
+    htmlstring = "<div><span>hello world</span></div>";
+    result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("SPAN", [
+                DomTreeTest.makeDomTreeElement("#text", "hello world")])
+        ])
+    ];
+
+    yield [htmlstring, result, message];
+
+    message = "Single element with child element with text";
+    htmlstring = "<div>more text<span>hello world</span></div>";
+    result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("#text", "more text"),
+            DomTreeTest.makeDomTreeElement("SPAN", [
+                DomTreeTest.makeDomTreeElement("#text", "hello world")])
+        ])
+    ];
+
+    yield [htmlstring, result, message];
+}
+
+DomTreeTest.stringToDomNodeArgs = function* ()
+{
+    var message = "Create single element";
+    var htmlstring = "<div></div>";
+    
+    yield [htmlstring, message];
+
+    message = "Single element with attribute";
+    htmlstring = "<div class='something'></div>";
+    
+    yield [htmlstring, message];
+
+    message = "Single element with child element";
+    htmlstring = "<div><span></span></div>";
+
+    yield [htmlstring, message];
+
+    message = "Single element with child element with text";
+    htmlstring = "<div><span>hello world</span></div>";
+    
+    yield [htmlstring, message];
+
+    message = "Single element with child element with text";
+    htmlstring = "<div>more text<span>hello world</span></div>";
+   
+    yield [htmlstring, message];
+}
