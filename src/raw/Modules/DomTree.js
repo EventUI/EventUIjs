@@ -191,6 +191,25 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             session.options.omittedElements = omissions;
         }
 
+        if (EVUI.Modules.Core.Utils.isArray(session.options.omittedElements) === false)
+        {
+            session.options.omittedAttributes = [];
+        }
+        else
+        {
+            var omissions = [];
+            var numOmissions = session.options.omittedAttributes.length;
+            for (var x = 0; x < numOmissions; x++)
+            {
+                var curOmission = session.options.omittedAttributes[x];
+                if (typeof curOmission !== "string") continue;
+
+                omissions.push(curOmission.toLowerCase());
+            }
+
+            session.options.omittedAttributes = omissions;
+        }
+
         session.parseOptions = buildDomTreeParseOptions(session.options);
         applySafeMode(session);
 
@@ -209,7 +228,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         parseSession.parseOptions.omittedElementsDic["script"] = true;
     };
 
-    /**
+    /**Builds the options used by the parser based on the user's options object.
     @param {EVUI.Modules.DomTree.DomTreeElementOptions} options The Converter.Options passed into the main convertFromString function.**/
     var buildDomTreeParseOptions = function (options)
     {
@@ -221,11 +240,18 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             var numOmitted = options.omittedElements.length;
             for (var x = 0; x < numOmitted; x++)
             {
-                parseOptions.omittedElementsDic[options.omittedElements[x]] = true;
+                parseOptions.omittedElementsDic[options.omittedElements[x].toLowerCase()] = true;
             }
         }
 
-
+        if (EVUI.Modules.Core.Utils.isArray(options.omittedAttributes) === true)
+        {
+            var numOmitted = options.omittedAttributes.length;
+            for (var x = 0; x < numOmitted; x++)
+            {
+                parseOptions.omittedAttributesDic[options.omittedAttributes[x].toLowerCase()] = true;
+            }
+        }
 
         return parseOptions;
     }
@@ -2495,6 +2521,10 @@ EVUI.Modules.DomTree.DomTreeElementOptions = function ()
     /**Array. When converting an HTMLDOcument, Element, or DocumentFragment into an Object (a EVUI.Modules.DomTree.DomTreeElement), these are the tag names to not capture.
     @type {String[]}*/
     this.omittedElements = [];
+
+    /**Array. When converting an HTMLDOcument, Element, or DocumentFragment into an Object (a EVUI.Modules.DomTree.DomTreeElement), these are the attributes to not capture.
+    @type {String[]}*/
+    this.omittedAttributes = [];
 
     /**Boolean. When converting an HTMLDOcument, Element, or DocumentFragment into an Object (a EVUI.Modules.DomTree.DomTreeElement), and the tag name matches one of the tags in the OmittedDomTreeElements array, this controls whether or not to omit the entire element, or just omits its contents (keeping its outer tag and attributes intact). False by default.
     @type {Boolean}*/
