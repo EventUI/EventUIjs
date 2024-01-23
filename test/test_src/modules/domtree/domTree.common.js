@@ -1,11 +1,11 @@
 const DomTreeTest = {};
 
-DomTreeTest.makeDomTreeDocFragment = function ()
+DomTreeTest.makeDomTreeDocFragment = function (content)
 {
     var domTreeFrag = new EVUI.Modules.DomTree.DomTreeElement();
     domTreeFrag.type = EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment;
     domTreeFrag.flags |= EVUI.Modules.DomTree.DomTreeElementFlags.HTML;
-    domTreeFrag.content = [];
+    domTreeFrag.content = Array.isArray(content) === true ? content : [];
 
     return domTreeFrag;
 };
@@ -67,39 +67,64 @@ DomTreeTest.makeAttribute = function (key, value)
 DomTreeTest.stringToDomTreeArgs = function* ()
 {
     var message = "Create single element";
-    var htmlstring = "<div></div>";
+    var htmlString = "<div></div>";
     var result = DomTreeTest.makeDomTreeDocFragment();
     result.content = [
         DomTreeTest.makeDomTreeElement("DIV")
     ];  
 
-    yield [htmlstring, result, message];
+    yield [htmlString, result, message];
 
-    message = "Single element with attribute";
-    htmlstring = "<div class='something'></div>";
-    result = DomTreeTest.makeDomTreeDocFragment();
+    var message = "Single element with attribute";
+    var htmlString = "<div class='something'></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
     result.content = [
         DomTreeTest.makeDomTreeElement("DIV", [], [
             DomTreeTest.makeAttribute("class", "something")
         ])
     ];
 
-    yield [htmlstring, result, message];
+    yield [htmlString, result, message];
 
-    message = "Single element with child element";
-    htmlstring = "<div><span></span></div>";
-    result = DomTreeTest.makeDomTreeDocFragment();
+    var message = "Single element with child element";
+    var htmlString = "<div><span></span></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
     result.content = [
         DomTreeTest.makeDomTreeElement("DIV", [
             DomTreeTest.makeDomTreeElement("SPAN")
         ])
     ];
 
-    yield [htmlstring, result, message];
+    yield [htmlString, result, message];
 
-    message = "Single element with child element with text";
-    htmlstring = "<div><span>hello world</span></div>";
-    result = DomTreeTest.makeDomTreeDocFragment();
+    var message = "Peer Elements"
+    var htmlString = "<div></div><div></div><div></div>";
+
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV"),
+        DomTreeTest.makeDomTreeElement("DIV"),
+        DomTreeTest.makeDomTreeElement("DIV")
+    ];
+
+    yield [htmlString, result, message];
+
+    var message = "Child elements";
+    var htmlString = "<div><div><div></div></div></div>"
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("DIV", [
+                DomTreeTest.makeDomTreeElement("DIV")
+            ])
+        ])
+    ];
+
+    yield [htmlString, result, message];
+
+    var message = "Single element with child element with text";
+    var htmlString = "<div><span>hello world</span></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
     result.content = [
         DomTreeTest.makeDomTreeElement("DIV", [
             DomTreeTest.makeDomTreeElement("SPAN", [
@@ -107,11 +132,11 @@ DomTreeTest.stringToDomTreeArgs = function* ()
         ])
     ];
 
-    yield [htmlstring, result, message];
+    yield [htmlString, result, message];
 
-    message = "Single element with child element with text";
-    htmlstring = "<div>more text<span>hello world</span></div>";
-    result = DomTreeTest.makeDomTreeDocFragment();
+    var message = "Single element with child element with text";
+    var htmlString = "<div>more text<span>hello world</span></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
     result.content = [
         DomTreeTest.makeDomTreeElement("DIV", [
             DomTreeTest.makeDomTreeElement("#text", "more text"),
@@ -120,33 +145,208 @@ DomTreeTest.stringToDomTreeArgs = function* ()
         ])
     ];
 
-    yield [htmlstring, result, message];
+    yield [htmlString, result, message];
+
+    var message = "Edge case: no HTML tags";
+    var htmlString = "some text";
+
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("#text", "some text")
+    ];
+
+    yield [htmlString, result, message];
+
+    var message = "Edge case: malformed tags.";
+    var htmlString = "<div>><div><><<>></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("#text", ">"),
+            DomTreeTest.makeDomTreeElement("DIV", [
+                DomTreeTest.makeDomTreeElement("#text", "<><<>>")])            
+        ])];
+
+    yield [htmlString, result, message];
 }
 
 DomTreeTest.stringToDomNodeArgs = function* ()
 {
     var message = "Create single element";
-    var htmlstring = "<div></div>";
-    
-    yield [htmlstring, message];
+    var htmlString = "<div></div>";
+
+    yield [htmlString, message];
 
     message = "Single element with attribute";
-    htmlstring = "<div class='something'></div>";
-    
-    yield [htmlstring, message];
+    htmlString = "<div class='something'></div>";
+
+    yield [htmlString, message];
+
+    message = "Peer Elements"
+    htmlString = `<div></div><div></div><div></div>`;
+
+    yield [htmlString, message];
+
+    message = "Child elements";
+    htmlString = "<div><div><div></div></div></div>"
+
+    yield [htmlString, message];
 
     message = "Single element with child element";
-    htmlstring = "<div><span></span></div>";
+    htmlString = "<div><span></span></div>";
 
-    yield [htmlstring, message];
-
-    message = "Single element with child element with text";
-    htmlstring = "<div><span>hello world</span></div>";
-    
-    yield [htmlstring, message];
+    yield [htmlString, message];
 
     message = "Single element with child element with text";
-    htmlstring = "<div>more text<span>hello world</span></div>";
-   
-    yield [htmlstring, message];
-}
+    htmlString = "<div><span>hello world</span></div>";
+
+    yield [htmlString, message];
+
+    message = "Single element with child element with text";
+    htmlString = "<div>more text<span>hello world</span></div>";
+
+    yield [htmlString, message];
+
+    message = "Edge case: no HTML tags";
+    htmlString = "some text";
+
+    yield [htmlString, message];
+
+    message = "Edge case: malformed tags.";
+    htmlString = "<div>><div><><<>></div>";
+
+    yield [htmlString, message];
+};
+
+DomTreeTest.stringToDomNodeOmitElementArgs = function* ()
+{
+    var message = "Create single element";
+    var htmlString = "<div></div>";
+    var omittedElements = ["div"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Single element with attribute - omit DEV";
+    htmlString = "<div class='something'></div>";
+    omittedElements = ["DiV"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Peer Elements - omit SPAN"
+    htmlString = `<div></div><span></span><div></div>`;
+    omittedElements = ["span"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Child elements - omit DIV";
+    htmlString = "<div><span><div></div></span></div>"
+    omittedElements = ["div"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Single element with child element - omit SPAN";
+    htmlString = "<div><span></span></div>";
+    omittedElements = ["SPAN"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Single element with child element with text - omit LABEL";
+    htmlString = "<div><span><label>hello world</label></span></div>";
+    omittedElements = ["label"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Single element with child element with text";
+    htmlString = "<div>more text<span>hello world</span></div>";
+    omittedElements = ["SpAn"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Edge case: no HTML tags";
+    htmlString = "some text";
+    omittedElements = ["h1"];
+
+    yield [htmlString, message, omittedElements];
+
+    message = "Edge case: malformed tags.";
+    htmlString = "<div>><div><><<>></div>";
+    omittedElements = ["DIV"];
+
+    yield [htmlString, message, omittedElements];
+};
+
+DomTreeTest.stringToDomTreeOmitElementArgs = function* ()
+{
+    var message = "Create single element";
+    var htmlString = "<div></div>";
+    var omittedElements = ["div"];
+    var expected = DomTreeTest.makeDomTreeDocFragment([]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Single element with attribute - omit DEV";
+    htmlString = "<div class='something'></div>";
+    omittedElements = ["div"];
+    expected = DomTreeTest.makeDomTreeDocFragment([]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Peer Elements - omit SPAN"
+    htmlString = `<div></div><span></span><div></div>`;
+    omittedElements = ["span"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV"),
+        DomTreeTest.makeDomTreeElement("DIV")]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Child elements - omit DIV";
+    htmlString = "<div><span><div></div></span></div>"
+    omittedElements = ["div"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("SPAN")]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Single element with child element - omit SPAN";
+    htmlString = "<div><span></span></div>";
+    omittedElements = ["span"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV")]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Single element with child element with text - omit #text";
+    htmlString = "<div><span>hello world</span></div>";
+    omittedElements = ["SPAN"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV")]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Single element with child element with text";
+    htmlString = "<div>more text<span>hello world</span></div>";
+    omittedElements = ["SPAN"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("#text", "more text")
+        ])]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Edge case: no HTML tags";
+    htmlString = "some text";
+    omittedElements = ["h1"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("#text", "some text")]);
+
+    yield [htmlString, expected, message, omittedElements];
+
+    message = "Edge case: malformed tags.";
+    htmlString = "<div>><div><><<>></div>";
+    omittedElements = ["DIV"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("#text", "<><<>>")]);
+
+    yield [htmlString, expected, message, omittedElements];
+};
