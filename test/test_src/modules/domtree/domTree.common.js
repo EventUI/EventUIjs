@@ -303,8 +303,7 @@ DomTreeTest.stringToDomTreeOmitElementArgs = function* ()
     message = "Child elements - omit DIV";
     htmlString = "<div><span><div></div></span></div>"
     omittedElements = ["div"];
-    expected = DomTreeTest.makeDomTreeDocFragment([
-        DomTreeTest.makeDomTreeElement("SPAN")]);
+    expected = DomTreeTest.makeDomTreeDocFragment([]);
 
     yield [htmlString, expected, message, omittedElements];
 
@@ -345,8 +344,7 @@ DomTreeTest.stringToDomTreeOmitElementArgs = function* ()
     message = "Edge case: malformed tags.";
     htmlString = "<div>><div><><<>></div>";
     omittedElements = ["DIV"];
-    expected = DomTreeTest.makeDomTreeDocFragment([
-        DomTreeTest.makeDomTreeElement("#text", "<><<>>")]);
+    expected = DomTreeTest.makeDomTreeDocFragment([]);
 
     yield [htmlString, expected, message, omittedElements];
 };

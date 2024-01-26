@@ -90,7 +90,7 @@ EVUITest.Test = function ()
     @type {[]}*/
     this.testArgs = null;
 
-    /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestArgs instance
+    /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestHostArgs instance
     @type {EVUITest.Constants.Fn_Test}*/
     this.test = null;
 
