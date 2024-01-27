@@ -418,4 +418,92 @@ DomTreeTest.stringToDomNodeArgsOmitAttributes = function* ()
     omittedAttributes = ["attr1", "style"];
 
     yield [htmlString, message, omittedAttributes];
-}
+
+    message = "Omit one attribute on two tags with multiple attributes.";
+    htmlString = "<div attr1='value'style='background-color: red;'><span style='background-color: red;'>Hello World</span></div>";
+    omittedAttributes = ["style"];
+
+    yield [htmlString, message, omittedAttributes];
+};
+
+DomTreeTest.stringToDomTreeArgsOmitAttributes = function* ()
+{
+    var message = "Omit single attribute on single tag.";
+    var htmlString = "<div attr1='value'></div>";
+    var omittedAttributes = ["attr1"];
+    var expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV")
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+
+    message = "Omit single attribute on single tag - case mismatch (omission).";
+    htmlString = "<div attr1='value'></div>";
+    omittedAttributes = ["ATTR1"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV")
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+
+    message = "Omit single attribute on single tag - case mismatch (markup).";
+    htmlString = "<div ATTR1='value'></div>";
+    omittedAttributes = ["attr1"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV")
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+
+    message = "Omit single attribute on multiple tags.";
+    htmlString = "<div attr1='value'><span attr1='again'>Hello World</span></div>";
+    omittedAttributes = ["attr1"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("SPAN", [
+                DomTreeTest.makeDomTreeElement("#text", "Hello World")
+            ])
+        ])
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+
+    message = "Omit two different attributes on same tag.";
+    htmlString = "<div attr1='value' style='background-color: red;'><span>Hello World</span></div>";
+    omittedAttributes = ["attr1", "style"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("SPAN", [
+                DomTreeTest.makeDomTreeElement("#text", "Hello World")
+            ])
+        ])
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+
+    message = "Omit two different attributes on two tags.";
+    htmlString = "<div attr1='value'style='background-color: red;'><span style='background-color: red;'>Hello World</span></div>";
+    omittedAttributes = ["attr1", "style"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("SPAN", [
+                DomTreeTest.makeDomTreeElement("#text", "Hello World")
+            ])
+        ])
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+
+    message = "Omit two different attributes on two tags.";
+    htmlString = "<div attr1='value'style='background-color: red;'><span style='background-color: red;'>Hello World</span></div>";
+    omittedAttributes = ["style"];
+    expected = DomTreeTest.makeDomTreeDocFragment([
+        DomTreeTest.makeDomTreeElement("DIV", [
+            DomTreeTest.makeDomTreeElement("SPAN", [
+                DomTreeTest.makeDomTreeElement("#text", "Hello World")
+            ])
+        ], [DomTreeTest.makeAttribute("attr1", "value")])
+    ]);
+
+    yield [htmlString, expected, message, omittedAttributes];
+};

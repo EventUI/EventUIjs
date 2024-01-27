@@ -24,3 +24,18 @@ await $evui.testAsync({
         $evui.assert(expected).isEquivalentTo(actual);
     }
 });
+
+await $evui.testAsync({
+    name: "DomTree - string to DomTreeElement hierarchy with omitted elements",
+    testArgs: DomTreeTest.stringToDomTreeArgsOmitAttributes,
+    test: function (hostArgs, htmlString, expected, message, omittedAttributes)
+    {
+        hostArgs.outputWriter.logInfo("Testing: " + message);
+        hostArgs.outputWriter.logInfo("Omitting the following attributes " + JSON.stringify(omittedAttributes) + " for the html string of " + htmlString);
+
+        var actual = $evui.parseHtmlToDomTree(htmlString, { omittedAttributes: omittedAttributes });
+
+        $evui.assert(expected).isEquivalentTo(actual);
+    }
+});
+
