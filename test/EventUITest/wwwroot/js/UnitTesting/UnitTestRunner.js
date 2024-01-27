@@ -54,6 +54,7 @@ EVUIUnit.TestRunner = class
     writeOutput(output, outputLevel)
     {
         if (output == null) return;
+        if (Array.isArray(output) === true) output = output[0];
 
         if (this.#isChildWindow === false)
         {
@@ -278,8 +279,7 @@ EVUIUnit.TestRunner = class
     /**Deep clones an object recursively and removes all parts of the graph that can't be sent between iframes.
     @param {Object|Array} source The source object to clone.
     @param {Object|Array} target The target object that is getting properties set from the source.
-    @param {Object} cloneState Internal state object to prevent circular reference loops.
-     */
+    @param {Object} cloneState Internal state object to prevent circular reference loops.*/
     #deepCloneObject(source, target, cloneState)
     {
         if (cloneState == null)

@@ -86,6 +86,28 @@ DomTreeTest.stringToDomTreeArgs = function* ()
 
     yield [htmlString, result, message];
 
+    var message = "Single element with attribute - uppercase";
+    var htmlString = "<div CLASS='something'></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [], [
+            DomTreeTest.makeAttribute("class", "something")
+        ])
+    ];
+
+    yield [htmlString, result, message];
+
+    var message = "Single element with attribute with spaces";
+    var htmlString = "<div class = 'something'></div>";
+    var result = DomTreeTest.makeDomTreeDocFragment();
+    result.content = [
+        DomTreeTest.makeDomTreeElement("DIV", [], [
+            DomTreeTest.makeAttribute("class", "something")
+        ])
+    ];
+
+    yield [htmlString, result, message];
+
     var message = "Single element with child element";
     var htmlString = "<div><span></span></div>";
     var result = DomTreeTest.makeDomTreeDocFragment();
@@ -179,6 +201,16 @@ DomTreeTest.stringToDomNodeArgs = function* ()
 
     message = "Single element with attribute";
     htmlString = "<div class='something'></div>";
+
+    yield [htmlString, message];
+
+    var message = "Single element with attribute - uppercase";
+    var htmlString = "<div CLASS='something'></div>";
+
+    yield [htmlString, message];
+
+    var message = "Single element with attribute with spaces";
+    var htmlString = "<div class = 'something'></div>";
 
     yield [htmlString, message];
 
@@ -348,3 +380,42 @@ DomTreeTest.stringToDomTreeOmitElementArgs = function* ()
 
     yield [htmlString, expected, message, omittedElements];
 };
+
+DomTreeTest.stringToDomNodeArgsOmitAttributes = function* ()
+{
+    var message = "Omit single attribute on single tag.";
+    var htmlString = "<div attr1='value'></div>";
+    var omittedAttributes = ["attr1"];
+
+    yield [htmlString, message, omittedAttributes];
+
+    message = "Omit single attribute on single tag - case mismatch (omission).";
+    htmlString = "<div attr1='value'></div>";
+    omittedAttributes = ["ATTR1"];
+
+    yield [htmlString, message, omittedAttributes];
+
+    message = "Omit single attribute on single tag - case mismatch (markup).";
+    htmlString = "<div ATTR1='value'></div>";
+    omittedAttributes = ["attr1"];
+
+    yield [htmlString, message, omittedAttributes];
+
+    message = "Omit single attribute on multiple tags.";
+    htmlString = "<div attr1='value'><span attr1='again'>Hello World</span></div>";
+    omittedAttributes = ["attr1"];
+
+    yield [htmlString, message, omittedAttributes];
+
+    message = "Omit two different attributes on same tag.";
+    htmlString = "<div attr1='value' style='background-color: red;'><span>Hello World</span></div>";
+    omittedAttributes = ["attr1", "style"];
+
+    yield [htmlString, message, omittedAttributes];
+
+    message = "Omit two different attributes on two tags.";
+    htmlString = "<div attr1='value'style='background-color: red;'><span style='background-color: red;'>Hello World</span></div>";
+    omittedAttributes = ["attr1", "style"];
+
+    yield [htmlString, message, omittedAttributes];
+}

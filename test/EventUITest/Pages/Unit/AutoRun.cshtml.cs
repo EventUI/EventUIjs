@@ -7,6 +7,7 @@ using EventUITest.Utils;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.RegularExpressions;
 
 namespace EventUITest.Pages.Unit
 {
@@ -20,7 +21,9 @@ namespace EventUITest.Pages.Unit
             DirectoryInfo rootDirectory = RootDirectoryFinder.GetRootRepositoryDirectory(new string[] { "src", "test", "license" }, true);
 
             HostServerArgs = UnitTesting.GetHostArgs(manifest, Path.Combine(rootDirectory.FullName, "test\\test_src\\"));
+            Regex isCommonFile = new Regex("\\.common\\..", RegexOptions.IgnoreCase);
 
+            HostServerArgs.runOrder = HostServerArgs.runOrder.Where(fileName => isCommonFile.IsMatch(fileName) == false).ToList();
         }
 
         public HtmlString GetHostArgsJSON()
