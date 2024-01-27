@@ -146,6 +146,10 @@ EVUITest.TestResult = function ()
     /**Object. The TestOptions used for the test.
     @type {EVUITest.TestOptions}*/
     this.options = null;
+
+    /**Array. An array of the output that was logged during the test.
+    @type {EVUI.TestHostOutput[]}*/
+    this.output = [];
 };
 
 /**Simple utility class used for writing output from the TestHost. The default implementation writes to the console, but it can be overwritten to write to anything.
@@ -270,11 +274,13 @@ EVUITest.TestHostController = function ()
     var _self = this;
     var _executing = false;
     var _testQueue = [];
+    var _messageIDCounter = 0;
     var _idCounter = 1;
     var _instanceCounter = 1;
     var _outputWriter = null;
     var _testResults = [];
     var _testCounter = 0;
+    var _currentTestInstance = null;
 
     /**Boolean. Whether or not the Host is currently running.
     @type {Boolean}*/
@@ -546,7 +552,7 @@ EVUITest.TestHostController = function ()
     @param {EVUITest.TestResult} testResult The result object representing the test that was just completed..*/
     var writeTestOutput = function (testResult)
     {
-        if (typeof EVUITest.Settings.outputWriter.writeOutput !== "function")
+        if (typeof _self.outputWriter?.writeOutput !== "function")
         {
             console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function.");
         }
@@ -555,7 +561,7 @@ EVUITest.TestHostController = function ()
             try
             {
                 var testLogMessage = formatTestOutput(testResult);
-                EVUITest.Settings.outputWriter.writeOutput(testLogMessage);
+                writeOutput(testLogMessage);
             }
             catch (ex)
             {
@@ -602,6 +608,8 @@ EVUITest.TestHostController = function ()
         {
             if (index >= numInstances)
             {
+
+
                 try
                 {
                     callback(testState);
@@ -655,14 +663,34 @@ EVUITest.TestHostController = function ()
 
         finalOptions.timeout = timeout;
         testInstance.options = finalOptions;
+        _currentTestInstance = testInstance;
+
+        var existingOutputWriter = _self.outputWriter.writeOutput;
+        _self.outputWriter.writeOutput = function (...args)
+        {
+            var loggedMessage = new EVUITest.TestHostOutput();
+            loggedMessage.id = _messageIDCounter++;
+            loggedMessage.instanceId = testInstance.instanceId;
+            loggedMessage.testId = testInstance.state.testId;
+            loggedMessage.message = args;
+            loggedMessage.timestamp = Date.now();
+
+            testInstance.output.push(loggedMessage);
+
+            existingOutputWriter(args);
+        }
 
         var finish = function () //final function to call on all exit paths from this function
         {
             removeEventListener("error", errorHandler);
 
             if (timeoutID > -1) clearTimeout(timeoutID);
+
+            _currentTestInstance = null;
+            _self.outputWriter.writeOutput = existingOutputWriter;
+
             callback(testInstance);
-        }
+        };
 
         var pass = function () //function to call when the test passes
         {
@@ -822,6 +850,7 @@ EVUITest.TestHostController = function ()
         result.reason = testInstance.reason;
         result.intentionalFailure = testInstance.intentionalFailure;
         result.options = testInstance.options;
+        result.output = testInstance.output;
 
         if (testInstance.options.shouldFail === true) //if we were supposed to fail the test, invert the success/fail flags but mark the fail as intentional
         {
@@ -1007,7 +1036,20 @@ EVUITest.TestHostController = function ()
         /**Object. The options used for the test.
         @type {EVUITest.TestOptions}*/
         this.options = null;
+
+        /**Array. An array of the arguments passed into the OutputWriter while this test was running.
+        @type {EVUITest.TestHostOutput}*/
+        this.output = [];
     }
+};
+
+EVUITest.TestHostOutput = function ()
+{
+    this.id = -1;
+    this.testId = -1;
+    this.instanceId = -1;
+    this.timestamp = -1;
+    this.message = null;
 };
 
 /**The arguments made by EventUI Test that are injected as the first parameter into every test.
@@ -1034,8 +1076,6 @@ EVUITest.TestHostArgs = function ()
     @type {EVUITest.TestOptions}*/
     this.options = null;
 };
-
-
 
 /**An object which runs simple tests on a constructor argument parameter.
 @param {Any} value The value to make an assertion operation on.
@@ -1329,14 +1369,14 @@ EVUITest.Assertion = function (value, settings)
         if (comparisonResult.success === true)
         {
             outputMessage.logLevel = EVUITest.LogLevel.Debug;
-            if (logOnSuccess !== false) writeOutput(outputMessage);
+            if (logOnSuccess !== false) writeOutput(outputMessage, settings);
         }
         else
         {
             outputMessage.logLevel = EVUITest.LogLevel.Error;
 
             if (throwOnFailure !== false) return Error(logMessage);
-            writeOutput(outputMessage);
+            writeOutput(outputMessage, settings);
         }
     };
 
@@ -1482,6 +1522,7 @@ EVUITest.Assertion = function (value, settings)
         {
             settings = new EVUITest.AssertionSettings();
             settings.comparer = EVUITest.ValueComparer.Default;
+            settings.outputWriter = EVUITest.Settings.outputWriter;
             settings.compareOptions = {};
             settings.logOptions = {};
         }
@@ -1492,7 +1533,8 @@ EVUITest.Assertion = function (value, settings)
             if (settings.logOptions == null || typeof settings.logOptions !== "object") settings.logOptions = {};
 
             if (typeof settings.logOnSuccess !== "boolean") settings.logOnSuccess = EVUITest.Settings.logOnSuccess;
-            if (typeof settings.throwOnFailure == "boolean") settings.throwOnFailure = EVUITest.Settings.throwOnFailure;
+            if (typeof settings.throwOnFailure !== "boolean") settings.throwOnFailure = EVUITest.Settings.throwOnFailure;
+            if (typeof settings.outputWriter == null || typeof settings.outputWriter !== "object") settings.outputWriter = EVUITest.Settings.outputWriter;
         }
 
         if (typeof settings.logOnSuccess !== "boolean") settings.logOnSuccess = true;
@@ -1502,18 +1544,19 @@ EVUITest.Assertion = function (value, settings)
     };
 
     /**Writes output to the console or whatever has been assigned as the output writer.
-    @param {Any} output Any output to write.*/
-    var writeOutput = function (output)
+    @param {Any} output Any output to write.
+    @param {EVUITest.AssertionSettings} settings The settings for the assertion.*/
+    var writeOutput = function (output, settings)
     {
         try
         {
-            if (EVUITest.Settings.outputWriter == null)
+            if (settings.outputWriter == null)
             {
                 console.log(output);
             }
             else
             {
-                EVUITest.Settings.outputWriter.writeOutput(output);
+                settings.outputWriter.writeOutput(output);
             }
         }
         catch (ex)
@@ -1861,6 +1904,10 @@ EVUITest.AssertionSettings = function ()
     /**Object. The ValueComparer used to perform the comparison work of the Assertion.
     @type {EVUITest.ValueComparer}*/
     this.comparer = null;
+
+    /**Object. The default options to feed into the ValueComparer when the Assertion executes.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
 
     /**Object. The default options to feed into the ValueComparer when the Assertion executes.
     @type {EVUITest.ValueCompareOptions}*/
