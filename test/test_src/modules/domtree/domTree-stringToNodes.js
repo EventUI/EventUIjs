@@ -67,3 +67,47 @@ $evui.testAsync({
         $evui.assert(expected).isEquivalentTo(actual);
     }
 });
+
+$evui.testAsync({
+    name: "DomTree - string to Node hierarchy with omitted attributes",
+    testArgs: DomTreeTest.stringToDomNodeArgsOmitAttributes,
+    test: function (hostArgs, htmlString, message, omittedAttributes)
+    {
+        hostArgs.outputWriter.logInfo("Testing: " + message);
+        hostArgs.outputWriter.logInfo("Omitting the following attributes " + JSON.stringify(omittedAttributes) + " for the html string of " + htmlString);
+
+        var actual = $evui.parseHtml(htmlString, {
+            omittedAttributes: omittedAttributes
+        });
+
+        var expected = document.createDocumentFragment();
+
+        var parser = new DOMParser();
+        var parsedDoc = parser.parseFromString(htmlString, "text/html");
+
+        //snip all the omitted attributes out of the parsed document
+        var numOmitted = omittedAttributes.length;
+        for (var x = 0; x < numOmitted; x++)
+        {
+            var attrName = omittedAttributes[x];
+            var eles = parsedDoc.querySelectorAll(`[${attrName}]`);
+            if (eles == null) continue;
+
+            var numEle = eles.length;
+            for (var y = 0; y < numEle; y++)
+            {
+                eles[y].removeAttribute(attrName);
+            }
+        }
+
+        //copy the document into a document fragment so it matches the structure of the DomTeee's parser.
+        var numNodes = parsedDoc.body.childNodes.length;
+        while (numNodes > 0)
+        {
+            expected.appendChild(parsedDoc.body.childNodes[0]);
+            numNodes--;
+        }
+
+        $evui.assert(expected).isEquivalentTo(actual);
+    }
+});
