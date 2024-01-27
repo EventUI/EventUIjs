@@ -2134,7 +2134,6 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                 if (options.elementOptions.includeOmittedElementOuterTag === true)
                 {
                     noChildren = true;
-                    if (this.tagName.toLowerCase() === "script") noSrc = true;
                 }
                 else
                 {
@@ -2144,26 +2143,22 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
 
             if (this.attributes != null)
             {
+                var keptAttr = 0;
                 var numAttr = this.attributes.length;
                 if (numAttr > 0)
                 {
-                    if (noSrc === true)
-                    {
-                        treeNode.attrs = [];
+                    treeNode.attrs = [];
 
-                        for (var x = 0; x < numAttr; x++)
-                        {
-                            var curAttr = this.attributes[x];
-                            if (curAttr.key === "src") continue;
-
-                            treeNode.attrs.push(curAttr);
-                        }
-                    }
-                    else
+                    for (var x = 0; x < numAttr; x++)
                     {
-                        treeNode.attrs = this.attributes;
-                    }                    
+                        var curAttr = this.attributes[x];
+                        if (options.isOmittedAttribute(curAttr, this.tagName) === true) continue;
+
+                        keptAttr = treeNode.attrs.push(curAttr);
+                    }                  
                 }
+
+                if (keptAttr === 0) treeNode.attrs = undefined;
             }
 
             if (this.isSelfClosing === true)
