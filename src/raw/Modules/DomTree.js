@@ -2289,7 +2289,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             }
         }
 
-        return false;
+        return potentialMatch;
     };
 };
 
