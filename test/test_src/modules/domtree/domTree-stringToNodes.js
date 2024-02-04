@@ -70,7 +70,7 @@ $evui.testAsync({
 
 $evui.testAsync({
     name: "DomTree - string to Node hierarchy with omitted attributes",
-    testArgs: DomTreeTest.stringToDomNodeArgsOmitAttributes,
+    testArgs: DomTreeTest.stringToDomNodeOmitAttributesArgs,
     test: function (hostArgs, htmlString, message, omittedAttributes)
     {
         hostArgs.outputWriter.logInfo("Testing: " + message);

@@ -3,6 +3,7 @@ const DomTreeTest = {};
 DomTreeTest.makeDomTreeDocFragment = function (content)
 {
     var domTreeFrag = new EVUI.Modules.DomTree.DomTreeElement();
+    domTreeFrag.tagName = "#document-fragment";
     domTreeFrag.type = EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment;
     domTreeFrag.flags |= EVUI.Modules.DomTree.DomTreeElementFlags.HTML;
     domTreeFrag.content = Array.isArray(content) === true ? content : [];
@@ -381,7 +382,7 @@ DomTreeTest.stringToDomTreeOmitElementArgs = function* ()
     yield [htmlString, expected, message, omittedElements];
 };
 
-DomTreeTest.stringToDomNodeArgsOmitAttributes = function* ()
+DomTreeTest.stringToDomNodeOmitAttributesArgs = function* ()
 {
     var message = "Omit single attribute on single tag.";
     var htmlString = "<div attr1='value'></div>";
@@ -426,7 +427,7 @@ DomTreeTest.stringToDomNodeArgsOmitAttributes = function* ()
     yield [htmlString, message, omittedAttributes];
 };
 
-DomTreeTest.stringToDomTreeArgsOmitAttributes = function* ()
+DomTreeTest.stringToDomTreeOmitAttributesArgs = function* ()
 {
     var message = "Omit single attribute on single tag.";
     var htmlString = "<div attr1='value'></div>";
@@ -507,3 +508,8 @@ DomTreeTest.stringToDomTreeArgsOmitAttributes = function* ()
 
     yield [htmlString, expected, message, omittedAttributes];
 };
+
+DomTreeTest.nodesToDomTreeElements = function* ()
+{
+
+}

@@ -327,6 +327,10 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     {
         if (element == null) return EVUI.Modules.DomTree.DomTreeElementFlags.Unknown;
 
+        if (element.nodeType === Node.TEXT_NODE || element.nodeType === Node.CDATA_SECTION_NODE || element.nodeType === Node.COMMENT_NODE)
+        {
+            return getElementFlags(element.parentNode);
+        }
         if (element instanceof HTMLElement) //its a HTML element
         {
             return EVUI.Modules.DomTree.DomTreeElementFlags.HTML;
@@ -543,7 +547,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             domTreeAttrs.push(domTreeAttr);
         }
 
-        return domTreeAttrs;
+        return (domTreeAttrs.length === 0) ? undefined : domTreeAttrs;
     };
 
     /**Gets the inner contents of an DomTreeElement. Can be one of 4 things: null for a self-closing tag, an empty array for a tag with no children, an array of child DomTreeElements for child elements, or a string of text for a text node.
@@ -1000,6 +1004,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         rootBlock.index = 0;
         rootBlock.length = session.rawHtml.length;
         rootBlock.blockType = EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment;
+        rootBlock.tagName = "#document-fragment";
 
         //get all the tag opens and closes that were NOT contained in any of the literal text spans.
         getTagOpensAndCloses(session);

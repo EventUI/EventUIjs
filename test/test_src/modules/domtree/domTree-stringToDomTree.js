@@ -27,7 +27,7 @@ await $evui.testAsync({
 
 await $evui.testAsync({
     name: "DomTree - string to DomTreeElement hierarchy with omitted elements",
-    testArgs: DomTreeTest.stringToDomTreeArgsOmitAttributes,
+    testArgs: DomTreeTest.stringToDomTreeOmitAttributesArgs,
     test: function (hostArgs, htmlString, expected, message, omittedAttributes)
     {
         hostArgs.outputWriter.logInfo("Testing: " + message);
