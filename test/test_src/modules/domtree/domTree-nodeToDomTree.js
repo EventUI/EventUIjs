@@ -123,6 +123,6 @@ await $evui.testAsync({
 
         var actual = $evui.toDomTreeElement(frag, { omittedAttributes: omittedAttributes });
 
-        $evui.assert(expected).isEquivalentTo(actual);
+        $evui.assert(actual).isEquivalentTo(expected);
     }
 });

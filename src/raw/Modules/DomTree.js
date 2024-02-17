@@ -92,7 +92,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         @type {Boolean}*/
         this.outputToString = false;
 
-        /**Options for determing what content to filter out when converting a DomTreeElement into a Node.
+        /**Options for determine what content to filter out when converting a DomTreeElement into a Node.
         @type {DomTreeParseOptions}*/
         this.parseOptions = null;
     };
@@ -635,7 +635,15 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         }
         else
         {
-            return frag;
+            if (session.source.type !== EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment &&
+                session.source.type !== EVUI.Modules.DomTree.DomTreeElementType.Document)
+            {
+                return frag.childNodes[0];
+            }
+            else
+            {
+                return frag;
+            }
         }
     };
 
@@ -2514,7 +2522,7 @@ Object.freeze(EVUI.Modules.DomTree.DomTreeElementType);
 @class*/
 EVUI.Modules.DomTree.DomTreeElementOptions = function ()
 {
-    /**Ensures an options set that attempts to prevent script injection by disallowing script tags, link tags to scripts, and inline event handlers. False by default.
+    /**Ensures an options set that attempts to prevent script injection by disallowing script tags, link tags to scripts, and in-line event handlers. False by default.
     @type {Boolean}*/
     this.safeMode = false;
 
