@@ -37,7 +37,7 @@ await $evui.testAsync({
 		//see that the original binding worked
 		$evui.assert(domContent[0].childNodes[0].textContent).is(bindObj.a.toString());
 
-		//update the bound object and update the binding to refelct the change
+		//update the bound object and update the binding to reflect the change
 		bindObj.a = "abc";
 		await bindResult.updateAsync();
 
@@ -53,7 +53,7 @@ await $evui.testAsync({
 		//make sure its still attached to the document fragment
 		$evui.assert(newDomContent[0].parentNode.nodeType).is(Node.DOCUMENT_FRAGMENT_NODE);
 
-		//finally, make sure we're attched to the element still as well
+		//finally, make sure we're attached to the element still as well
 		$evui.assert(newDomContent[0].parentNode).is(bindResult.element);
 	}
 });

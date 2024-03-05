@@ -498,7 +498,7 @@ EVUITest.TestHostController = function ()
             if (typeof args === "function")
             {
                 var returnedArgs = args(); //get the result of the arguments function call to use as the arguments for the test
-                if (typeof returnedArgs === "object" && returnedArgs != null)
+                if (typeof returnedArgs === "object" && returnedArgs != null && typeof returnedArgs[Symbol.iterator] === "function")
                 {
                     if (typeof returnedArgs.next === "function") //if we got an object with a "next" function, it's an iterator
                     {
@@ -608,8 +608,6 @@ EVUITest.TestHostController = function ()
         {
             if (index >= numInstances)
             {
-
-
                 try
                 {
                     callback(testState);
