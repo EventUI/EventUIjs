@@ -1591,7 +1591,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var htmlContent = session.bindingHandle.htmlContent;
                 if (htmlContent == null) htmlContent = session.bindingHandle.currentState.htmlContent;
 
-                var contentMetadata = getHtmlContentMetadata(htmlContent);
+                var contentMetadata = getHtmlContentMetadata(htmlContent, session);
 
                 var mergedHtmlContent = duplicateHtmlContent(session, session.bindingHandle.currentState.htmlContent, session.bindingHandle.currentState.boundProperties, contentMetadata);
                 session.bindingHandle.currentState.mergedHtmlContent = mergedHtmlContent;
@@ -1608,7 +1608,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             else //otherwise we have no actual work to do, we just use the htmlContent as the merged htmlContent and we make a dummy tree out of a document fragment as a placeholder
             {
                 session.bindingHandle.currentState.mergedHtmlContent = session.bindingHandle.currentState.htmlContent;
-                session.bindingHandle.currentState.boundContentTree = _services.domTreeConverter.toDomTreeElement(document.createDocumentFragment());
+                session.bindingHandle.currentState.boundContentTree = _services.domTreeConverter.toDomTreeElement(document.createDocumentFragment(), getDomTreeOptions(session.bindingHandle));
             }
         }
 
@@ -2218,10 +2218,16 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var numChildren = session.bindingHandle.currentState.boundContentFragment.childNodes.length;
                 newContentTrees = [];
 
+                var bindOptions = getDomTreeOptions(session.bindingHandle);
+                if (bindOptions == null) bindOptions = {}
+                bindOptions.includeNodeReferences = true;
+
                 for (var x = 0; x < numChildren; x++)
                 {
-                    newContentTrees.push(_services.domTreeConverter.toDomTreeElement(session.bindingHandle.currentState.boundContentFragment.childNodes[x], { includeNodeReferences: true }));
+                    newContentTrees.push(_services.domTreeConverter.toDomTreeElement(session.bindingHandle.currentState.boundContentFragment.childNodes[x], bindOptions));
                 }
+
+                bindOptions.includeNodeReferences = false;
             }
             else //otherwise we just use the pre-existing trees.
             {
@@ -2232,14 +2238,20 @@ EVUI.Modules.Binding.BindingController = function (services)
             var existingContentTrees = [];
             if (session.bindingHandle.oldState != null && session.bindingHandle.oldState.boundContent != null && session.bindingHandle.oldState.source === session.bindingHandle.currentState.source)
             {
+                var bindOptions = getDomTreeOptions(session.bindingHandle);
+                if (bindOptions == null) bindOptions = {}
+                bindOptions.includeNodeReferences = true;
+
                 var numCurContent = session.bindingHandle.oldState.boundContent.length;
                 for (var x = 0; x < numCurContent; x++)
                 {
                     var curContent = session.bindingHandle.oldState.boundContent[x];
                     if (EVUI.Modules.Core.Utils.isOrphanedNode(curContent) === true) continue;
 
-                    existingContentTrees.push(_services.domTreeConverter.toDomTreeElement(curContent, { includeNodeReferences: true }));
+                    existingContentTrees.push(_services.domTreeConverter.toDomTreeElement(curContent, bindOptions));
                 }
+
+                bindOptions.includeNodeReferences = false;
 
                 if (session.bindingHandle.oldState.childBindingHandles.length > 0)
                 {
@@ -3559,13 +3571,17 @@ EVUI.Modules.Binding.BindingController = function (services)
      */
     var toDomNode = function (domTreeEle, bindingHandle)
     {
-        var node = domTreeEle.toNode();
-        var bindOptions = (bindingHandle.options == null) ? null : bindingHandle.options.nodeCreation;
+        var node = domTreeEle.toNode(getDomTreeOptions(bindingHandle));
 
-        assignElementMetadata(domTreeEle, bindOptions);
+        assignElementMetadata(domTreeEle);
 
         return node;
     };
+
+    var getDomTreeOptions = function (bindingHandle)
+    {
+        return (bindingHandle.options == null) ? null : bindingHandle.options.nodeCreation;
+    }
 
     /********************************************************************************BINDING HTML PROCESSING***************************************************************************/
 
@@ -3576,10 +3592,12 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {EVUI.Modules.DomTree.DomTreeElement}*/
     var stringToDomTree = function (session, htmlStr, htmlContentMetadata)
     {
-        var tree = _services.domTreeConverter.htmlToDomTree(htmlStr);
+        var domTreeOptions = getDomTreeOptions(session.bindingHandle);
+
+        var tree = _services.domTreeConverter.htmlToDomTree(htmlStr, domTreeOptions);
         if (tree == null)
         {
-            tree = _services.domTreeConverter.toDomTreeElement(document.createTextNode(""));
+            tree = _services.domTreeConverter.toDomTreeElement(document.createTextNode(""), domTreeOptions);
         }
 
         session.boundPropertyDictionary = {};
@@ -3897,10 +3915,10 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             return true; //we always re-bind new objects.
 
-            //if (session.bindingHandle.oldState.htmlContent !== session.bindingHandle.currentState.htmlContent) return true;
+            if (session.bindingHandle.oldState.htmlContent !== session.bindingHandle.currentState.htmlContent) return true;
 
             //see if any of the root comparisons was an actual change to this object
-            //var changed = false;
+            var changed = false;
             //var numDiffs = session.observedDifferences.rootComparison.differences.length;
             //for (var x = 0; x < numDiffs; x++)
             //{
@@ -3911,6 +3929,12 @@ EVUI.Modules.Binding.BindingController = function (services)
             //        break;
             //    }
             //}
+
+            var numDiffs = session.observedDifferences.allDifferences.length;
+            for (var x = 0; x < numDiffs; x++)
+            {
+                var curDif = session.observedDifferences.allDifferences[x];
+            }
 
             if (changed === false) return false;
         }
@@ -5620,15 +5644,16 @@ EVUI.Modules.Binding.BindingController = function (services)
     /**
      * 
      * @param {String|BindingHtmlContentEntry} htmlOrEntry
+     * @param {BindingSession} session
      * @returns {HtmlContentMetadata}
      */
-    var getHtmlContentMetadata = function (htmlOrEntry)
+    var getHtmlContentMetadata = function (htmlOrEntry, session)
     {
         if (typeof htmlOrEntry === "object")
         {
             if (htmlOrEntry.needsRecalcuation === true || htmlOrEntry.contentMetata == null)
             {
-                htmlOrEntry.contentMetata = makeHtmlContentMetadata(htmlOrEntry.content);
+                htmlOrEntry.contentMetata = makeHtmlContentMetadata(htmlOrEntry.content, session);
             }
 
             return htmlOrEntry.contentMetata;
@@ -5642,7 +5667,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 if (curMetadata.html === htmlOrEntry) return curMetadata;
             }
 
-            var newMetadata = makeHtmlContentMetadata(htmlOrEntry);
+            var newMetadata = makeHtmlContentMetadata(htmlOrEntry, session);
             _htmlContentMetadata.push(newMetadata);
 
             return newMetadata;
@@ -5652,14 +5677,15 @@ EVUI.Modules.Binding.BindingController = function (services)
     /**
      * 
      * @param {String} html
+     * @param {BindingSession} session
      * @returns {HtmlContentMetadata}
      */
-    var makeHtmlContentMetadata = function (html)
+    var makeHtmlContentMetadata = function (html, session)
     {
         var metadata = new HtmlContentMetadata();
         metadata.html = html;
 
-        var templateTree = _services.domTreeConverter.htmlToDomTree(html);
+        var templateTree = _services.domTreeConverter.htmlToDomTree(html, getDomTreeOptions(session.bindingHandle));
         templateTree.search(function (ele)
         {
             if (ele.attrs == null) return;
@@ -6135,7 +6161,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             else
             {
                 replacementValue = replacementValue.toString();
-                if (session.bindingHandle.options.safeMode === true) replacementValue = replacementValue.replace(/\<|\>/g, function (value)
+                if (session.bindingHandle.options.noHtmlInjection === true) replacementValue = replacementValue.replace(/\<|\>/g, function (value)
                 {
                     if (value === "<") return "&lt";
                     if (value === ">") return "&gt";
@@ -7798,7 +7824,7 @@ EVUI.Modules.Binding.BindOptions = function ()
     this.recursive = true;
 
     /**Boolean. Prevents the injection of HTML via escaping '<' and '>' in a Binding's BoundProperty values.*/
-    this.safeMode = false;
+    this.noHtmlInjection = false;
 
     /**Boolean. When executing recursive Bindings, this controls whether or not the child Bindings get the same event handlers as their parent if the child Binding is not based on a BindingTemplate that has its own events. True by default.
     @type {Boolean}*/
