@@ -2341,14 +2341,7 @@ EVUI.Modules.DomTree.DomTreeElement.prototype.toNode = function (options)
 {
     if (this.node != null) return this.node;
 
-    if (this.type === EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment || this.type === EVUI.Modules.DomTree.DomTreeElementType.Document)
-    {
-        this.node = EVUI.Modules.DomTree.Converter.fromDomTreeElement(this, options);
-    }
-    else
-    {
-        this.node = EVUI.Modules.DomTree.Converter.fromDomTreeElement(this, options).childNodes[0];
-    }
+    this.node = EVUI.Modules.DomTree.Converter.fromDomTreeElement(this, options);
 
     var assignNodes = function (domTree, node)
     {
