@@ -81,13 +81,10 @@ $evui.init(function ()
             this.data = this.buildData(maxData); //this.data.concat(this.buildData(maxData));
             if (this.activeBinding != null)
             {
-                this.activeBinding.source = this.data;
-                await this.activeBinding.updateAsync();
+                this.activeBinding.dispose();
             }
-            else
-            {
-                this.activeBinding = await $evui.bindAsync({ source: this.data, htmlContent: "tableRow", element: _rootElement,/* insertionMode: $evui.enum("BindingInsertionMode", "Append")*/ });
-            }
+
+            this.activeBinding = await $evui.bindAsync({ source: this.data, htmlContent: "tableRow", element: _rootElement,/* insertionMode: $evui.enum("BindingInsertionMode", "Append")*/ }); 
         };
 
         this.cleanUp = async function ()
@@ -224,6 +221,7 @@ $evui.init(function ()
                 else
                 {
                     binding.source.selected = "";
+                    _self.selectedBinding = null;
                 }
 
                 await _self.activeBinding.updateAsync();
