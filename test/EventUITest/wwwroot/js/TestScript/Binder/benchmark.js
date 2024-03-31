@@ -40,6 +40,7 @@ $evui.init(function ()
             _updateButton = document.getElementById("update");
             _clearButton = document.getElementById("clear");
             _swapButton = document.getElementById("swaprows");
+            _insertButton = document.getElementById("insert");
             _rootElement = document.getElementById("tbody");
 
             $evui.css(".select {background-color: blue}");
@@ -128,6 +129,15 @@ $evui.init(function ()
             await this.activeBinding.updateAsync();
         };
 
+        this.insert = async function ()
+        {
+            if (this.activeBinding == null) return;
+
+            this.data.splice(0, 0, this.buildData(1)[0]);
+
+            await this.activeBinding.updateAsync();
+        }
+
         var hookUpButtons = function ()
         {
             _runButton.onclick = async function ()
@@ -175,6 +185,14 @@ $evui.init(function ()
                 await timeStep("Swap content", async function ()
                 {
                     await _self.swap();
+                });
+            };
+
+            _insertButton.onclick = async function ()
+            {
+                await timeStep("Insert content", async function ()
+                {
+                    await _self.insert();
                 });
             };
         };

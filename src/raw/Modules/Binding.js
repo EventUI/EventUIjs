@@ -1472,6 +1472,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     if (session.bindingHandle.oldState.source === session.bindingHandle.currentState.source)
                     {
                         session.bindingHandle.currentState.sourceObserver = session.bindingHandle.oldState.sourceObserver; //re-use the old observer if possible
+                        session.bindingHandle.currentState.arrayObserver = session.bindingHandle.oldState.arrayObserver;
                     }
                     else
                     {
@@ -2107,7 +2108,14 @@ EVUI.Modules.Binding.BindingController = function (services)
                         injectNode(session, insertionMode, session.bindingHandle.currentState.element, session.bindingHandle.currentState.boundContentFragment);
                     }
 
-                    session.bindingHandle.currentState.boundContent = nodeChildren;
+                    if (session.isArray === true) //go make sure that if any of the array children beneath this one changed that this Binding's boundContent list includes all the children and make sure that the children correctly refer to each other in a linked-list fashion
+                    {
+                        session.bindingHandle.currentState.boundContent = reAssignArrayElementReferences2(session);
+                    }
+                    else
+                    {
+                        session.bindingHandle.currentState.boundContent = nodeChildren;
+                    }
                 }
             }
         }
@@ -2669,6 +2677,32 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             return;
         }
+
+        //finally, do a purge of any nodes that aren't in the new bound content list.
+        var oldNodes = session.bindingHandle.oldState.boundContent;
+        if (oldNodes == null || oldNodes.length === 0) return;
+
+        var numNew = session.bindingHandle.currentState.boundContent.length;
+        var numOld = oldNodes.length;
+
+        var key = Math.random();
+        for (var x = 0; x < numNew; x++)
+        {
+            session.bindingHandle.currentState.boundContent[x][key] = true;
+        }
+
+        for (var x = 0; x < numOld; x++)
+        {
+            if (oldNodes[x][key] !== true) oldNodes[x].remove();
+        }
+
+        var key = Math.random();
+        for (var x = 0; x < numNew; x++)
+        {
+            delete session.bindingHandle.currentState.boundContent[x][key];
+        }
+
+        return;
     };
 
     /**Processes the diff result between the old and new DomTreeElement hierarchies.
@@ -3783,6 +3817,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                         if (session.bindingHandle.oldStateBound === true && session.bindingHandle.currentState.source === session.bindingHandle.oldState.source && session.bindingHandle.oldState.sourceObserver != null)
                         {
                             session.bindingHandle.currentState.sourceObserver = session.bindingHandle.oldState.sourceObserver;
+                            session.bindingHandle.currentState.arrayObserver = session.bindingHandle.oldState.arrayObserver;
                         }
                         else
                         {
@@ -3809,6 +3844,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 if (session.bindingHandle.oldStateBound === true && session.bindingHandle.currentState.source === session.bindingHandle.oldState.source && session.bindingHandle.oldState.sourceObserver != null)
                 {
                     session.bindingHandle.currentState.sourceObserver = session.bindingHandle.oldState.sourceObserver;
+                    session.bindingHandle.currentState.arrayObserver = session.bindingHandle.oldState.arrayObserver;
                 }
                 else
                 {
@@ -3876,6 +3912,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 if (session.bindingHandle.oldStateBound === true && session.bindingHandle.oldState.sourceObserver != null)
                 {
                     session.bindingHandle.currentState.sourceObserver = session.bindingHandle.oldState.sourceObserver;
+                    session.bindingHandle.currentState.arrayObserver = session.bindingHandle.oldState.arrayObserver;
                 }
                 else
                 {
@@ -4992,7 +5029,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var childDiffs = new ChildDifferencePackage();
 
         childDiffs.isArray = session.isArray;
-        var arrayDiffs = session.isArray ? session.bindingHandle.currentState.arrayObserver.getChanges(true) : [];
+        var arrayDiffs = session.isArray && session.bindingHandle.currentState.arrayObserver != null ? session.bindingHandle.currentState.arrayObserver.getChanges(true) : [];
         var allNewArrayDiffs = EVUI.Modules.Core.Utils.toDictionary(arrayDiffs, function (source) { return source.newIndex.toString() });
         var allOldArrayDiffs = EVUI.Modules.Core.Utils.toDictionary(arrayDiffs, function (source) { return source.oldIndex.toString() });
         var modifiedPaths = childDiffs.modifiedPaths;
@@ -5161,10 +5198,17 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (modified === undefined)
             {
-                var curBindings = getBindingContentList(allBindings, curKey);                
-                for (var y = 0; y < curBindings.numBindings; y++)
+                if (allOldBindings[curKey] === undefined)
                 {
-                    childDiffs.unchangedBindings.push(curBindings.bindings[y].binding);
+                    modifiedPaths[curKey] = getBindingContentList(allBindings, curKey).makeChangeArray(BindingStructureChangeType.Added);
+                }
+                else
+                {
+                    var curBindings = getBindingContentList(allBindings, curKey);
+                    for (var y = 0; y < curBindings.numBindings; y++)
+                    {
+                        childDiffs.unchangedBindings.push(curBindings.bindings[y].binding);
+                    }
                 }
             }
             else
