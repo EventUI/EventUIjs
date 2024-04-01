@@ -1072,7 +1072,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     var span = new LiteralTextSpan();
                     span.start = startIndex;
                     span.end = match.index + match[0].length;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
 
                     spans.push(span);
 
@@ -1099,7 +1099,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         span.end = session.rawHtml.length;
                     }
 
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
 
                     //it is possible for there to be other comment/quote characters inside the sinlge-line comment, so we skip over all of them until we are onto the next line.
@@ -1127,7 +1127,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         var span = new LiteralTextSpan();
                         span.start = startIndex;
                         span.end = match.index + match[0].length;
-                        span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                        span.text = session.rawHtml.substring(span.start, span.end);
 
                         spans.push(span);
 
@@ -1154,7 +1154,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         var span = new LiteralTextSpan();
                         span.start = startIndex;
                         span.end = match.index + match[0].length;
-                        span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                        span.text = session.rawHtml.substring(span.start, span.end);
 
                         spans.push(span);
 
@@ -1181,7 +1181,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         var span = new LiteralTextSpan();
                         span.start = startIndex;
                         span.end = match.index + match[0].length;
-                        span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                        span.text = session.rawHtml.substring(span.start, span.end);
 
                         spans.push(span);
 
@@ -1206,7 +1206,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     var span = new LiteralTextSpan();
                     span.start = startIndex;
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, match.index);
+                    span.text = session.rawHtml.substring(span.start, span.end);
 
                     spans.push(span);
                     inHtmlOrCode = true;
@@ -1229,7 +1229,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     var span = new LiteralTextSpan();
                     span.start = startIndex;
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, match.index);
+                    span.text = session.rawHtml.substring(span.start, span.end);
 
                     spans.push(span);
                     inHtmlOrCode = true;
@@ -1307,7 +1307,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1340,7 +1340,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1373,7 +1373,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1406,7 +1406,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1758,8 +1758,8 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
 
         if (tagContent[tagStart] === "!") //special cases for comments and CDATA
         {
-            if (contentLength > tagStart + 3 && tagContent.substr(tagStart + 1, 2) === "--") return "#comment";
-            if (contentLength > tagStart + 9 && tagContent.substr(tagStart + 1, 7).toLowerCase() === "![cdata[") return "#cdata";
+            if (contentLength > tagStart + 3 && tagContent.substring(tagStart + 1, tagStart + 3) === "--") return "#comment";
+            if (contentLength > tagStart + 9 && tagContent.substring(tagStart + 1, tagStart + 8).toLowerCase() === "![cdata[") return "#cdata";
         }
 
         if (contentLength > 4 && getClosing === true) //special cases for getting a normalized tag name for comments and CDATA
@@ -2609,13 +2609,7 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
     }
 };
 
-/**Converts a HTML string into a DocumentFragment containing the parsed HTML.
- 
- NOTE: This function is significantly slower than the native DOM parser used when setting innerHTML of an element, however there are certain situations where the native DOM parser applies certain rules to the creation of new elements based on the tag name of the element whose innerHTML is being set.
- 
- For example, making a <tr> inside of a div via setting the div's innerHTML doesn't work correctly (the tr element is missing in the result in most browsers). There may be other cases where similar rules are applied, and the reason for the existence of this function is to bypass those rules. 
- 
- For more performant code, use innerHTML - for code that may fail based on the browser's parsing rules (i.e. having the need to parse any unknown HTML into DOM nodes), this function becomes an option instead.
+/**Converts a HTML string into a DocumentFragment containing the parsed HTML. 
 @param {String} html A string of HTML to turn into a DocumentFragment.
 @param {EVUI.Modules.DomTree.DomTreeElementOptions} options Options to control the conversion of the string into Dom Nodes.
 @returns {DocumentFragment} */
