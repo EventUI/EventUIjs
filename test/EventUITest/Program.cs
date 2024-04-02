@@ -19,6 +19,8 @@ namespace EventUITest
             // Add services to the container.
             builder.Services.AddRazorPages();
 
+            builder.Services.AddHttpClient();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -31,8 +33,8 @@ namespace EventUITest
 
             app.UseHttpsRedirection();
 
-            AddStaticFiles(app);
-            
+            app.AddEventUIStaticContent();
+           
             app.UseRouting();
 
             app.UseAuthorization();
@@ -40,38 +42,6 @@ namespace EventUITest
             app.MapRazorPages();
 
             app.Run();
-        }
-
-        internal static void AddStaticFiles(WebApplication app)
-        {
-            DirectoryInfo rootContentPath = RootDirectoryFinder.GetRootRepositoryDirectory(new string[] { "license", "test", "src" }, true);
-
-            string rootSrcPath = Path.Combine(rootContentPath.FullName, "src");
-            string rootTestPath = Path.Combine(rootContentPath.FullName, "test", "test_src");
-
-            if (Directory.Exists(rootSrcPath) == false)
-            {
-                throw new DirectoryNotFoundException("Could not locate root EventUI's raw source path. \"" + rootSrcPath + "\" did not exist.");
-            }
-
-            if (Directory.Exists(rootTestPath) == false)
-            {
-                throw new DirectoryNotFoundException("Could not locate root EventUI's test source path. \"" + rootTestPath + "\" did not exist.");
-            }
-
-            app.UseStaticFiles();
-
-            app.UseStaticFiles(new StaticFileOptions()
-            {
-                FileProvider = new PhysicalFileProvider(rootSrcPath),
-                RequestPath = "/evuisrc",
-            });
-
-            app.UseStaticFiles(new StaticFileOptions()
-            {
-                FileProvider = new PhysicalFileProvider(rootTestPath),
-                RequestPath = "/evuitest"
-            });
         }
     }
 }

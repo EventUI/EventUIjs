@@ -40,6 +40,7 @@ $evui.init(function ()
             _updateButton = document.getElementById("update");
             _clearButton = document.getElementById("clear");
             _swapButton = document.getElementById("swaprows");
+            _insertButton = document.getElementById("insert");
             _rootElement = document.getElementById("tbody");
 
             $evui.css(".select {background-color: blue}");
@@ -81,13 +82,10 @@ $evui.init(function ()
             this.data = this.buildData(maxData); //this.data.concat(this.buildData(maxData));
             if (this.activeBinding != null)
             {
-                this.activeBinding.source = this.data;
-                await this.activeBinding.updateAsync();
+                this.activeBinding.dispose();
             }
-            else
-            {
-                this.activeBinding = await $evui.bindAsync({ source: this.data, htmlContent: "tableRow", element: _rootElement,/* insertionMode: $evui.enum("BindingInsertionMode", "Append")*/ });
-            }
+
+            this.activeBinding = await $evui.bindAsync({ source: this.data, htmlContent: "tableRow", element: _rootElement,/* insertionMode: $evui.enum("BindingInsertionMode", "Append")*/ }); 
         };
 
         this.cleanUp = async function ()
@@ -130,6 +128,15 @@ $evui.init(function ()
 
             await this.activeBinding.updateAsync();
         };
+
+        this.insert = async function ()
+        {
+            if (this.activeBinding == null) return;
+
+            this.data.splice(0, 0, this.buildData(1)[0]);
+
+            await this.activeBinding.updateAsync();
+        }
 
         var hookUpButtons = function ()
         {
@@ -180,6 +187,14 @@ $evui.init(function ()
                     await _self.swap();
                 });
             };
+
+            _insertButton.onclick = async function ()
+            {
+                await timeStep("Insert content", async function ()
+                {
+                    await _self.insert();
+                });
+            };
         };
 
         var timeStep = async function (detail, handler)
@@ -195,13 +210,13 @@ $evui.init(function ()
             {
                 var now = Date.now();
 
-                var index = binding.parentBinding.source.indexOf(binding.source);
+                var index = _self.data.indexOf(binding.source);
                 if (index > -1)
                 {
                     if (_self.selectedBinding == binding) _self.selectedBinding = null;
 
-                    binding.parentBinding.source.splice(index, 1);
-                    await binding.parentBinding.updateAsync();
+                    _self.data.splice(index, 1);
+                    await _self.activeBinding.updateAsync();
                 }
 
                 console.log("Remove: " + (Date.now() - now));
@@ -217,7 +232,6 @@ $evui.init(function ()
                     if (_self.selectedBinding != null) //first selection, don't de-select
                     {
                         _self.selectedBinding.source.selected = "";
-                        await _self.selectedBinding.updateAsync();
                     }
 
                     _self.selectedBinding = binding;
@@ -225,9 +239,10 @@ $evui.init(function ()
                 else
                 {
                     binding.source.selected = "";
+                    _self.selectedBinding = null;
                 }
 
-                await binding.updateAsync();
+                await _self.activeBinding.updateAsync();
 
                 console.log("Highlight: " + (Date.now() - now));
             }

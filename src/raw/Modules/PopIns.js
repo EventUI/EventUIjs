@@ -1,16 +1,7 @@
-﻿/*Copyright 2022 Richard H Stannard
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.*/
+﻿/**Copyright (c) 2023 Richard H Stannard
+ 
+This source code is licensed under the MIT license found in the
+LICENSE file in the root directory of this source tree.*/
 
 /*#INCLUDES#*/
 
@@ -124,9 +115,9 @@ EVUI.Modules.PopIns.Constants.Attribute_BottomAnchor = "evui-pop-anchor-bottom";
 
 EVUI.Modules.PopIns.Constants.Default_ObjectName = "PopIn";
 EVUI.Modules.PopIns.Constants.Default_ManagerName = "PopInManager";
-EVUI.Modules.PopIns.Constants.Default_CssPrefix = "evui-pop";
-EVUI.Modules.PopIns.Constants.Default_EventNamePrefix = "evui.pop";
-EVUI.Modules.PopIns.Constants.Default_AttributePrefix = "evui-pop";
+EVUI.Modules.PopIns.Constants.Default_CssPrefix = "evui-popin";
+EVUI.Modules.PopIns.Constants.Default_StepPrefix = "evui.popin";
+EVUI.Modules.PopIns.Constants.Default_AttributePrefix = "evui-popin";
 
 Object.freeze(EVUI.Modules.PopIns.Constants);
 
@@ -516,7 +507,8 @@ EVUI.Modules.PopIns.PopInManager = function (services)
 
         var popInEventArgs = new EVUI.Modules.PopIns.PopInEventArgs(argsPackage, args);
         popInEventArgs.cancel = windowEventArgs.cancel;
-        popInEventArgs.key = windowEventArgs.key;
+        popInEventArgs.eventType = windowEventArgs.eventType;
+        popInEventArgs.eventName = windowEventArgs.eventName;
         popInEventArgs.pause = windowEventArgs.pause;
         popInEventArgs.resume = windowEventArgs.resume;
         popInEventArgs.stopPropagation = windowEventArgs.stopPropagation;
@@ -818,7 +810,7 @@ EVUI.Modules.PopIns.PopInManager = function (services)
     _settings.attributePrefix = EVUI.Modules.PopIns.Constants.Default_AttributePrefix;
     _settings.cssPrefix = EVUI.Modules.PopIns.Constants.Default_CssPrefix;
     _settings.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
-    _settings.eventNamePrefix = EVUI.Modules.PopIns.Constants.Default_EventNamePrefix;
+    _settings.stepPrefix = EVUI.Modules.PopIns.Constants.Default_StepPrefix;
     _settings.managerName = EVUI.Modules.PopIns.Constants.Default_ManagerName;
     _settings.objectName = EVUI.Modules.PopIns.Constants.Default_ObjectName;
     _settings.makeOrExtendObject = makeOrExtendObject;
@@ -1114,20 +1106,24 @@ EVUI.Modules.PopIns.PopInEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**String. The unique key current step in the EventStream.
+    /**String. The full name of the event.
     @type {String}*/
-    this.key = null;
+    this.eventName = null;
 
-    /**Function. Pauses the EventStream, preventing the next step from executing until resume is called.*/
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the PopIn's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
 
-    /**Function. Resumes the EventStream, allowing it to continue to the next step.*/
+    /**Resumes the PopIn's action, allowing it to continue to the next step.*/
     this.resume = function () { };
 
-    /**Function. Cancels the EventStream and aborts the execution of the PopIn operation.*/
+    /**Cancels the PopIn's action and aborts the execution of the operation.*/
     this.cancel = function () { }
 
-    /**Function. Stops the EventStream from calling any other event handlers with the same key.*/
+    /**Stops the PopIn from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
     /**Object. The position of the PopIn that has been calculated in using the currentShowSettings.
@@ -1140,7 +1136,7 @@ EVUI.Modules.PopIns.PopInEventArgs = function (argsPackage, currentArgs)
             enumerable: true
         });
 
-    /**Object. The PaneHide/Show/Load/Unload Arguments being used for the operation.
+    /**Object. The PopInHide/Show/Load/Unload Arguments being used for the operation.
     @type {EVUI.Modules.PopIns.PopInShowArgs|EVUI.Modules.PopIns.PopInHideArgs|EVUI.Modules.PopIns.PopInLoadArgs|EVUI.Modules.PopIns.PopInUnloadArgs}*/
     this.currentActionArgs = null;
     Object.defineProperty(this, "currentActionArgs", {
@@ -1442,6 +1438,9 @@ EVUI.Modules.PopIns.Manager = null;
 })();
 
 Object.freeze(EVUI.Modules.PopIns);
+
+/**Constructor reference for the ModalManager.*/
+EVUI.Constructors.PopIns = EVUI.Modules.PopIns.PopInManager;
 
 delete $evui.popIns;
 

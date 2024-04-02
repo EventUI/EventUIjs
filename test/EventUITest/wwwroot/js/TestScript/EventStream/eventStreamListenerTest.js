@@ -1,6 +1,7 @@
 ﻿$evui.init(function ()
 {
-    var es = $evui.eventStream();
+    var es = $evui.createController("eventStream");
+
     es.addStep({
         key: "a",
         type: "event",

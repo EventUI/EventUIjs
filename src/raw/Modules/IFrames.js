@@ -62,19 +62,25 @@ EVUI.Modules.IFrames.Constants.PlaceholderIFrameContextID = "evui.iframe.placeho
 
 /**Event key for the event that fires when a message arrives in this Window.
 @type {String}*/
-EVUI.Modules.IFrames.Constants.Event_OnMessage = "evui.iframes.onmessage";
+EVUI.Modules.IFrames.Constants.Event_OnMessage = "message";
 
 /**Event key for the event that fires when a message arrives in this Window and is handled by a named IFrameMessageListener.
 @type {String}*/
-EVUI.Modules.IFrames.Constants.Event_OnHandler = "evui.iframes.onhandler";
+EVUI.Modules.IFrames.Constants.Event_OnHandle = "handle";
 
 /**Event key for the event that fires when a message arrives in this Window in response to an ask operation.
 @type {String}*/
-EVUI.Modules.IFrames.Constants.Event_OnAsk = "evui.iframes.onask"
+EVUI.Modules.IFrames.Constants.Event_OnAsk = "ask"
 
 /**Event key for the event that fires when a message is sent from this Window to another.
 @type {String}*/
-EVUI.Modules.IFrames.Constants.Event_OnSend = "evui.iframes.onsend";
+EVUI.Modules.IFrames.Constants.Event_OnSend = "send";
+
+EVUI.Modules.IFrames.Constants.Job_Send = "job.send";
+
+EVUI.Modules.IFrames.Constants.Job_Ask = "job.ask";
+
+EVUI.Modules.IFrames.Constants.StepPrefix = "evui.iframes";
 
 Object.freeze(EVUI.Modules.IFrames.Constants);
 
@@ -763,7 +769,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             if (entry == null) //not a managed iframe
             {
                 var incomingIFrame = getIFrameFromContentWindow(messageEvent.source); //go find the iframe element on the page that sent the message
-                if (incomingIFrame == null) return; //cloudn't find it, bail
+                if (incomingIFrame == null) return; //couldn't find it, bail
 
                 if (EVUI.Modules.Core.Utils.isSettingTrue("autoAddIncomingIFrames") === true) //if we're auto-adding iframes, register the new iframe with the manager.
                 {
@@ -813,6 +819,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             es.addStep({
                 type: EVUI.Modules.EventStream.EventStreamStepType.Event,
                 key: EVUI.Modules.IFrames.Constants.Event_OnAsk,
+                name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Event_OnAsk,
                 handler: function (eventArgs)
                 {
                     return askSession.askCallback(eventArgs.message.data);
@@ -824,11 +831,13 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             es.addStep({
                 type: EVUI.Modules.EventStream.EventStreamStepType.Event,
                 key: EVUI.Modules.IFrames.Constants.Event_OnMessage,
+
+                name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Event_OnMessage,
                 handler: function (eventArgs)
                 {
                     if (typeof iframeEntry.handle.onMessage === "function")
                     {
-                        return iframeEntry.handle.onMessage(eventArgs);
+                        return iframeEntry.handle.onMessage.call(this, eventArgs);
                     }
                 }
             });
@@ -836,6 +845,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             es.addStep({
                 type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
                 key: EVUI.Modules.IFrames.Constants.Event_OnMessage,
+                name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Event_OnMessage,
                 handler: function (eventArgs)
                 {
                     if (typeof _self.onMessage === "function")
@@ -847,7 +857,8 @@ EVUI.Modules.IFrames.IFrameManager = function ()
 
             es.addStep({
                 type: EVUI.Modules.EventStream.EventStreamStepType.Event,
-                key: EVUI.Modules.IFrames.Constants.Event_OnHandler,
+                key: EVUI.Modules.IFrames.Constants.Event_OnHandle,
+                name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Event_OnHandle,
                 handler: function (eventArgs)
                 {
                     var handler = getMessageHandler(messageSession.entry.handle, messageSession.messageWapper.metadata.messageCode);
@@ -874,6 +885,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         es.addStep({
             key: EVUI.Modules.IFrames.Constants.Event_OnSend,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Event_OnSend,
             handler: function (eventArgs)
             {
                 if (typeof messageSession.entry.handle.onSend === "function")
@@ -886,6 +898,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         es.addStep({
             key: EVUI.Modules.IFrames.Constants.Event_OnSend,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Event_OnSend,
             handler: function (eventArgs)
             {
                 if (typeof _self.onSend === "function")
@@ -896,8 +909,9 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         });
 
         es.addStep({
-            key: "evui.iframes.send",
+            key: EVUI.Modules.IFrames.Constants.Job_Send,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Job_Send,
             handler: function (jobArgs)
             {
                 var target = null;
@@ -930,8 +944,9 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             messageSession.entry.messageSessions.push(messageSession);
 
             es.addStep({
-                key: "evui.iframes.asktimeout",
+                key: EVUI.Modules.IFrames.Constants.Job_Ask,
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+                name: EVUI.Modules.IFrames.Constants.StepPrefix + "." + EVUI.Modules.IFrames.Constants.Job_Ask,
                 handler: function (jobArgs)
                 {
                     var finish = function (value)
@@ -1009,7 +1024,8 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             var iframeArgs = new EVUI.Modules.IFrames.IFrameEventArgs(messageSession.entry.iFrame, message);
             iframeArgs.cancel = eventArgs.cancel;
             iframeArgs.context = es.eventState;
-            iframeArgs.key = eventArgs.key;
+            iframeArgs.eventType = eventArgs.key;
+            iframeArgs.eventName = eventArgs.name;
             iframeArgs.pause = eventArgs.pause;
             iframeArgs.resume = eventArgs.resume;
             iframeArgs.stopPropagation = eventArgs.stopPropagation;
@@ -1411,10 +1427,6 @@ EVUI.Modules.IFrames.IFrameEventArgs = function (iframe, message)
     var _iframe = iframe;
     var _message = message;
 
-    /**String. The unique key of this event.
-    @type {String}*/
-    this.key = null;
-
     /**Object. The window that sent the message.
     @type {EVUI.Modules.IFrames.IFrame}*/
     this.sendingIFrame = null;
@@ -1433,12 +1445,28 @@ EVUI.Modules.IFrames.IFrameEventArgs = function (iframe, message)
         configurable: false
     });
 
-    /** */
+    /**String. The full name of the event.
+    @type {String}*/
+    this.eventName = null;
+
+    /**String. The type of event being raised.
+    @type {String}*/
+    this.eventType = null;
+
+    /**Pauses the IFrame's action, preventing the next step from executing until resume is called.*/
     this.pause = function () { };
+
+    /**Resumes the IFrame's action, allowing it to continue to the next step.*/
     this.resume = function () { };
-    this.cancel = function () { };
+
+    /**Cancels the IFrame's action and aborts the execution of the operation.*/
+    this.cancel = function () { }
+
+    /**Stops the IFrame from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
-    this.respond = function (data, messageCodeOrArgs, senderName) { };
+
+    /**Object. Any state value to carry between events.
+    @type {Object}*/
     this.context = {};
 };
 
@@ -1568,6 +1596,8 @@ EVUI.Modules.IFrames.Manager = null;
     });
 })();
 
+/**Constructor reference for the DropdownManager.*/
+EVUI.Constructors.IFrames = EVUI.Modules.IFrames.IFrameManager
 
 delete $evui.iframes;
 

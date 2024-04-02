@@ -3,29 +3,33 @@
 /*#TEST_START("Passing test")#*/
 await $evui.testHost.runAsync({
     name: "Basic test: passing",
-    test: function (pass, fail)
+    test: function (testArgs)
     {
         $evui.testHost.writeOutput("passing");
-        pass();
+        testArgs.pass();
     }
 });
 
 /*#TEST_START("Timeout test")#*/
 await $evui.testHost.runAsync({
     name: "Basic test: timeout",
-    test: function (pass, fail)
+    test: function (testArgs)
     {
         $evui.testHost.writeOutput("timing out");
+    },
+    options: {
+        shouldFail: true,
+        implicitSuccess: false
     }
 });
 
 /*#TEST_START("Failing test")#*/
 await $evui.testHost.runAsync({
     name: "Basic test: manual fail",
-    test: function (pass, fail)
+    test: function (testArgs)
     {
-        $evui.testHost.writeOutput("failing");
-        fail("manual");
+        testArgs.outputWriter.writeOutput("failing");
+        testArgs.fail("manual", true);
     }
 });
 
@@ -33,11 +37,11 @@ await $evui.testHost.runAsync({
 await $evui.testAsync({
     name: "Basic test: multiple parameters passing",
     testArgs: [1, 2, 3],
-    test: function (pass, fail, number)
+    test: function (testArgs, number)
     {
-        if (typeof number !== "number") fail("No parameter provided.")
-        $evui.testHost.writeOutput("Parameter: " + number);
-        pass();
+        if (typeof number !== "number") testArgs.fail("No parameter provided.")
+        testArgs.outputWriter.writeOutput("Parameter: " + number);
+        testArgs.pass();
     }
 });
 
@@ -45,10 +49,14 @@ await $evui.testAsync({
 await $evui.testAsync({
     name: "Basic test: multiple parameters timeout",
     testArgs: [1, 2, 3],
-    test: function (pass, fail, number)
+    test: function (testArgs, number)
     {
-        if (typeof number !== "number") fail("No parameter provided.")
-        $evui.testHost.writeOutput("Parameter: " + number);
+        if (typeof number !== "number") testArgs.fail("No parameter provided.")
+        testArgs.outputWriter.writeOutput("Parameter: " + number);
+    },
+    options: {
+        shouldFail: true,
+        implicitSuccess: false
     }
 });
 
@@ -56,11 +64,11 @@ await $evui.testAsync({
 await $evui.testAsync({
     name: "Basic test: multiple parameters failing",
     testArgs: [1, 2, 3],
-    test: function (pass, fail, number)
+    test: function (testArgs, number)
     {
-        if (typeof number !== "number") fail("No parameter provided.")
-        $evui.testHost.writeOutput("Parameter: " + number);
-        fail("manual");
+        if (typeof number !== "number") testArgs.fail("No parameter provided.")
+        testArgs.outputWriter.writeOutput("Parameter: " + number);
+        testArgs.fail("manual", true);
     }
 });
 
@@ -68,17 +76,17 @@ await $evui.testAsync({
 await $evui.testAsync({
     name: "Basic test: fail conditionally",
     testArgs: [1, 2, 3, 4],
-    test: function (pass, fail, number)
+    test: function (testArgs, number)
     {
-        if (typeof number !== "number") fail("No parameter provided.")
-        $evui.testHost.writeOutput("Parameter: " + number);
+        if (typeof number !== "number") testArgs.fail("No parameter provided.")
+        testArgs.outputWriter.writeOutput("Parameter: " + number);
         if (number % 2 === 0)
         {
-            pass();
+            testArgs.pass();
         }
         else
         {
-            fail(number + " is not divisible by 2.");
+            testArgs.fail(number + " is not divisible by 2.", true);
         }
     }
 });

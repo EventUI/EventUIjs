@@ -1,26 +1,30 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
 if ($evui == null) $evui = {};
 
+/**Root namespace for the EventUI Test library.
+@namespace*/
 EVUITest = {};
 
+/**Constants table for the EventUI Test library.
+@static*/
 EVUITest.Constants = {};
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
-@param {EVUITest.Constants.Fn_TestPass} pass A function to call once the test is complete.
-@param {EVUITest.Constants.Fn_TestFail} fail A function to call if the test fails.
+@param {EVUITest.TestHostArgs} testHostArgs An arguments object for the test that contains the functions used to pass or fail the test, as well as some metadata about the test.
 @param {Any} args The arguments passed into the test.*/
-EVUITest.Constants.Fn_Test = function (pass, fail, ...args) { };
+EVUITest.Constants.Fn_Test = function (testHostArgs, ...args) { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.*/
 EVUITest.Constants.Fn_TestPass = function () { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
-@param {String} reason The reason why the test failed.*/
-EVUITest.Constants.Fn_TestFail = function (reason) { };
+@param {String} reason The reason why the test failed.  
+@param {Boolean} intentionalFailure Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
+EVUITest.Constants.Fn_TestFail = function (reason, intentionalFailure) { };
 
 /**A predicate function that is fed the assertion value and returns true or false. 
 @param {Any} assertionValue The value wrapped by the assertion.
@@ -31,6 +35,13 @@ EVUITest.Constants.Fn_Predicate = function (assertionValue) { };
 @param {EVUITest.ValueEqualityContext} equalityContext The comparison context of the values.
 @returns {Boolean}*/
 EVUITest.Constants.Fn_EqualityComparer = function (equalityContext) { };
+
+/**A symbol used to mark a function on an object's prototype as being an equality test. Used to invoke a Fn_EqualityComparer function
+to compare two values.
+@type {Symbol}*/
+EVUITest.Constants.Symbol_EqualityComparer = Symbol("evui.test.equality");
+
+Object.freeze(EVUITest.Constants);
 
 /**Default settings for the Assertions module.
 @class*/
@@ -71,10 +82,6 @@ EVUITest.Settings.outputWriter = null;
 @class*/
 EVUITest.Test = function ()
 {
-    /**Number. The Id of the test.
-    @type {Number}*/
-    this.id = null;
-
     /**String. The name of the test. Used for logging purposes.
     @type {String}*/
     this.name = null;
@@ -83,7 +90,7 @@ EVUITest.Test = function ()
     @type {[]}*/
     this.testArgs = null;
 
-    /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestExecutionArgs instance
+    /**Function. The test to run. Can take any number of parameters, but the first parameter is always a TestHostArgs instance
     @type {EVUITest.Constants.Fn_Test}*/
     this.test = null;
 
@@ -120,6 +127,10 @@ EVUITest.TestResult = function ()
     @type {Error}*/
     this.error = null;
 
+    /**Boolean. Whether or not this test was intentionally failed and not a result of the test failing organically.
+    @type {Boolean}*/
+    this.intentionalFailure = false;
+
     /**Number. The number of milliseconds the test took.
     @type {Number}*/
     this.duration = 0;
@@ -130,57 +141,275 @@ EVUITest.TestResult = function ()
 
     /**Number. The ordinal of this test in the set of tests that contained it.
     @type {Number}*/
-    this.testSetId = 0;
+    this.instanceInSet = 0;
+
+    /**Object. The TestOptions used for the test.
+    @type {EVUITest.TestOptions}*/
+    this.options = null;
+
+    /**Array. An array of the output that was logged during the test.
+    @type {EVUI.TestHostOutput[]}*/
+    this.output = [];
 };
 
 /**Simple utility class used for writing output from the TestHost. The default implementation writes to the console, but it can be overwritten to write to anything.
 @class*/
 EVUITest.OutputWriter = function ()
 {
-    /**Writes the output of a TestResult.
-    @param {EVUITest.TestResult} testResult The result of a test.*/
-    this.writeTestOuput = function (testResult)
-    {
-        var output = this.formatTestOutput(testResult);
-        this.writeOutput(output);
-    };
+    var _self = this;
 
-    /**Writes arbitrary output.
+    /**Writes arbitrary output. Override to implement custom logging behavior.
     @param {Any} args Any arguments to write to output.*/
     this.writeOutput = function (...args)
     {
         console.log(...args);
     };
 
+    /**Logs a "critical" level log message.
+    @param {String} message The message to log.*/
+    this.logCritical = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Critical);
+    };
+
+    /**Logs a "error" level log message.
+    @param {String} message The message to log.*/
+    this.logError = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Error);
+    };
+
+    /**Logs a "warning" level log message.
+    @param {String} message The message to log.*/
+    this.logWarning = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Warn); 
+    };
+
+    /**Logs a "debug" level log message.
+    @param {String} message The message to log.*/
+    this.logDebug = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Debug);
+    };
+
+    /**Logs a "info" level log message.
+    @param {String} message The message to log.*/
+    this.logInfo = function (message)
+    {
+        this.log(message, EVUITest.LogLevel.Info);
+    };
+
+    /**Logs a message by creating a OutputWriterMessage and passing it to writeOutput.
+    @param {String} message The message to log.
+    @param {String} level The LogLevel enum value to associate with the log message.*/
+    this.log = function (message, level)
+    {
+        if (typeof message == null) return;
+        if (typeof level !== "string") level = EVUITest.LogLevel.Info;
+
+        var logMessage = new EVUITest.OutputWriterMessage();
+        logMessage.message = message;
+        logMessage.logLevel = level;
+
+        _self.writeOutput(logMessage)
+    }
+};
+
+/**Represents an output message from the EVUITest library that ties together a log message with a log level code.
+@class */
+EVUITest.OutputWriterMessage = function ()
+{
+    /**A value from the LogLevel enum indicating the level of severity of the log message.
+    @type {String}*/
+    this.logLevel = EVUITest.LogLevel.Info;
+
+    /**The message to log. Must be able to be sent in an iframe message.
+    @type {Any}*/
+    this.message = null;
+
+    /**The UTC ISO timestamp for when this log statement was made.
+    @type {String}*/
+    this.timestamp = new Date(Date.now()).toISOString();
+};
+
+/**The importance level of a log message.
+@enum*/
+EVUITest.LogLevel =
+{
+    None: "none",
+    Trace: "trace",
+    Debug: "debug",
+    Info: "info",
+    Warn: "warn",
+    Error: "error",
+    Critical: "critical"
+};
+
+/**Settings for running tests.
+@class*/
+EVUITest.TestOptions = function ()
+{
+    /**Number. The number of milliseconds to wait before automatically failing the test. 100ms by default.
+    @type {Number}*/
+    this.timeout = 100;
+
+    /**Array. In the event of an asynchronous portion of a test crashing without a try-catch capturing the error, this is the window's onerror handler's list of code files to associate with the error. If an error comes from a file that meets the filter, it is associated with the test. If not, the error is ignored.
+    @type {String|RegExp|String[]|RegExp[]}*/
+    this.fileFilter = new RegExp(/.*\.js$/ig);
+
+    /**Boolean. Whether or not a failing test is considered a successful test (and a non-failing result counts as unsuccessful test). False by default.
+    @type {Boolean}*/
+    this.shouldFail = false;
+
+    /**Boolean. Whether or not a test is consider successful if it finishes without calling TestArgs.pass(). True by default.
+    @type {Boolean}*/
+    this.implicitSuccess = true;
+};
+
+/**A simple utility that runs a test single delegate that can contain any arbitrary testing code. The entry point to the EVUI unit testing Selenium integration.
+@class*/
+EVUITest.TestHostController = function ()
+{
+    var _self = this;
+    var _executing = false;
+    var _testQueue = [];
+    var _messageIDCounter = 0;
+    var _idCounter = 1;
+    var _instanceCounter = 1;
+    var _outputWriter = null;
+    var _testResults = [];
+    var _testCounter = 0;
+    var _currentTestInstance = null;
+
+    /**Boolean. Whether or not the Host is currently running.
+    @type {Boolean}*/
+    this.executing = false;
+    Object.defineProperty(this, "executing", {
+        get: function ()
+        {
+            return _executing;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**Object. The OutputWriter used by the TestHost.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
+    Object.defineProperty(this, "outputWriter", {
+        get: function ()
+        {
+            if (_outputWriter == null) return EVUITest.Settings.outputWriter;
+            return _outputWriter;
+        },
+        set: function (value)
+        {
+            if (typeof value !== "object" || value == null) throw Error("Object expected.")
+            _outputWriter = value;
+        },
+        configurable: false,
+        enumerable: false
+    });
+
+    /**Object. Control options for the test host.
+    @type {EVUITest.TestOptions}*/
+    this.options = new EVUITest.TestOptions();
+
+    /**Awaitable. Runs a test function based on the Test passed in.
+    @param {String|EVUITest.Constants.Fn_Test|EVUITest.Test} name The name of the test being run, a test function to run, or a Test yolo to run.
+    @param {EVUITest.Constants.Fn_Test|EVUITest.Test} test The test function to run, or a Test yolo to run.
+    @returns {Promise<EVUITest.TestResult[]>}*/
+    this.runAsync = function (name, test)
+    {
+        var resolvedTest = getTestAmbiguously(name, test);
+        if (resolvedTest == null) throw Error("Test YOLO or function expected.");
+
+        resolvedTest.instances = getTestInstances(resolvedTest);
+
+        if (_executing === true)
+        {
+            _testQueue.push(resolvedTest);
+
+            return new Promise(function (resolve)
+            {
+                resolvedTest.callback = function (testState)
+                {
+                    resolve(testState.results);
+                }
+            });
+        }
+
+        return new Promise(function (resolve)
+        {
+            executeTest(resolvedTest, function (testState)
+            {
+                resolve(testState.results);
+            });
+        });
+    };
+
+    /**Uses the outputWriter to write arbitrary output.
+    @param {Any} args Any arguments to write as output.*/
+    this.writeOutput = function (...args)
+    {
+        writeOutput(...args);
+    };
+
+    /**Gets a copy of the internal TestResults list.
+    @returns {EVUITest.TestResult[]}*/
+    this.getResults = function ()
+    {
+        return _testResults.slice();
+    };
+
+    /**Clears the internal TestResults list of all rsults.*/
+    this.clearResults = function ()
+    {
+        _testResults.splice(0, _testResults.length);
+    };
+
     /**Formats a testResult into a loggable string.
-    @param {EVUITest.TestResult} testResult The result of a test.*/
-    this.formatTestOutput = function (testResult)
+    @param {EVUITest.TestResult} testResult The result of a test.
+    @returns {EVUITest.OutputWiterMessage}*/
+    var formatTestOutput = function (testResult)
     {
         if (testResult == null) return null;
 
-        var output = "Test #" + testResult.testId + " - \"" + testResult.testName + "\" ";
+        var outputMessage = new EVUITest.OutputWriterMessage();
+        var output = "Test #" + testResult.testId + ":" + testResult.instanceInSet + " - \"" + testResult.testName + "\" ";
 
         if (testResult.success === true)
         {
-            output += "SUCCEDED in " + testResult.duration + "ms."
+            outputMessage.logLevel = EVUITest.LogLevel.Debug;
+            output += "SUCCEDED in " + testResult.duration.toFixed(3) + "ms."
         }
         else
         {
-            output += "FAILED  in " + testResult.duration + "ms.";
+            if (testResult.intentionalFailure === true)
+            {
+                outputMessage.logLevel = EVUITest.LogLevel.Debug;
+                output += "SIMULATED FAILURE  in " + testResult.duration.toFixed(3) + "ms.";
+            }
+            else
+            {
+                outputMessage.logLevel = EVUITest.LogLevel.Error;
+                output += "FAILED  in " + testResult.duration.toFixed(3) + "ms.";
+            }
 
             if (typeof testResult.reason === "string" && testResult.reason.trim().length > 0)
             {
                 output += "\nReason: " + testResult.reason;
             }
-            else if (testResult.error instanceof Error)
+            else if (testResult.error instanceof Error && testResult.intentionalFailure !== true)
             {
-                output += "\nError: " + testResult.error.stack;
+                output += "\n" + testResult.error.stack;
             }
         }
 
         if (testResult.arguments != null && testResult.arguments.length > 0)
         {
-            var argsStr = "\n\nWith Arguments:\n";
+            var argsStr = " With Arguments:\t";
 
             if (typeof arguments === "function")
             {
@@ -195,90 +424,11 @@ EVUITest.OutputWriter = function ()
                 argsStr += testResult.arguments.toString();
             }
 
-            output += argsStr;
+            output += argsStr
         }
 
-        return output;
-    };
-};
-
-/**Settings for running tests.
-@class*/
-EVUITest.TestOptions = function ()
-{
-    /**Number. The number of milliseconds to wait before automatically failing the test.
-    @type {Number}*/
-    this.timeout = 100;
-
-    /**Array. In the event of an asynchronous portion of a test crashing without a try-catch capturing the error, this is the window's onerror handler's list of code files to associate with the error. If an error comes from a file that meets the filter, it is associated with the test. If not, the error is ignored.
-    @type {String|RegExp|String[]|RegExp[]}*/
-    this.fileFilter = new RegExp(/.*\.js/ig);
-};
-
-/**A simple utility that runs a test single delegate that can contain any arbitrary testing code. The entry point to the EVUI unit testing Selenium integration.
-@class*/
-EVUITest.TestHostController = function ()
-{
-    var _self = this;
-    var _executing = false;
-    var _testQueue = [];
-    var _idCounter = 0;
-    var _instanceCounter = 0;
-
-    /**Boolean. Whether or not the Host is currently running.
-    @type {Boolean}*/
-    this.executing = false;
-    Object.defineProperty(this, "executing", {
-        get: function ()
-        {
-            return _executing;
-        },
-        configurable: false,
-        enumerable: true
-    });
-
-    /**Object. Control options for the test host.
-    @type {EVUITest.TestOptions}*/
-    this.options = new EVUITest.TestOptions();
-
-    /**Awaitable. Runs a test function based on the Test passed in.
-    @param {String|EVUITest.Constants.Fn_Test|EVUITest.Test} name The name of the test being run, a test function to run, or a Test yolo to run.
-    @param {EVUITest.Constants.Fn_Test|EVUITest.Test} test The test function to run, or a Test yolo to run.
-    @returns {Promise}*/
-    this.runAsync = function (name, test)
-    {
-        var resolvedTest = getTestAmbiguously(name, test);
-        if (resolvedTest == null) throw Error("Test YOLO or function expected.");
-
-        resolvedTest.instances = getTestInstances(resolvedTest);
-
-        if (_executing === true)
-        {
-            _testQueue.push(resolvedTest);
-
-            return new Promise(function (resolve)
-            {
-                resolvedTest.callback = function ()
-                {
-                    resolve();
-                }
-            });
-        }
-
-        return new Promise(function (resolve)
-        {
-            executeTest(resolvedTest, function ()
-            {
-                resolve();
-            });
-        });
-    };
-
-    /**Uses the ouputWriter to write arbitrary output.
-    @param {Any} args Any arguments to write as output.*/
-    this.writeOutput = function (...args)
-    {
-        writeOutput(...args);
+        outputMessage.message = output;
+        return outputMessage;
     };
 
     /**Takes ambiguous user input and makes a TestState object from it.
@@ -307,22 +457,7 @@ EVUITest.TestHostController = function ()
         //if we were handed an object, populate the realTest with its values
         if (testType === "object")
         {
-            var args = test.testArgs;
-            if (args != null)
-            {
-                if (Array.isArray(args) === false)
-                {
-                    args = [args];
-                }
-                else
-                {
-                    args = args.slice();
-                }
-            }
-            else
-            {
-                args = [];
-            }
+            var args = getTestArguments(test.testArgs);           
 
             //move the properties from the user's test onto the real test
             extend(realTest, test, ["id", "testArgs"]);
@@ -351,6 +486,60 @@ EVUITest.TestHostController = function ()
         return state;
     };
 
+    /**Gets the complete array of test arguments from the user's input, regardless if it was a properly formatted array, a generator function, or a vanialla function
+    @param {[]} args
+    @returns {[]} */
+    var getTestArguments = function (args)
+    {
+        if (args == null) return [];
+        
+        if (Array.isArray(args) === false) //args shoud be an array of arrays
+        {
+            if (typeof args === "function")
+            {
+                var returnedArgs = args(); //get the result of the arguments function call to use as the arguments for the test
+                if (typeof returnedArgs === "object" && returnedArgs != null && typeof returnedArgs[Symbol.iterator] === "function")
+                {
+                    if (typeof returnedArgs.next === "function") //if we got an object with a "next" function, it's an iterator
+                    {
+                        args = [];
+                        var result = returnedArgs.next(); //use the iterator to get the full list of parameters in advance
+                        while (result != null && result.done === false)
+                        {
+                            args.push(Array.isArray(result.value) === false ? [result.value] : result.value); //very result needs to be wrapped in an array
+                            result = returnedArgs.next();
+                        }
+                    }
+                    else //not an iterator
+                    {
+                        if (Array.isArray(returnedArgs) === false) //again, ensure the value is an array
+                        {
+                            args = [returnedArgs];
+                        }
+                        else
+                        {
+                            args = returnedArgs;
+                        }
+                    }
+                }
+                else //wasnt even an object, wrap it in an array
+                {
+                    args = [returnedArgs];
+                }
+            }
+            else //was not an array, wrap it in an array
+            {
+                args = [args];
+            }
+        }
+        else //it WAS an array - make a copy of it so it cant be manipulated during the test
+        {
+            args = args.slice();
+        }
+
+        return args;
+    }
+
     /**Gets the next test in the test queue.
     @returns {TestState}*/
     var getNextTest = function ()
@@ -360,24 +549,27 @@ EVUITest.TestHostController = function ()
     };
 
     /**Utility function for ensuring that there is a valid outputWriter before attempting to write any output about the results of a test instance.
-    @param {TestInstance} testInstance The instance of a test that was just completed.*/
-    var writeTestOutput = function (testInstance)
+    @param {EVUITest.TestResult} testResult The result object representing the test that was just completed..*/
+    var writeTestOutput = function (testResult)
     {
-        if (typeof EVUITest.Settings.outputWriter?.writeTestOuput !== "function")
+        if (typeof _self.outputWriter?.writeOutput !== "function")
         {
-            console.log("Invalid outputWriter! The outputWriter must have a \"writeTestOutput\" function that accepts a TestResult as a parameter.");
+            console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function.");
         }
         else
         {
-            var result = makeResultFromState(testInstance);
-
             try
             {
-                EVUITest.Settings.outputWriter.writeTestOuput(result);
+                var testLogMessage = formatTestOutput(testResult);
+                writeOutput(testLogMessage);
             }
             catch (ex)
             {
-                writeOutput(ex);
+                var errorLogMessage = new EVUITest.OutputWriterMessage();
+                errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
+                errorLogMessage.message = "Error generating log message: " + ex.stack;
+
+                writeOutput(errorLogMessage);
             }
         }
     };
@@ -386,16 +578,15 @@ EVUITest.TestHostController = function ()
     @param {Any} args Any values to write as output.*/
     var writeOutput = function (...args)
     {
-        if (typeof EVUITest.Settings.outputWriter?.writeOutput !== "function")
+        if (typeof _self.outputWriter?.writeOutput !== "function")
         {
             console.log("Invalid outputWriter! The outputWriter must have a \"writeOutput\" function that accepts an ...args set of arguments.");
         }
         else
         {
-
             try
             {
-                EVUITest.Settings.outputWriter.writeOutput(...args);
+                _self.outputWriter.writeOutput(...args);
             }
             catch (ex)
             {
@@ -419,11 +610,15 @@ EVUITest.TestHostController = function ()
             {
                 try
                 {
-                    callback();
+                    callback(testState);
                 }
                 catch (ex)
                 {
-                    writeOutput("Error in " + testState.test.name + " callback!", ex);
+                    var errorLogMessage = new EVUITest.OutputWriterMessage();
+                    errorLogMessage.logLevel = EVUITest.LogLevel.Critical;
+                    errorLogMessage.message = "Error in " + testState.test.name + " callback: " + ex.stack;
+
+                    writeOutput(errorLogMessage);
                 }
 
                 var next = getNextTest();
@@ -441,7 +636,12 @@ EVUITest.TestHostController = function ()
 
             executeInstance(testState.instances[index], function (testInstance)
             {
-                writeTestOutput(testInstance);
+                var testResult = makeResultFromState(testInstance);
+                testState.results.push(testResult);
+
+                _testResults.push(testResult);
+
+                writeTestOutput(testResult);
                 runTest(++index);
             });
         };
@@ -459,13 +659,36 @@ EVUITest.TestHostController = function ()
         var timeout = typeof finalOptions.timeout !== "number" ? 100 : finalOptions.timeout; //timeout before the test auto-fails.
         var timeoutID = -1; //id of the setTimeout return value. Used to cancel the timeout in the event the test completes before it expires.
 
+        finalOptions.timeout = timeout;
+        testInstance.options = finalOptions;
+        _currentTestInstance = testInstance;
+
+        var existingOutputWriter = _self.outputWriter.writeOutput;
+        _self.outputWriter.writeOutput = function (...args)
+        {
+            var loggedMessage = new EVUITest.TestHostOutput();
+            loggedMessage.id = _messageIDCounter++;
+            loggedMessage.instanceId = testInstance.instanceId;
+            loggedMessage.testId = testInstance.state.testId;
+            loggedMessage.message = args;
+            loggedMessage.timestamp = Date.now();
+
+            testInstance.output.push(loggedMessage);
+
+            existingOutputWriter(args);
+        }
+
         var finish = function () //final function to call on all exit paths from this function
         {
             removeEventListener("error", errorHandler);
 
-            if (timeoutID > 0) clearTimeout(timeoutID);
+            if (timeoutID > -1) clearTimeout(timeoutID);
+
+            _currentTestInstance = null;
+            _self.outputWriter.writeOutput = existingOutputWriter;
+
             callback(testInstance);
-        }
+        };
 
         var pass = function () //function to call when the test passes
         {
@@ -478,12 +701,13 @@ EVUITest.TestHostController = function ()
             finish();
         };
 
-        var fail = function (reasonOrEx) //function to call when the test fails
+        var fail = function (reasonOrEx, expectedFailure) //function to call when the test fails
         {
             if (testFinished === true) return;
             testFinished = true;
 
             testInstance.success = false;
+            testInstance.intentionalFailure = (typeof expectedFailure === "boolean") ? expectedFailure : false;
             testInstance.endTime = performance.now();
 
             if (typeof reasonOrEx === "string")
@@ -496,7 +720,7 @@ EVUITest.TestHostController = function ()
             }
             else //make an error so we get a stack trace
             {
-                testInstance.error = new Error("Manually failed for an unknown reason.");
+                testInstance.error = Error("Manually failed for an unknown reason.");
             }
 
             finish();
@@ -513,34 +737,62 @@ EVUITest.TestHostController = function ()
         //add the global error event listener to catch exceptions thrown not on the stack trace of the promise (i.e. in a callback for a native API, like a XMLHttpRequest)
         addEventListener("error", errorHandler);
 
-        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow
-        Promise.resolve().then(function ()
+        var runTest = function ()
         {
             try
             {
+                _testCounter++;
+                _self.outputWriter.logDebug("RUNNING Test #" + testInstance.state.testId + ":" + testInstance.instanceInSet + " - \"" + testInstance.state.test.name + "\"");
+
+                var testArgs = new EVUITest.TestHostArgs();
+                testArgs.fail = fail;
+                testArgs.pass = pass;
+                testArgs.outputWriter = _self.outputWriter;
+                testArgs.parameters = testInstance.arguments.slice();
+                testArgs.options = finalOptions;
+
                 timeoutID = setTimeout(function () //set the timeout failsafe
                 {
                     fail(new Error("Timeout reached after " + timeout + "ms."))
                 }, timeout);
 
                 //make the final args array to use to invoke the test. The first two parameters are always the pass and fail functions
-                var allArgs = [pass, fail].concat(testInstance.arguments);
+                var allArgs = [testArgs].concat(testInstance.arguments);
                 testInstance.startTime = performance.now();
 
                 var result = testInstance.testFn.apply(this, allArgs);
                 if (result instanceof Promise)
                 {
+                    result.then(function ()
+                    {
+                        if (testFinished === false && finalOptions.implicitSuccess === true) pass();
+                    });
+
                     result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
                         fail(ex);
                     });
+                }
+                else
+                {
+                    if (testFinished === false && finalOptions.implicitSuccess === true) pass();
                 }
             }
             catch (ex)
             {
                 fail(ex);
             }
-        });
+        };
+
+        //because the test host runs tests in one big recursive loop, this resets the stack frame for every test run and prevents an eventual stack overflow and allows for log messages to come through mid-test
+        if (_testCounter > 0 && _testCounter % 5 === 0)
+        {
+            setTimeout(runTest); //run a timeout to let go of the thread and let any pending calls in the event loop fire
+        }
+        else
+        {
+            Promise.resolve().then(runTest); //run the test in the faster promise event queue for better performance
+        }
     };
 
     /**Creates a TestInstance for every set of arguments in the args list provided by the user.
@@ -565,7 +817,7 @@ EVUITest.TestHostController = function ()
             for (var x = 0; x < numArgs; x++)
             {
                 var instance = new TestInstance();
-                instance.arguments = testState.arguments[x];
+                instance.arguments = (Array.isArray(testState.arguments[x]) === false) ? [testState.arguments[x]] : testState.arguments[x];
                 instance.state = testState;
                 instance.instanceInSet = x + 1;
                 instance.testFn = testState.test.test;
@@ -584,6 +836,7 @@ EVUITest.TestHostController = function ()
     {
         var result = new EVUITest.TestResult();
 
+        result.testId = testInstance.state.testId;
         result.arguments = testInstance.arguments;
         result.duration = testInstance.endTime - testInstance.startTime;
         result.error = testInstance.error;
@@ -591,14 +844,32 @@ EVUITest.TestHostController = function ()
         result.testId = testInstance.state.testId;
         result.testName = testInstance.state.test.name;
         result.instanceId = testInstance.instanceId;
-        result.testSetId = testInstance.instanceInSet;
+        result.instanceInSet = testInstance.instanceInSet;
+        result.reason = testInstance.reason;
+        result.intentionalFailure = testInstance.intentionalFailure;
+        result.options = testInstance.options;
+        result.output = testInstance.output;
+
+        if (testInstance.options.shouldFail === true) //if we were supposed to fail the test, invert the success/fail flags but mark the fail as intentional
+        {
+            if (result.success === true)
+            {
+                result.success = false;
+                if (typeof result.reason !== "string") result.reason = "Test PASSED but was expected to FAIL.";
+            }
+            else
+            {
+                result.intentionalFailure = true;
+            }
+        }
 
         return result;
     }
 
     /**Performs an inheritance operation on the various option sets we can use to make the final options set.
     @param {EVUITest.TestOptions} testOptions The options settings that apply to the whole test.
-    @param {EVUITest.TestOptions} hostOptions The options settings that applies to all tests in the test runner.*/
+    @param {EVUITest.TestOptions} hostOptions The options settings that applies to all tests in the test runner.
+    @returns {EVUITest.TestOptions}*/
     var makeFinalOptions = function (testOptions, hostOptions)
     {
         var finalOptions = new EVUITest.TestOptions();
@@ -606,7 +877,7 @@ EVUITest.TestHostController = function ()
         extend(finalOptions, hostOptions);
         extend(finalOptions, testOptions);
 
-        return Object.freeze(finalOptions);
+        return finalOptions;
     };
 
     /**Determines whether or not the script reported in the global error handler is one of the relevant scripts being watched for exceptions and not a random 3rd party library.
@@ -704,6 +975,10 @@ EVUITest.TestHostController = function ()
         @type {TestInstance[]}*/
         this.instances = [];
 
+        /**Array. The array of all the test results produced by the source test.
+        @type {EVUITest.TestResult}*/
+        this.results = [];
+
         /**Function. A callback to call once this test has completed running all of its instances.
         @type {Function}*/
         this.callback = null;
@@ -740,6 +1015,10 @@ EVUITest.TestHostController = function ()
         @type {Boolean}*/
         this.success = false;
 
+        /**Boolean. Whether or not the failure was intentional.
+        @type {Boolean}*/
+        this.intentionalFailure = false;
+
         /**String. If the test was manually failed, this is the reason why.
         @type {String}*/
         this.reason = null;
@@ -751,12 +1030,50 @@ EVUITest.TestHostController = function ()
         /**Function. The actual test being run.
         @type {EVUITest.Constants.Fn_Test}*/
         this.testFn = null;
+
+        /**Object. The options used for the test.
+        @type {EVUITest.TestOptions}*/
+        this.options = null;
+
+        /**Array. An array of the arguments passed into the OutputWriter while this test was running.
+        @type {EVUITest.TestHostOutput}*/
+        this.output = [];
     }
 };
 
+EVUITest.TestHostOutput = function ()
+{
+    this.id = -1;
+    this.testId = -1;
+    this.instanceId = -1;
+    this.timestamp = -1;
+    this.message = null;
+};
 
+/**The arguments made by EventUI Test that are injected as the first parameter into every test.
+@class*/
+EVUITest.TestHostArgs = function ()
+{
+    /**Function. Indicates that the test has passed.
+    @type {EVUITest.Constants.Fn_TestPass}*/
+    this.pass = function () { };
 
+    /**Function. Indicates that the test has failed (and, optionally, that the failure was expected).
+    @type {EVUITest.Constants.Fn_TestFail}*/
+    this.fail = function (reasonOrEx, intentionalFailure) { };
 
+    /**Array. The array of parameters provided to the test that were passed into the test function.
+    @type {[]}*/
+    this.parameters = null;
+
+    /**Object. The OutputWriter that belongs to the TestHost running the test.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
+
+    /**Object. The options being used for this test.
+    @type {EVUITest.TestOptions}*/
+    this.options = null;
+};
 
 /**An object which runs simple tests on a constructor argument parameter.
 @param {Any} value The value to make an assertion operation on.
@@ -803,14 +1120,6 @@ EVUITest.Assertion = function (value, settings)
         return _settings;
     };
 
-    /**Gets the message based on the last operation this assertion executed.
-    @returns {String}*/
-    this.getMessage = function ()
-    {
-        if (_lastComparison == null) return null;
-        return getComparisonMessage(_lastComparison);
-    };
-
     /**Gets the latest comparison made by the Assertion.
     @returns {EVUITest.ValueCompareResult|EVUITest.ValueContainmentResult|EVUITest.ValuePredicateResult}*/
     this.getLastComparison = function ()
@@ -826,11 +1135,11 @@ EVUITest.Assertion = function (value, settings)
         return false;
     };
 
-    /**Determines if two values are equal.
+    /**Determines if two values are equal using strict ValueCompareOptions rules by default.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
-    this.equals = function (b, compareOptions)
+    @returns {EVUITest.ValueCompareResult}*/
+    this.is = function (b, compareOptions)
     {
         var defaultSettings = {};
         defaultSettings.affirmitiveCheck = true;
@@ -840,14 +1149,14 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if two values are NOT equal.
+    /**Determines if two values are NOT equal using strict ValueCompareOptions rules by default.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
-    this.doesNotEqual = function (b, compareOptions)
+    @returns {EVUITest.ValueCompareResult}*/
+    this.isNot = function (b, compareOptions)
     {
         var defaultSettings = {};
         defaultSettings.affirmitiveCheck = false;
@@ -857,13 +1166,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if the predicate function returns true when executed and passed the Assertion's value as a parameter.
+    /**Determines if the predicate function returns true (as determined by a strict comparison to the boolean 'true' by default) when executed and passed the Assertion's value as a parameter.
     @param {EVUITest.Constants.Fn_Predicate} predicate The function to feed Assertion's value into.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValuePredicateResult}*/
     this.isTrue = function (predicate, compareOptions)
     {
         var defaultSettings = {};
@@ -873,14 +1182,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(predicate, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-
-    /**Determines if the predicate function returns false when executed and passed the Assertion's value as a parameter.
+    /**Determines if the predicate function returns false (as determined by a strict comparison to the boolean 'false' by default) when executed and passed the Assertion's value as a parameter.
     @param {EVUITest.Constants.Fn_Predicate} predicate The function to feed Assertion's value into.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValuePredicateResult}*/
     this.isFalse = function (predicate, compareOptions)
     {
         var defaultSettings = {};
@@ -890,13 +1198,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(predicate, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if an Array contains the given value.
+    /**Determines if an Array contains the given value based on strict ValueCompareOptions by default.
     @param {Any} value The value to find in the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueContainmentResult}*/
     this.contains = function (value, compareOptions)
     {
         var defaultSettings = {};
@@ -906,13 +1214,13 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(value, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if an Array does not contain the given value.
+    /**Determines if an Array does not contain the given value based on strict ValueCompareOptions by default.
     @param {Any} value The value to find in the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueContainmentResult}*/
     this.doesNotContain = function (value, compareOptions)
     {
         var defaultSettings = {};
@@ -922,13 +1230,16 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(value, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if two values are "equivalent" in that, if both are objects, their property values match regardless if the object references differ.
-    @param {any} b The value to compare against the Assertion's value.
+    /**Determines if two values are "equivalent" in that
+    1. If both are objects, at least one of their property values do not match regardless if the object references differ.
+    
+    Otherwise equivlanecy is based on strict ValueCompareOptions by default.
+    @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueCompareResult}*/
     this.isEquivalentTo = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -940,13 +1251,16 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if two values are NOT "equivalent" in that, if both are objects, at least one of their property values do not match regardless if the object references differ.
-    @param {any} b The value to compare against the Assertion's value.
+    /**Determines if two values are NOT "equivalent" in that:
+    1. If both are objects, at least one of their property values do not match regardless if the object references differ.
+    
+    Otherwise equivlanecy is based on strict ValueCompareOptions by default.
+    @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueCompareResult}*/
     this.isNotEquivalentTo = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -958,13 +1272,18 @@ EVUITest.Assertion = function (value, settings)
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if two values are "roughly" the same in that, if both are objects, their property values match regardless if the object references differ. If an object being compared is an array, the order of elements does not matter.
-    @param {any} b The value to compare against the Assertion's value.
+    /**Determines if two values are "roughly" the same in that:
+    1. If both are objects, their property values match regardless if the object references differ. 
+    2. If an object being compared is an array, the order of elements does not matter.
+    3. If strings are being compared, their case does not matter.
+
+    Otherwise, loose equality is used by default.
+    @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueCompareResult}*/
     this.isRoughly = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -973,17 +1292,24 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
         defaultSettings.ignoreOrder = true;
+        defaultSettings.strictEquals = false;
+        defaultSettings.ignoreCase = true;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
-    /**Determines if two values are NOT "roughly" the same in that, if both are objects, their at least one of their property values does not match regardless if the object references differ. If an object being compared is an array, the order of elements does not matter.
+    /**Determines if two values are NOT "roughly" the same in that:
+    1. If both are objects, their property values match regardless if the object references differ. 
+    2. If an object being compared is an array, the order of elements does not matter.
+    3. If strings are being compared, their case does not matter.
+
+    Otherwise, loose equality is used by default.
     @param {any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueCompareResult}*/
     this.isNotRoughly = function (b, compareOptions)
     {
         var defaultSettings = {};
@@ -992,25 +1318,27 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
         defaultSettings.ignoreOrder = true;
+        defaultSettings.strictEquals = false;
+        defaultSettings.ignoreCase = true;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
     /**Performs an arbitrary comparison between two values as specified by the compareOptions parameter.
-    @param {any} b Any value or predicate function to use in the comparison.
+    @param {Any} b Any value or predicate function to use in the comparison.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
-    @returns {EVUITest.Assertion}*/
+    @returns {EVUITest.ValueCompareResult|EVUITest.ValueContainmentResult|EVUITest.ValuePredicateResult}*/
     this.compare = function (b, compareOptions)
     {
-        if (compareOptions == null || typeof compareOptions !== "object") throw Error("compareOptions must be an object.");
+        if (compareOptions == null || typeof compareOptions !== "object") compareOptions = {};
 
         var error = executeAssertion(b, compareOptions, {});
         if (error != null) throw new Error(error.message);
 
-        return this;
+        return _lastComparison;
     };
 
     /**Executes the assertion requested by one of the top-level public functions.
@@ -1025,21 +1353,28 @@ EVUITest.Assertion = function (value, settings)
         settings.comparer = getComparer(settings);
 
         var comparisonResult = settings.comparer.compare(_value, b, settings.compareOptions);
-        _lastComparison = Object.freeze(comparisonResult);
-
         var logMessage = getComparisonMessage(comparisonResult);
+
+        comparisonResult.message = logMessage;
+        _lastComparison = Object.freeze(comparisonResult);
 
         var logOnSuccess = typeof settings.logOnSuccess === "boolean" ? settings.logOnSuccess : _settings.logOnSuccess;
         var throwOnFailure = typeof settings.throwOnFailure === "boolean" ? settings.throwOnFailure : _settings.throwOnFailure;
 
+        var outputMessage = new EVUITest.OutputWriterMessage();
+        outputMessage.message = logMessage;
+
         if (comparisonResult.success === true)
         {
-            if (logOnSuccess !== false) writeOutput(logMessage);
+            outputMessage.logLevel = EVUITest.LogLevel.Debug;
+            if (logOnSuccess !== false) writeOutput(outputMessage, settings);
         }
         else
         {
+            outputMessage.logLevel = EVUITest.LogLevel.Error;
+
             if (throwOnFailure !== false) return Error(logMessage);
-            writeOutput(logMessage);
+            writeOutput(outputMessage, settings);
         }
     };
 
@@ -1073,15 +1408,6 @@ EVUITest.Assertion = function (value, settings)
         var compareOptions = {};
         var logOptions = {};
         var assertionSettings = {};
-
-        if (userSettings instanceof EVUITest.ValueEqualityComparer === true)
-        {
-            comparer = userSettings;
-        }
-        else
-        {
-            if (userSettings.comparer instanceof EVUITest.ValueEqualityComparer === true) comparer = userSettings.comparer;
-        }
 
         if (typeof userSettings.compareOptions === "object" && userSettings.compareOptions != null)
         {
@@ -1194,6 +1520,7 @@ EVUITest.Assertion = function (value, settings)
         {
             settings = new EVUITest.AssertionSettings();
             settings.comparer = EVUITest.ValueComparer.Default;
+            settings.outputWriter = EVUITest.Settings.outputWriter;
             settings.compareOptions = {};
             settings.logOptions = {};
         }
@@ -1204,7 +1531,8 @@ EVUITest.Assertion = function (value, settings)
             if (settings.logOptions == null || typeof settings.logOptions !== "object") settings.logOptions = {};
 
             if (typeof settings.logOnSuccess !== "boolean") settings.logOnSuccess = EVUITest.Settings.logOnSuccess;
-            if (typeof settings.throwOnFailure == "boolean") settings.throwOnFailure = EVUITest.Settings.throwOnFailure;
+            if (typeof settings.throwOnFailure !== "boolean") settings.throwOnFailure = EVUITest.Settings.throwOnFailure;
+            if (typeof settings.outputWriter == null || typeof settings.outputWriter !== "object") settings.outputWriter = EVUITest.Settings.outputWriter;
         }
 
         if (typeof settings.logOnSuccess !== "boolean") settings.logOnSuccess = true;
@@ -1214,18 +1542,19 @@ EVUITest.Assertion = function (value, settings)
     };
 
     /**Writes output to the console or whatever has been assigned as the output writer.
-    @param {Any} output Any output to write.*/
-    var writeOutput = function (output)
+    @param {Any} output Any output to write.
+    @param {EVUITest.AssertionSettings} settings The settings for the assertion.*/
+    var writeOutput = function (output, settings)
     {
         try
         {
-            if (EVUITest.Settings.outputWriter == null)
+            if (settings.outputWriter == null)
             {
                 console.log(output);
             }
             else
             {
-                EVUITest.Settings.outputWriter.writeOutput(output);
+                settings.outputWriter.writeOutput(output);
             }
         }
         catch (ex)
@@ -1273,8 +1602,6 @@ EVUITest.Assertion = function (value, settings)
         var aName = getValueStringForm(valueComparison.a, logOptions);
         var bName = getValueStringForm(valueComparison.b, logOptions);
         var comparisonVerb = getOperationStringForm(valueComparison);
-        var comparer = valueComparison.equalityComparer == null ? "" : "\nUsing ValueEqualityComparer: " + valueComparison.equalityComparer.name;
-
         var message = aName + " " + comparisonVerb + " " + bName + ".";
         var compareMessage = "\nExpected: " + getValueStringForm(valueComparison.a, _settings.logOptions) + "\nActual: " + getValueStringForm(valueComparison.b, _settings.logOptions);
 
@@ -1302,14 +1629,11 @@ EVUITest.Assertion = function (value, settings)
                     {
                         compareMessage = "\nDifference found at \"" + path + "\":  \n\tExpected: " + getValueStringForm(firstDiff.a, _settings.logOptions) + "\n\tActual: " + getValueStringForm(firstDiff.b, _settings.logOptions) + "\n in Objects" + compareMessage;
                     }
-
-
-                    comparer = firstDiff.equalityComparer == null ? "" : "\nUsing ValueEqualityComparer: " + firstDiff.equalityComparer.name;
                 }
             }
         }
 
-        return prefix + message + compareMessage + comparer;
+        return prefix + message + compareMessage;
     };
 
     /**Gets the "string" version of a value to appear in a log or error message.
@@ -1319,7 +1643,7 @@ EVUITest.Assertion = function (value, settings)
     var getValueStringForm = function (value, logOptions)
     {
         var valueStr = null;
-        var maxStrLength = (logOptions != null && typeof logOptions.maxStringLength === "number" && logOptions.maxStringLength >= 0) ? logOptions.maxStringLength : 200;
+        var maxStrLength = (logOptions != null && typeof logOptions.maxStringLength === "number" && logOptions.maxStringLength >= 0) ? logOptions.maxStringLength : 1000;
         var typeofVal = typeof value;
 
         if (typeofVal === "object")
@@ -1464,7 +1788,7 @@ EVUITest.Assertion = function (value, settings)
         }
         else if (comparisonResult.options.compareType === EVUITest.ValueCompareType.Predicate)
         {
-            return "returned " + getValueStringForm(comparisonResult.returnValue, _settings.logOptions) + " for";
+            return "returned";
         }
         else
         {
@@ -1490,7 +1814,7 @@ EVUITest.Assertion = function (value, settings)
                 }
             }
 
-            var numChildren = comparison.childComparisons.length;
+            var numChildren = (comparison.childComparisons == null) ? 0 : comparison.childComparisons.length;
             if (numChildren === 0)
             {
                 return comparison;
@@ -1558,7 +1882,7 @@ EVUITest.Assertion = function (value, settings)
         logOptions.stringifyObjects = (_settings.logOptions != null) ? _settings.logOptions.stringifyObjects : false;
 
         var message = aName + " " + comparisionVerb + " " + bName + ".";
-        var compareMessage = "\Executed: " + getValueStringForm(predicateComparison.predicate, logOptions) + "\nWith: " + getValueStringForm(predicateComparison.value, logOptions);
+        var compareMessage = "\nExecuted: " + getValueStringForm(predicateComparison.predicate, logOptions) + "\nWith: " + getValueStringForm(predicateComparison.value, logOptions);
 
         if (predicateComparison.success === false)
         {
@@ -1578,6 +1902,10 @@ EVUITest.AssertionSettings = function ()
     /**Object. The ValueComparer used to perform the comparison work of the Assertion.
     @type {EVUITest.ValueComparer}*/
     this.comparer = null;
+
+    /**Object. The default options to feed into the ValueComparer when the Assertion executes.
+    @type {EVUITest.OutputWriter}*/
+    this.outputWriter = null;
 
     /**Object. The default options to feed into the ValueComparer when the Assertion executes.
     @type {EVUITest.ValueCompareOptions}*/
@@ -1610,7 +1938,7 @@ EVUITest.AssertionLogOptions = function ()
 
     /**Number. The maximum length for a string (a raw string or stringified object/function) in an error message.
     @type {Number}*/
-    this.maxStringLength = 200;
+    this.maxStringLength = 1000;
 };
 
 /**Object for making various kinds of comparisons between values, objects, and functions.
@@ -1619,75 +1947,6 @@ EVUITest.ValueComparer = function ()
 {
     //self reference for closures
     var _self = this;
-
-    /**
-    @type {EVUITest.ValueEqualityComparer[]}*/
-    var _comparers = [];
-
-    /**Adds a ValueEqualityComparer to this ValueComparer's collection of ValueEqualityComparers.
-    @param {EVUITest.ValueEqualityComparer} comparer The comparer to add.*/
-    this.addEqualityComparer = function (comparer)
-    {
-        if (comparer == null || typeof comparer !== "object") throw Error("Object expected.");
-
-        if (typeof comparer.name !== "string" || comparer.name.trim().length === 0) throw Error("ValueEqualityComparer must have a string name.")
-
-        var existing = this.getEqualityComparer(comparer.name);
-        if (existing != null) throw Error("A ValueEqualityComparer with the name \"" + comparer.name + "\" already exists.");
-
-        if (typeof comparer.equals !== "function") throw Error("ValueEqualityComparer must have an equals function to perform the actual comparison.");
-
-        _comparers.push(comparer);
-    };
-
-
-    /**Removes a ValueEqualityComparer from the ValueComparer's collection of ValueEqualityComparers by name.
-    @param {String} name The unique key of the equality comparer to remove.
-    @returns {Boolean}*/
-    this.removeEqualityComparer = function (name)
-    {
-        if (typeof name !== "string") throw Error("String expected.");
-
-        var numComparers = _comparers.length;
-        for (var x = 0; x < numComparers; x++)
-        {
-            var curComparer = _comparers[x];
-            if (curComparer.name === name)
-            {
-                _comparers.splice(x, 1);
-                return true;
-            }
-        }
-
-        return false;
-    };
-
-    /**Gets a COPY of the internal list of ValueEqualityComparers.
-    @returns {ValueEqualityComparer[]}*/
-    this.getEqualityComparers = function ()
-    {
-        return _comparers.slice();
-    };
-
-    /**Gets a ValueEqualityComparer by name.
-    @param {String} name The unique key of the ValueEqualityComparer to get.
-    @returns {ValueEqualityComparer}*/
-    this.getEqualityComparer = function (name)
-    {
-        if (typeof name !== "string") throw Error("String expected.");
-
-        var numComparers = _comparers.length;
-        for (var x = 0; x < numComparers; x++)
-        {
-            var curComparer = _comparers[x];
-            if (curComparer.name === name)
-            {
-                return curComparer;
-            }
-        }
-
-        return null;
-    };
 
     /**Executes a "compare" operation that can be a value comparison, a "containment" check where an element is looked for in an array, or a predicate function validated against its expected result.
     @param {Any} a Either the first value to compare, the array to search in for a containment check, or the value to feed into a predicate function.
@@ -1732,43 +1991,9 @@ EVUITest.ValueComparer = function ()
         if (isObject(b) === true) context.bRoot = b;
 
         context.options = Object.freeze(extend({}, options));
-        context.equalityComparers = buildComparerCloneList(context.options);
 
         return context;
     };
-
-    /**Makes an immutable copy of the list of comparers that can be used for the target value of the comparison by combining the default list for the ValueComparer with that in the args list.
-    @param {EVUITest.ValueCompareOptions} options The ValueCompareOptions that is being used in the comparison.
-    @returns {EVUITest.ValueEqualityComparer[]} */
-    var buildComparerCloneList = function (options)
-    {
-        var allComparers = null;
-
-        if (Array.isArray(options.equalityComparers) === true)
-        {
-            allComparers = options.equalityComparers.concat(_comparers);
-        }
-        else
-        {
-            allComparers = _comparers;
-        }
-
-        var validComparers = [];
-        var numComparers = allComparers.length;
-        for (var x = 0; x < numComparers; x++)
-        {
-            var curComparer = allComparers[x];
-
-            if (curComparer == null || typeof curComparer !== "object") continue;
-            if (typeof curComparer.equals !== "function") continue;
-
-            var immutable = Object.freeze(extend({}, curComparer));
-            validComparers.push(immutable);
-        }
-
-        return validComparers;
-    };
-
 
     /**Compares two arbitrary values.
     @param {any} a A value.
@@ -1787,62 +2012,25 @@ EVUITest.ValueComparer = function ()
         comparison.path = (parentComparison != null && typeof parentComparison.path === "string" && parentComparison.path.trim().length > 0) ? parentComparison.path + "." + key : key;
         comparison.options = context.options;
 
-
         if (comparison.aType === "object" && comparison.bType === "object" && a != null && b != null)
         {
-            if (context.options.recursive === false && parentComparison != null)
+            var comparisonExecuted = applyCustomComparer(comparison, context);
+            if (comparisonExecuted === false)
             {
-                comparison.valuesEqual = valuesEqual(comparison, context);
-            }
-            else
-            {
-                comparison.valuesEqual = objectsEqual(comparison, context);
+                if (context.options.recursive === false && parentComparison != null)
+                {
+                    comparison.valuesEqual = valuesEqual(comparison, context);
+                }
+                else
+                {
+                    comparison.valuesEqual = objectsEqual(comparison, context);
+                }
             }
         }
         else
         {
             comparison.valuesEqual = valuesEqual(comparison, context);
-        }
-
-        var useCustomComparers = false;
-        if (context.options.affirmitiveCheck === false)
-        {
-            if (comparison.valuesEqual === false)
-            {
-                comparison.success = true;
-            }
-            else
-            {
-                useCustomComparers = true;
-            }
-        }
-        else
-        {
-            if (comparison.valuesEqual === true)
-            {
-                comparison.success = true;
-            }
-            else
-            {
-                useCustomComparers = true;
-            }
-        }
-
-        if (useCustomComparers === true && context.equalityComparers.length > 0)
-        {
-            var equalityContext = Object.freeze(buildEqualityContext(comparison, context));
-            var comparers = getEqualityComparers(equalityContext, context);
-
-            var numComparers = comparers.length;
-            for (var x = 0; x < numComparers; x++)
-            {
-                if (comparers[x].equals(equalityContext) === true)
-                {
-                    comparison.valuesEqual = true;
-                    break;
-                }
-            }
-        }
+        }        
 
         if (context.options.affirmitiveCheck === false)
         {
@@ -1858,10 +2046,66 @@ EVUITest.ValueComparer = function ()
 
         if (parentComparison != null)
         {
+            if (parentComparison.childComparisons == null) parentComparison.childComparisons = [];
             parentComparison.childComparisons.push(comparison);
         }
 
         return comparison;
+    };
+
+    /**Looks up to see if there are any custom comparers to be used in this comparison. If so, the custom comparers are used instead of the default compare logic. Returns true if a custom comparer was used.
+    @param {EVUITest.ValueCompareResult} comparison The comparison to check agsinst the custom equality comparers list.
+    @param {ComparisonContext} context The active comparison context.
+    @returns {Boolean}*/
+    var applyCustomComparer = function (comparison, context)
+    {
+        var aComparer = comparison.a[EVUITest.Constants.Symbol_EqualityComparer];
+        var bComparer = comparison.b[EVUITest.Constants.Symbol_EqualityComparer];
+
+        var aType = typeof aComparer;
+        var bType = typeof bComparer;
+
+        if (aType !== "function" && bType !== "function") return false;
+
+        var comparisonContext = buildEqualityContext(comparison, context);
+
+        if (aType === "function" && bType === "function")
+        {
+            if (aComparer === bComparer)
+            {
+                var aEquals = aComparer(comparisonContext);
+                if (typeof aEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + aEquals + " instead.");
+
+                comparison.valuesEqual = aEquals;
+            }
+            else
+            {
+                var aEquals = aComparer(comparisonContext);
+                var bEquals = bComparer(comparisonContext);
+
+                if (typeof aEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + aEquals + " instead.");
+                if (typeof bEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + bEquals + " instead.");
+                if (aEquals !== bEquals) throw Error("Custom equality disagreement: both values at " + comparison.path + " had custom value comparers that disagreed on equality. a's comparer returned " + aEquals + " and b's comparer returned " + bEquals + ".");
+
+                comparison.valuesEqual = aEquals;
+            }
+        }
+        else if (aType === "function")
+        {
+            var aEquals = aComparer(comparisonContext);
+            if (typeof aEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + aEquals + " instead.");
+            
+            comparison.valuesEqual = aEquals;
+        }
+        else if (bType === "function")
+        {
+            var bEquals = bComparer(comparisonContext);
+            if (typeof bEquals !== "boolean") throw Error("b's custom comparer at " + comparison.path + " did not return a boolean. Returned " + bEquals + " instead.");
+            
+            comparison.valuesEqual = bEquals;
+        }
+
+        return true;
     };
 
     /**Determines if a predicate function returns true or not when passed a value as a parameter.
@@ -1951,8 +2195,8 @@ EVUITest.ValueComparer = function ()
         return false;
     };
 
-    /**Build a ValueEqualityComparer context object that can be fed into the ValueEqualityComparer's valuesEqual function.
-    @param {EVUITest.ValueCompareResult} comparison The comparison being fed into a ValueEqualityComparer.
+    /**Build a ValueEqualityContext object that can be fed into the objects's Symbol_ValuesEqual function.
+    @param {EVUITest.ValueCompareResult} comparison The comparison being fed into an objects's Symbol_ValuesEqual function.
     @param {ComparisonContext} context The contextual information about the comparison.
     @returns {EVUITest.ValueEqualityContext}*/
     var buildEqualityContext = function (comparison, context)
@@ -1975,51 +2219,6 @@ EVUITest.ValueComparer = function ()
         }
 
         return currentContext;
-    };
-
-    /**Gets all the ValueEqualityComparers that apply to a value.
-    @param {EVUITest.ValueEqualityContext} equalityContext The metadata about the equality comparison.
-    @param {ComparisonContext} context The contextual information about the comparison.
-    @returns {EVUITest.ValueEqualityComparer[]}*/
-    var getEqualityComparers = function (equalityContext, context)
-    {
-        var aType = typeof equalityContext.a;
-        var comparers = [];
-
-        var numTotal = context.equalityComparers.length;
-        for (var x = 0; x < numTotal; x++)
-        {
-            var curComparer = context.equalityComparers[x];
-            var flags = typeof curComparer.filterFlags !== "number" ? EVUITest.EqualityFilterFlags.All : curComparer.filterFlags;
-
-            if (flags & EVUITest.EqualityFilterFlags.TypeOf === EVUITest.EqualityFilterFlags.TypeOf)
-            {
-                if (typeof curComparer.typeOfFilter === "string" && curComparer.typeOfFilter !== "any")
-                {
-                    if (aType !== curComparer.typeOfFilter) continue;
-                }
-            }
-
-            if (flags & EVUITest.EqualityFilterFlags.Prototype === EVUITest.EqualityFilterFlags.Prototype)
-            {
-                if (typeof curComparer.prototypeFilter === "function")
-                {
-                    if (equalityContext.a instanceof curComparer.prototypeFilter === false) continue;
-                }
-            }
-
-            if (flags & EVUITest.EqualityFilterFlags.Predicate === EVUITest.EqualityFilterFlags.Predicate)
-            {
-                if (typeof curComparer.predicateFilter === "function")
-                {
-                    if (curComparer.predicateFilter(equalityContext) === false) continue;
-                }
-            }
-
-            comparers.push(curComparer);
-        }
-
-        return comparers;
     };
 
     /**Determines if two values are equal depending on the settings of the ComparisonContext.
@@ -2139,6 +2338,7 @@ EVUITest.ValueComparer = function ()
         }
         else
         {
+            var matches = true;
             for (var x = 0; x < arr1Length; x++)
             {
                 var aVal = comparison.a[x];
@@ -2148,17 +2348,18 @@ EVUITest.ValueComparer = function ()
                 var childComparison = compareValues(aVal, bVal, context, curKey, comparison);
                 if (childComparison == null) continue;
 
-                comparison.childComparisons.push(childComparison);
-
                 if (childComparison.valuesEqual === false)
                 {
+                    matches = false;
                     comparison.valuesEqual = false;
                     if (context.options.shortCircuit === true) break;
                 }
             }
+
+            comparison.valuesEqual = matches;
         }
 
-        return comparison;
+        return comparison.valuesEqual;
     };
 
     /**Determines if the contents of two arrays are equal regardless of the order of items in the arrays.
@@ -2407,7 +2608,6 @@ EVUITest.ValueComparer = function ()
             ignoreCase = options.ignoreCase;
             ignoreReferences = options.ignoreReferences;
             ignoreOrder = options.ignoreOrder;
-            equalityComparers = options.equalityComparers;
             recursive = options.recursive;
             affirmativeCheck = options.affirmitiveCheck;
             nullCheckOnly = options.nullCheckOnly;
@@ -2466,7 +2666,6 @@ EVUITest.ValueComparer = function ()
 
         //populate the full options object with all the resolved values
         options.compareType = compareType;
-        options.equalityComparers = equalityComparers;
         options.ignoreCase = ignoreCase;
         options.ignoreOrder = ignoreOrder;
         options.ignoreReferences = ignoreReferences;
@@ -2516,10 +2715,6 @@ EVUITest.ValueComparer = function ()
         @type {Object}*/
         this.bRoot = null;
 
-        /**Array. Any custom equality comparers used to compare different objects in a way that is different than the normal compare logic.
-        @type {EVUITest.ValueEqualityComparer[]}*/
-        this.equalityComparers = [];
-
         /**Object. The comparison options for what determines equality in this compare session.
         @type {EVUITest.ValueCompareOptions}*/
         this.options = null;
@@ -2561,7 +2756,6 @@ EVUITest.ValueComparer.Default = null;
             if (comparer == null)
             {
                 comparer = Object.freeze(new EVUITest.ValueComparer());
-                comparer.addEqualityComparer(EVUITest.ValueEqualityComparer.DomNodeComparer);
             }
 
             return comparer;
@@ -2637,17 +2831,13 @@ EVUITest.ValueCompareResult = function (parent)
     @type {String}*/
     this.path = null;
 
-    /**Object. If this value was determined to be equal by a ValueEqualityComparer, this is the ValueEqualityComparer used to determine the equality.
-    @type {EVUITest.ValueEqualityComparer}*/
-    this.equalityComparer = null;
-
     /**Object. The options used to determine if the values were equal or equivalent. 
     @type {EVUITest.ValueCompareOptions}*/
     this.options = null;
 
     /**Array. If this comparison was between two objects, these are the child comparisons of the properties of both objects (if the "shortCircuit" option is true this list will stop at the first different property).
     @type {EVUITest.ValueCompareResult[]}*/
-    this.childComparisons = [];
+    this.childComparisons = null;
 
     /**Boolean. Whether or not the comparison was considered a "success" based on the options provided. This is true if the expected equality result (equals/not equals) matches the actual equality comparison's result.
     @type {Boolean}*/
@@ -2656,6 +2846,10 @@ EVUITest.ValueCompareResult = function (parent)
     /**Boolean. Whether or not a strict equality comparison returned true or false when a and b were compared. 
     @type {Boolean}*/
     this.valuesEqual = false;
+
+    /**String. A formatted string describing the result of the comparison.
+    @type {String}*/
+    this.message = null;
 
     /**If this comparison was a child comparison of another comparison, this returns the parent ValueCompareResult that contains this one.
     @type {EVUITest.ValueCompareResult}*/
@@ -2696,6 +2890,10 @@ EVUITest.ValueContainmentResult = function ()
     /**Boolean. Whether or not the operation was considered a "success" based on the options provided. This is true if the expected containment result (contains/does not contain) matches the actual equality comparison's result.
     @type {Boolean}*/
     this.success = false;
+
+    /**String. A formatted string describing the result of the comparison.
+    @type {String}*/
+    this.message = null;
 };
 
 /**The result of checking the result of a predicate function when fed a value.
@@ -2729,6 +2927,10 @@ EVUITest.ValuePredicateResult = function ()
     /**Boolean. Whether or not the operation was considered a "success" based on the options provided. This is true if the expected predicate return value (true/false) matches the expected result (true/false).
     @type {Boolean}*/
     this.success = false;
+
+    /**String. A formatted string describing the result of the comparison.
+    @type {String}*/
+    this.message = null;
 };
 
 /**Options for how two values should be compared.
@@ -2739,98 +2941,45 @@ EVUITest.ValueCompareOptions = function ()
     @type {String}*/
     this.compareType = EVUITest.ValueCompareType.None;
 
-    /**Boolean. Whether or not the expected result of the operation should be true. This is used for switching calls between "does a equal b" and "does b NOT equal a".
+    /**Boolean. Whether or not the expected result of the operation should be true. This is used for switching calls between "does a equal b" and "does b NOT equal a". True by default.
     @type {Boolean}*/
     this.affirmitiveCheck = true;
 
-    /**Boolean. Whether or not the "===" equality comparer should be used instead of the "==" equality comparer.
+    /**Boolean. Whether or not the "===" equality comparer should be used instead of the "==" equality comparer. True by default.
     @type {Boolean}*/
     this.strictEquals = true;
 
-    /**Boolean. Whether or not to differentiate between null and undefined - if true, null and undefined are both considered equal.
+    /**Boolean. Whether or not to differentiate between null and undefined - if true, null and undefined are both considered equal. True by default.
     @type {Boolean}*/
     this.nullCheckOnly = true;
 
-    /**Boolean. Whether or not to case-normalize strings before comparing them.
+    /**Boolean. Whether or not to case-normalize strings before comparing them. False by default.
     @type {Boolean}*/
     this.ignoreCase = false;
 
-    /**Boolean. Whether or not differences in object references are ignored. If references are ignored, objects are compared based on their property values.
+    /**Boolean. Whether or not differences in object references are ignored. If references are ignored, objects are compared based on their property values. False by default.
     @type {Boolean}*/
     this.ignoreReferences = false;
 
-    /**Boolean. Whether or not differences between the indexes of the elements in an array should be ignored when comparing two arrays.
+    /**Boolean. Whether or not differences between the indexes of the elements in an array should be ignored when comparing two arrays. False by default.
     @type {Boolean}*/
     this.ignoreOrder = false;
 
-    /**Boolean. Whether or not the comparison between two objects should be recursive and dig into child objects.
+    /**Boolean. Whether or not the comparison between two objects should be recursive and dig into child objects. True by default.
     @type {Boolean}*/
     this.recursive = true;
 
-    /**Boolean. Whether or not to stop the comparison process as soon as the first difference is found between two objects.
+    /**Boolean. Whether or not to stop the comparison process as soon as the first difference is found between two objects. True by default.
     @type {Boolean}*/
     this.shortCircuit = true;
-
-    /**Array. All of the ValueEqualityComparers to use for this comparison (in addition to the ones in the ValueComparer being used for the comparison).
-    @type {EVUITest.ValueEqualityComparer[]}*/
-    this.equalityComparers = [];
 };
 
-/**Bit flags for determining which is used to determine if a ValueEqualityComparer applies to a given value.
-@enum*/
-EVUITest.EqualityFilterFlags =
-{
-    /**Default.*/
-    None: 0,
-    /**The result of the "typeof" operator on the value should be used as a filter.*/
-    TypeOf: 1,
-    /**The result of the "instanceof" operator should be used as a filter.*/
-    Prototype: 2,
-    /**The result of a predicate function should be used as a filter.*/
-    Predicate: 4,
-    /**All filters should be used.*/
-    All: 2147483647
-};
-
-/**An object for doing a custom equality comparison between two values.
-@class*/
-EVUITest.ValueEqualityComparer = function ()
-{
-    /**String. The unique key of the comparer.
-    @type {String}*/
-    this.name = null;
-
-    /**String. The result of the typeof operator on a value to use as a filter.
-    @type {String}*/
-    this.typeOfFilter = "any";
-
-    /**Function. A constructor function used to create an object to use as a "type" filter.
-    @type {Function}*/
-    this.prototypeFilter = null;
-
-    /**Function. A predicate function used to determine if the equality comparer applies to a value.
-    @type {EVUITest.Constants.Fn_EqualityComparer}*/
-    this.predicateFilter = null;
-
-    /**Number. The bit flags for which filters to apply.
-    @type {Number}*/
-    this.filterFlags = EVUITest.EqualityFilterFlags.All;
-
-    /**Function. The equality comparer function.
-    @type {EVUITest.Constants.Fn_EqualityComparer}*/
-    this.equals = null;
-};
-
-/**A special default ValueEqualityComparer designed to determine if two Nodes are equivalent (equivalent textContent, attributes, and/or childNodes).
-@type {EVUITest.ValueEqualityComparer}*/
-EVUITest.ValueEqualityComparer.DomNodeComparer = null;
-
-//self executing function to make the standard DomNode ValueEqualityComparer.
+/**A special default comparer designed to determine if two Nodes are equivalent (equivalent textContent, attributes, and/or childNodes).*/
 (function ()
 {
     var compareAttributes = function (aAttr, bAttr, context)
     {
-        var result = context.comparer.compare(aAttr.value, bAttr.value, context.options);
+        var result = context.assert(aAttr.value).is(bAttr.value);
         if (result.success === false) return false;
     };
 
@@ -2864,7 +3013,7 @@ EVUITest.ValueEqualityComparer.DomNodeComparer = null;
         }
         else if (a.nodeType === Node.CDATA_SECTION_NODE || a.nodeType === Node.COMMENT_NODE || a.nodeType === Node.TEXT_NODE || a.nodeType == Node.DOCUMENT_TYPE_NODE)
         {
-            return context.comparer.compare(a.textContent, b.textContent, context.options);
+            return context.assert(a.textContent).is(b.textContent);
         }
         else if (a.nodeType === Node.DOCUMENT_NODE || a.nodeType == Node.DOCUMENT_FRAGMENT_NODE)
         {
@@ -2888,32 +3037,27 @@ EVUITest.ValueEqualityComparer.DomNodeComparer = null;
         return true;
     };
 
-    var domCompare = new EVUITest.ValueEqualityComparer();
-    domCompare.prototypeFilter = Node;
-    domCompare.name = "evui-dom-node";
-    domCompare.typeOfFilter = "object";
-    domCompare.filterFlags |= EVUITest.EqualityFilterFlags.TypeOf | EVUITest.EqualityFilterFlags.Prototype;
-    domCompare.equals = function (context)
+    Node.prototype[EVUITest.Constants.Symbol_EqualityComparer] = function (context)
     {
         if (context.a == context.b) return true; //nodes are the same node
         if (context.options.ignoreReferences !== true) return false; //nodes are not the same node and we are not doing an equivalency check
 
         return compareNodes(context.a, context.b, context);
     }
-
-    domCompare = Object.freeze(domCompare);
-
-    Object.defineProperty(EVUITest.ValueEqualityComparer, "DomNodeComparer", {
-        get: function ()
-        {
-            return domCompare;
-        },
-        configurable: false,
-        enumerable: true
-    });
 })();
 
-/**Parameter object that is fed into a ValueEqualityComparer's equals function. Contains all the contextual information known about a comparison at a moment in time.
+/**A comparer used for comparing Date objects.*/
+(function ()
+{
+    Date.prototype[EVUITest.Constants.Symbol_EqualityComparer] = function (context)
+    {
+        if (context.a === context.b) return true;
+        if (context.a instanceof Date === false || context.b instanceof Date === false) return false;
+        return context.a.getTime() === context.b.getTime();
+    }
+})();
+
+/**Parameter object that is fed into an object's EVUITest.Constants.Symbol_EqualityCmparer function. Contains all the contextual information known about a comparison at a moment in time.
 @class*/
 EVUITest.ValueEqualityContext = function ()
 {
@@ -2925,13 +3069,9 @@ EVUITest.ValueEqualityContext = function ()
     @type {Any}*/
     this.b = undefined;
 
-    /**Object. The ValueComparer that is using the ValueEqualityComparer.
+    /**Object. The ValueComparer that is being used.
     @type {EVUITest.ValueComparer}*/
     this.comparer = null;
-
-    /**Object. The ValueEqualityComparer that is currently executing.
-    @type {EVUITest.ValueEqualityComparer}*/
-    this.equalityComparer = null;
 
     /**String. The "path" of object properties from the root object to the property being compared.
     @type {String}*/
@@ -2961,6 +3101,20 @@ EVUITest.ValueEqualityContext = function ()
     @type {EVUITest.ValueCompareOptions}*/
     this.options = null;
 };
+
+/**Creates a new Assertion using the context's comparer and compare options.
+@param {Any} value The value to feed into the Assertion.
+@param {EVUITest.AssertionSettings} options Any options to apply to the comparison.
+@returns {EVUITest.Assertion}*/
+EVUITest.ValueEqualityContext.prototype.assert = function (value, options)
+{
+    var defaultOptions = options == null ? {} : options;
+
+    if (defaultOptions.comparer instanceof EVUITest.ValueComparer === false) defaultOptions.comparer = this.comparer;
+    if (typeof defaultOptions.compareOptions !== "object" || defaultOptions.compareOptions == null) defaultOptions.compareOptions = this.options;
+
+    return new EVUITest.Assertion(value, defaultOptions);
+}
 
 
 /**Creates an Assertion that can be used for unit testing values and objects against other values and objects.

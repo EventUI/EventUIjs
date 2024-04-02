@@ -126,7 +126,6 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @type {Boolean}*/
     this.endExecutionOnEventHandlerCrash = false;
 
-
     /**Number. The number of milliseconds to wait on each step before failing the EventStream. A negative number means no timeout. -1 by default.
     @type {Number}*/
     this.timeout = -1;
@@ -150,6 +149,10 @@ EVUI.Modules.EventStream.EventStream = function (config)
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
     @type {Number}*/
     this.skipInterval = EVUI.Modules.Core.Utils.getSetting("stepsBetweenWaits");
+
+    /**Boolean. Whether or not the steps added to the EventStream should have their properties extended onto a fresh step object.
+    @type {Boolean}*/
+    this.extendSteps = true;
 
     /**Gets the current status of the EventStream. Returns a value from EventStreamStatus.
     @returns {Number} A value from the EVUI.Modules.EventStream.EventStreamStatus enum.*/
@@ -497,7 +500,16 @@ EVUI.Modules.EventStream.EventStream = function (config)
         }
         else if (typeof step === "object")
         {
-            if (EVUI.Modules.Core.Utils.instanceOf(step, EVUI.Modules.EventStream.EventStreamStep) === false)
+            if (this.extendSteps === false)
+            {
+                streamStep = new EVUI.Modules.EventStream.EventStreamStep();
+                streamStep.handler = step.handler;
+                streamStep.key = step.key;
+                streamStep.name = step.name;
+                streamStep.timeout = step.timeout;
+                streamStep.type = step.type;
+            }
+            else if (EVUI.Modules.Core.Utils.instanceOf(step, EVUI.Modules.EventStream.EventStreamStep) === false)
             {
                 streamStep = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.EventStream.EventStreamStep(), step);
             }
@@ -836,6 +848,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
         config.eventState = _self.eventState;
         config.processReturnedEventArgs = _self.processReturnedEventArgs;
         config.skipInterval = _self.skipInterval;
+        config.extendSteps = _self.extendSteps;
         config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
         config.onComplete = function () { callback(); } //call the callback in the complete handler, which will fire no matter what.
 
@@ -1457,6 +1470,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (typeof config.skipInterval === "number" && config.skipInterval > 0) _self.skipInterval = config.skipInterval;
         if (typeof config.timeout === "number" && config.timeout > 0) _timeout = config.timeout;
         if (EVUI.Modules.Core.Utils.instanceOf(config.bubblingEvents, EVUI.Modules.EventStream.BubblingEventManager) === true) _self.bubblingEvents = config.bubblingEvents;
+        if (typeof config.extendSteps === "boolean") _self.extendSteps = config.extendSteps;
 
         if (typeof config.onCancel === "function") _self.onCancel = config.onCancel;
         if (typeof config.onError === "function") _self.onError = config.onError;
@@ -1794,7 +1808,13 @@ EVUI.Modules.EventStream.EventStreamConfig = function ()
     @type {EVUI.Modules.EventStream.BubblingEventManager}*/
     this.bubblingEvents = null;
 
+    /**Any. The "this" context to execute job and event handlers under.
+    @type {Any}*/
     this.context = null;
+
+    /**Boolean. Whether or not the steps added to the EventStream should have their properties extended onto a fresh step object.
+    @type {Boolean}*/
+    this.extendSteps = true;
 };
 
 /**An object that ties together an event name, its callback its priority (if there are other events with the same name) and the unique ID of it's handle.
@@ -2216,12 +2236,9 @@ $evui.vow = function (jobOrConfig, job)
     return es;
 };
 
-/**Returns a new EventStream in its default state.
-@param {EVUI.Modules.EventStream.EventStreamConfig} config Configuration options for the never EventStream.
-@returns {EVUI.Modules.EventStream.EventStream}*/
-$evui.eventStream = function (config)
-{
-    return new EVUI.Modules.EventStream.EventStream(config);
-};
+Object.freeze(EVUI.Modules.EventStream);
+
+/**Constructor reference for the EventStream.*/
+EVUI.Constructors.EventStream = EVUI.Modules.EventStream.EventStream;
 
 /*#ENDWRAP(ES)#*/

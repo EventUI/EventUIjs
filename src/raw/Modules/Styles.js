@@ -181,7 +181,7 @@ EVUI.Modules.Styles.StyleSheetManager = function ()
                 }
 
                 var index = getCssRuleIndex(existing, curExisting); //see if we still have the rule on the css object
-                if (index === -1)
+                if (index === -1 && flat.length > 0)
                 {
                     rulesToAdd.push(curNewRule); //we do not, add it
                 }
@@ -193,6 +193,21 @@ EVUI.Modules.Styles.StyleSheetManager = function ()
             }
             else //not an existing rule, add it
             {
+                //make sure the rule isn't all "nulls" - this is an edge case that can break the stylesheet manager or crash outright
+                var keys = Object.keys(curNewRule.rules);
+                var numKeys = keys.length;
+                var allNulls = true;
+
+                for (var y = 0; y < numKeys; y++)
+                {
+                    if (curNewRule.rules[keys[y]] !== "null") //null is the magic key that means "get rid of this rule"
+                    {
+                        allNulls = false;
+                        break;
+                    }
+                }
+
+                if (allNulls === true) continue;
                 rulesToAdd.push(curNewRule);
             }
         }
@@ -458,7 +473,11 @@ EVUI.Modules.Styles.StyleSheetManager = function ()
     @returns {RuleEntry[]} */
     var updateRules = function (flatRules, index, sheetEntry, existing)
     {
-        if (flatRules == null || flatRules.length === 0) return [];
+        if (flatRules == null || flatRules.length === 0)
+        {
+            if (index >= 0) sheetEntry.styleSheet.deleteRule(index); //remove the original rule
+            return [];
+        }
 
         var updatedRules = [];
         var deleted = false;
@@ -1660,6 +1679,9 @@ EVUI.Modules.Styles.Manager = null;
         configurable: false
     });
 })();
+
+/**Constructor reference for the StylesheetManager.*/
+EVUI.Constructors.Styles = EVUI.Modules.Styles.StyleSheetManager;
 
 delete $evui.styles;
 

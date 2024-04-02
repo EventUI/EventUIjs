@@ -765,9 +765,7 @@ EVUI.Modules.Observers.ArrayObserver = function (arr)
         var numChanges = changes.length;
         for (x = 0; x < numChanges; x++)
         {
-            var curChange = changes[x];
-
-            if (curChange.changeType !== EVUI.Modules.Observers.ArrayChangeType.Moved) continue; //the below only applies to moved elements
+            var curChange = changes[x];        
 
             var wasAdd = adds[x] != null;
             var wasRemoved = removes[x] != null;
@@ -775,6 +773,8 @@ EVUI.Modules.Observers.ArrayObserver = function (arr)
             if (wasAdd === true && wasRemoved === true) continue; //we both added and removed something at that index, so no "shifting" has happened
             if (wasAdd === true) delta++;
             if (wasRemoved === true) delta--;
+
+            if (curChange.changeType !== EVUI.Modules.Observers.ArrayChangeType.Moved) continue; //the below only applies to moved elements
 
             if (curChange.newIndex === curChange.oldIndex + delta) curChange.changeType = EVUI.Modules.Observers.ArrayChangeType.Shifted;
         }
