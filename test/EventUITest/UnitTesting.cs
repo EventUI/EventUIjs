@@ -126,6 +126,8 @@ namespace EventUITest
             public bool debug { get; set; } = false;
 
             public string testSessionId { get; set; } = null;
+
+            public string[] commonLibPaths { get; set; } = null;
         }
 
         public class TestManifest

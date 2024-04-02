@@ -40,6 +40,7 @@ $evui.init(function ()
             _updateButton = document.getElementById("update");
             _clearButton = document.getElementById("clear");
             _swapButton = document.getElementById("swaprows");
+            _insertButton = document.getElementById("insert");
             _rootElement = document.getElementById("tbody");
 
             $evui.css(".select {background-color: blue}");
@@ -81,13 +82,10 @@ $evui.init(function ()
             this.data = this.buildData(maxData); //this.data.concat(this.buildData(maxData));
             if (this.activeBinding != null)
             {
-                this.activeBinding.source = this.data;
-                await this.activeBinding.updateAsync();
+                this.activeBinding.dispose();
             }
-            else
-            {
-                this.activeBinding = await $evui.bindAsync({ source: this.data, htmlContent: "tableRow", element: _rootElement,/* insertionMode: $evui.enum("BindingInsertionMode", "Append")*/ });
-            }
+
+            this.activeBinding = await $evui.bindAsync({ source: this.data, htmlContent: "tableRow", element: _rootElement,/* insertionMode: $evui.enum("BindingInsertionMode", "Append")*/ }); 
         };
 
         this.cleanUp = async function ()
@@ -130,6 +128,15 @@ $evui.init(function ()
 
             await this.activeBinding.updateAsync();
         };
+
+        this.insert = async function ()
+        {
+            if (this.activeBinding == null) return;
+
+            this.data.splice(0, 0, this.buildData(1)[0]);
+
+            await this.activeBinding.updateAsync();
+        }
 
         var hookUpButtons = function ()
         {
@@ -180,6 +187,14 @@ $evui.init(function ()
                     await _self.swap();
                 });
             };
+
+            _insertButton.onclick = async function ()
+            {
+                await timeStep("Insert content", async function ()
+                {
+                    await _self.insert();
+                });
+            };
         };
 
         var timeStep = async function (detail, handler)
@@ -224,6 +239,7 @@ $evui.init(function ()
                 else
                 {
                     binding.source.selected = "";
+                    _self.selectedBinding = null;
                 }
 
                 await _self.activeBinding.updateAsync();

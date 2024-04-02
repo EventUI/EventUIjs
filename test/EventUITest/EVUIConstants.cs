@@ -16,5 +16,6 @@ namespace EventUITest
         public const string QueryString_FileName = "file";
         public const string QueryString_Debug = "debug";
         public const string QueryString_Session = "session";
+        public const string File_Common = "_common";
     }
 }

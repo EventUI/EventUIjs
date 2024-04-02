@@ -72,6 +72,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     var _tagNameStart = /\<|\<\/\s*/; //match: <, or </(whitespace)    
     var _attributeComponents = /\\"|\\'|"|'|=/g //match: escaped quote, escaped double quote, quote, double quote, and equals signs
     var _eventHandlerAttributeStart = /^on/i;
+    var _binderEventHandlerRegex = /^\$evui\.dispatch\(`[a-z0-9]*\.[a-z0-9]*\`\)$/
     var _canMatchAll = typeof String.prototype.matchAll !== "undefined";
     var _tagCache = {};
 
@@ -91,7 +92,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         @type {Boolean}*/
         this.outputToString = false;
 
-        /**Options for determing what content to filter out when converting a DomTreeElement into a Node.
+        /**Options for determine what content to filter out when converting a DomTreeElement into a Node.
         @type {DomTreeParseOptions}*/
         this.parseOptions = null;
     };
@@ -190,13 +191,44 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             session.options.omittedElements = omissions;
         }
 
+        if (EVUI.Modules.Core.Utils.isArray(session.options.omittedElements) === false)
+        {
+            session.options.omittedAttributes = [];
+        }
+        else
+        {
+            var omissions = [];
+            var numOmissions = session.options.omittedAttributes.length;
+            for (var x = 0; x < numOmissions; x++)
+            {
+                var curOmission = session.options.omittedAttributes[x];
+                if (typeof curOmission !== "string") continue;
+
+                omissions.push(curOmission.toLowerCase());
+            }
+
+            session.options.omittedAttributes = omissions;
+        }
+
         session.parseOptions = buildDomTreeParseOptions(session.options);
+        if (session.parseOptions.elementOptions.safeMode === true)
+        {
+            applySafeMode(session.parseOptions);
+        }
 
         return session;
     };
 
+    /**Applies the "safe mode" rules to the parse session.
+    @param {EVUI.Modules.DomTree.DomTreeParseOptions} parseOptions The parse session in progress.*/
+    var applySafeMode = function (parseOptions)
+    {
+        parseOptions.elementOptions.includeOmittedElementOuterTag = false;
+        parseOptions.elementOptions.noInlineEventHandlers = true;
+        parseOptions.omittedElementsDic["script"] = true;
+    };
 
-    /**
+    /**Builds the options used by the parser based on the user's options object.
     @param {EVUI.Modules.DomTree.DomTreeElementOptions} options The Converter.Options passed into the main convertFromString function.**/
     var buildDomTreeParseOptions = function (options)
     {
@@ -208,7 +240,16 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             var numOmitted = options.omittedElements.length;
             for (var x = 0; x < numOmitted; x++)
             {
-                parseOptions.omittedElementsDic[options.omittedElements[x]] = true;
+                parseOptions.omittedElementsDic[options.omittedElements[x].toLowerCase()] = true;
+            }
+        }
+
+        if (EVUI.Modules.Core.Utils.isArray(options.omittedAttributes) === true)
+        {
+            var numOmitted = options.omittedAttributes.length;
+            for (var x = 0; x < numOmitted; x++)
+            {
+                parseOptions.omittedAttributesDic[options.omittedAttributes[x].toLowerCase()] = true;
             }
         }
 
@@ -260,7 +301,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         var domTreeEle = new EVUI.Modules.DomTree.DomTreeElement();
         domTreeEle.flags = getElementFlags(element);
         domTreeEle.type = eleType;
-        domTreeEle.attrs = getAttrs(element); //make the attributes array
+        domTreeEle.attrs = getAttrs(element, session); //make the attributes array
         domTreeEle.tagName = element.nodeName;
         domTreeEle.content = getContents(session, element, eleType); //get either a string of child content, null content (a self-closing tag), or an array of child elements.
         domTreeEle.shadowContent = (element.shadowRoot != null) ? getContents(session, element, eleType, true) : undefined;
@@ -286,6 +327,10 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     {
         if (element == null) return EVUI.Modules.DomTree.DomTreeElementFlags.Unknown;
 
+        if (element.nodeType === Node.TEXT_NODE || element.nodeType === Node.CDATA_SECTION_NODE || element.nodeType === Node.COMMENT_NODE)
+        {
+            return getElementFlags(element.parentNode);
+        }
         if (element instanceof HTMLElement) //its a HTML element
         {
             return EVUI.Modules.DomTree.DomTreeElementFlags.HTML;
@@ -478,8 +523,9 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
 
     /** Gets an array of DomTreeElementAttribute objects representing all the attributes on the Element.
     @param {Element} element The Element to get the attributes of.
+    @param {DomTreeConversionSession} session The session in progress.
     @returns {EVUI.Modules.DomTree.DomTreeElementAttribute[]}*/
-    var getAttrs = function (element)
+    var getAttrs = function (element, session)
     {
         var numAttrs = (element.attributes != null) ? element.attributes.length : 0;
         if (numAttrs === 0) return undefined;
@@ -488,14 +534,20 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         for (var x = 0; x < numAttrs; x++)
         {
             var curAttr = element.attributes[x];
+
+            //don't include if omitted attributes
+            if (session.parseOptions.omittedAttributesDic[curAttr.name.toLowerCase()] === true) continue;
+
             var domTreeAttr = new EVUI.Modules.DomTree.DomTreeElementAttribute();
             domTreeAttr.key = curAttr.name;
             domTreeAttr.val = curAttr.value;
 
+            if (session.parseOptions.isOmittedAttribute(domTreeAttr, element.tagName) === true) continue;
+
             domTreeAttrs.push(domTreeAttr);
         }
 
-        return domTreeAttrs;
+        return (domTreeAttrs.length === 0) ? undefined : domTreeAttrs;
     };
 
     /**Gets the inner contents of an DomTreeElement. Can be one of 4 things: null for a self-closing tag, an empty array for a tag with no children, an array of child DomTreeElements for child elements, or a string of text for a text node.
@@ -583,7 +635,15 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         }
         else
         {
-            return frag;
+            if (session.source.type !== EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment &&
+                session.source.type !== EVUI.Modules.DomTree.DomTreeElementType.Document)
+            {
+                return frag.childNodes[0];
+            }
+            else
+            {
+                return frag;
+            }
         }
     };
 
@@ -928,7 +988,14 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     var ensureParseOptions = function (options)
     {
         var newOptions = (options == null || typeof options !== "object") ? new EVUI.Modules.DomTree.DomTreeElementOptions() : EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.DomTree.DomTreeElementOptions(), options);
-        return buildDomTreeParseOptions(newOptions);
+        var parseOptions = buildDomTreeParseOptions(newOptions);
+
+        if (parseOptions.elementOptions.safeMode === true)
+        {
+            applySafeMode(parseOptions);
+        }
+
+        return parseOptions;
     };
 
     /**Entry point into the conversion process where a string is turned into an object model that can be converted into actual DOM Nodes or DomTreeElements.
@@ -952,6 +1019,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         rootBlock.index = 0;
         rootBlock.length = session.rawHtml.length;
         rootBlock.blockType = EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment;
+        rootBlock.tagName = "#document-fragment";
 
         //get all the tag opens and closes that were NOT contained in any of the literal text spans.
         getTagOpensAndCloses(session);
@@ -1011,7 +1079,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     var span = new LiteralTextSpan();
                     span.start = startIndex;
                     span.end = match.index + match[0].length;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
 
                     spans.push(span);
 
@@ -1038,7 +1106,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         span.end = session.rawHtml.length;
                     }
 
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
 
                     //it is possible for there to be other comment/quote characters inside the sinlge-line comment, so we skip over all of them until we are onto the next line.
@@ -1066,7 +1134,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         var span = new LiteralTextSpan();
                         span.start = startIndex;
                         span.end = match.index + match[0].length;
-                        span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                        span.text = session.rawHtml.substring(span.start, span.end);
 
                         spans.push(span);
 
@@ -1093,7 +1161,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         var span = new LiteralTextSpan();
                         span.start = startIndex;
                         span.end = match.index + match[0].length;
-                        span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                        span.text = session.rawHtml.substring(span.start, span.end);
 
                         spans.push(span);
 
@@ -1120,7 +1188,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                         var span = new LiteralTextSpan();
                         span.start = startIndex;
                         span.end = match.index + match[0].length;
-                        span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                        span.text = session.rawHtml.substring(span.start, span.end);
 
                         spans.push(span);
 
@@ -1145,7 +1213,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     var span = new LiteralTextSpan();
                     span.start = startIndex;
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, match.index);
+                    span.text = session.rawHtml.substring(span.start, span.end);
 
                     spans.push(span);
                     inHtmlOrCode = true;
@@ -1168,7 +1236,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     var span = new LiteralTextSpan();
                     span.start = startIndex;
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, match.index);
+                    span.text = session.rawHtml.substring(span.start, span.end);
 
                     spans.push(span);
                     inHtmlOrCode = true;
@@ -1246,7 +1314,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1279,7 +1347,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1312,7 +1380,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1345,7 +1413,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                     }
 
                     span.end = match.index;
-                    span.text = session.rawHtml.substr(span.start, span.end - span.start);
+                    span.text = session.rawHtml.substring(span.start, span.end);
                     spans.push(span);
                     session.lastTextSpanIndex = lastIndex;
 
@@ -1697,8 +1765,8 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
 
         if (tagContent[tagStart] === "!") //special cases for comments and CDATA
         {
-            if (contentLength > tagStart + 3 && tagContent.substr(tagStart + 1, 2) === "--") return "#comment";
-            if (contentLength > tagStart + 9 && tagContent.substr(tagStart + 1, 7).toLowerCase() === "![cdata[") return "#cdata";
+            if (contentLength > tagStart + 3 && tagContent.substring(tagStart + 1, tagStart + 3) === "--") return "#comment";
+            if (contentLength > tagStart + 9 && tagContent.substring(tagStart + 1, tagStart + 8).toLowerCase() === "![cdata[") return "#cdata";
         }
 
         if (contentLength > 4 && getClosing === true) //special cases for getting a normalized tag name for comments and CDATA
@@ -2030,7 +2098,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             for (var x = 0; x < numAttrs; x++)
             {
                 var curAttr = this.attributes[x];
-                if (options.isOmittedAttribute(curAttr) === true) continue;
+                if (options.isOmittedAttribute(curAttr, this.tagName) === true) continue;
                 if (noSrc === true && curAttr.key.toLowerCase() === "src") continue;
 
                 node.setAttribute(curAttr.key, curAttr.val);
@@ -2086,7 +2154,6 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
                 if (options.elementOptions.includeOmittedElementOuterTag === true)
                 {
                     noChildren = true;
-                    if (this.tagName.toLowerCase() === "script") noSrc = true;
                 }
                 else
                 {
@@ -2096,26 +2163,22 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
 
             if (this.attributes != null)
             {
+                var keptAttr = 0;
                 var numAttr = this.attributes.length;
                 if (numAttr > 0)
                 {
-                    if (noSrc === true)
-                    {
-                        treeNode.attrs = [];
+                    treeNode.attrs = [];
 
-                        for (var x = 0; x < numAttr; x++)
-                        {
-                            var curAttr = this.attributes[x];
-                            if (curAttr.key === "src") continue;
-
-                            treeNode.attrs.push(curAttr);
-                        }
-                    }
-                    else
+                    for (var x = 0; x < numAttr; x++)
                     {
-                        treeNode.attrs = this.attributes;
-                    }                    
+                        var curAttr = this.attributes[x];
+                        if (options.isOmittedAttribute(curAttr, this.tagName) === true) continue;
+
+                        keptAttr = treeNode.attrs.push(curAttr);
+                    }                  
                 }
+
+                if (keptAttr === 0) treeNode.attrs = undefined;
             }
 
             if (this.isSelfClosing === true)
@@ -2163,7 +2226,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     @class*/
     var DomTreeParseOptions = function ()
     {
-        /**
+        /**Object. The options provided for creating DomNodes.
         @type {EVUI.Modules.DomTree.DomTreeElementOptions}*/
         this.elementOptions = null;
 
@@ -2176,19 +2239,21 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         this.omittedAttributesDic = {};
     };
 
-    /**Determins if a tag is an omitted tag or not.
+    /**Determines if a tag is an omitted tag or not.
     @param {String} tagName The name of the tag to check.*/
     DomTreeParseOptions.prototype.isOmittedTag = function (tagName)
     {
         if (typeof tagName !== "string") return true;
-        if (this.omittedAttributesDic[tagName.toLowerCase()] === true) return true;
+        if (this.omittedElementsDic[tagName.toLowerCase()] === true) return true;
 
         return false;
     };
 
     /**Determines if an attribute is an omitted attribute or not.
-    @param {EVUI.Modules.DomTree.DomTreeElementAttribute} attribute The attribute to test for inclusion.*/
-    DomTreeParseOptions.prototype.isOmittedAttribute = function (attribute)
+    @param {EVUI.Modules.DomTree.DomTreeElementAttribute} attribute The attribute to test for inclusion.
+    @param {String} tagName The name of the element associated with the attribute.
+    @returns {Boolean}*/
+    DomTreeParseOptions.prototype.isOmittedAttribute = function (attribute, tagName)
     {
         if (attribute == null || EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attribute.key) == true) return true;
         var potentialMatch = false;
@@ -2199,7 +2264,7 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         {
             potentialMatch = true;
         }
-        else if (_eventHandlerAttributeStart.test(attribute.key) === true)
+        else if (this.elementOptions.noInlineEventHandlers === true && _eventHandlerAttributeStart.test(attribute.key) === true)
         {
             if (window[lowerKey] !== undefined)
             {
@@ -2208,8 +2273,12 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             }
         }
 
-        if (potentialMatch === true)
+        if (potentialMatch === true && this.elementOptions.inlineEventHandlerFilter != null)
         {
+            //carve out a special exception case for the Binder's events
+            if (this.elementOptions.noInlineEventHandlers === true && _binderEventHandlerRegex.test(attribute.val) === true) return false;
+
+            //otherwise check against the user's settings
             if (this.elementOptions.inlineEventHandlerFilter instanceof RegExp)
             {
                 if (this.elementOptions.inlineEventHandlerFilter.test(attribute.val) === true) return false;
@@ -2222,7 +2291,20 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
             return true;
         }
 
-        return false;
+        if (this.elementOptions.safeMode === true)
+        {
+            var lowerTagName = tagName.toLowerCase();
+            if (lowerTagName === "script" && lowerKey === "src") return true;
+
+            var lowerValue = typeof attribute.val === "string" ? attribute.val.toLowerCase() : "";
+
+            if (lowerTagName === "link")
+            {
+                if ((lowerKey === "as" || lowerKey === "rel") && lowerValue === "script") return true;              
+            }
+        }
+
+        return potentialMatch;
     };
 };
 
@@ -2266,14 +2348,7 @@ EVUI.Modules.DomTree.DomTreeElement.prototype.toNode = function (options)
 {
     if (this.node != null) return this.node;
 
-    if (this.type === EVUI.Modules.DomTree.DomTreeElementType.DocumentFragment || this.type === EVUI.Modules.DomTree.DomTreeElementType.Document)
-    {
-        this.node = EVUI.Modules.DomTree.Converter.fromDomTreeElement(this, options);
-    }
-    else
-    {
-        this.node = EVUI.Modules.DomTree.Converter.fromDomTreeElement(this, options).childNodes[0];
-    }
+    this.node = EVUI.Modules.DomTree.Converter.fromDomTreeElement(this, options);
 
     var assignNodes = function (domTree, node)
     {
@@ -2443,13 +2518,21 @@ EVUI.Modules.DomTree.DomTreeElementType =
 
 Object.freeze(EVUI.Modules.DomTree.DomTreeElementType);
 
-/**Options for converting A HTMLDocument, XMLDocument, Element, or DocumentFragment into an object (a EVUI.Resources.JSONXRElement) or from an object.
+/**Options for converting A HTMLDocument, XMLDocument, Element, or DocumentFragment into an object (a EVUI.Resources.DomTreeElement) or from an object.
 @class*/
 EVUI.Modules.DomTree.DomTreeElementOptions = function ()
 {
+    /**Ensures an options set that attempts to prevent script injection by disallowing script tags, link tags to scripts, and in-line event handlers. False by default.
+    @type {Boolean}*/
+    this.safeMode = false;
+
     /**Array. When converting an HTMLDOcument, Element, or DocumentFragment into an Object (a EVUI.Modules.DomTree.DomTreeElement), these are the tag names to not capture.
     @type {String[]}*/
     this.omittedElements = [];
+
+    /**Array. When converting an HTMLDOcument, Element, or DocumentFragment into an Object (a EVUI.Modules.DomTree.DomTreeElement), these are the attributes to not capture.
+    @type {String[]}*/
+    this.omittedAttributes = [];
 
     /**Boolean. When converting an HTMLDOcument, Element, or DocumentFragment into an Object (a EVUI.Modules.DomTree.DomTreeElement), and the tag name matches one of the tags in the OmittedDomTreeElements array, this controls whether or not to omit the entire element, or just omits its contents (keeping its outer tag and attributes intact). False by default.
     @type {Boolean}*/
@@ -2466,7 +2549,7 @@ EVUI.Modules.DomTree.DomTreeElementOptions = function ()
     @type {Boolean}*/
     this.noInlineEventHandlers = false;
 
-    /**Object. If noInlineEventHandlers is set to true, this is the "exception case" filter where certain inline handlers are allowed, but must satisfy a RegExp or predicate function in order to be included.
+    /**Object. If noInlineEventHandlers is set to true, this is the "exception case" filter where certain in-line handlers are allowed, but must satisfy a RegExp or predicate function in order to be included.
     @type {RegExp|EVUI.Modules.DomTree.Constants.Fn_AttributeFilter}*/
     this.inlineEventHandlerFilter = null;
 };
@@ -2533,14 +2616,8 @@ $evui.fromDomTreeElement = function (domTreeElement, options, toString)
     }
 };
 
-/**Converts a HTML string into a DocumentFragment containing the parsed HTML.
- 
- NOTE: This function is significantly slower than the native DOM parser used when setting innerHTML of an element, however there are certain situations where the native DOM parser applies certain rules to the creation of new elements based on the tag name of the element whose innerHTML is being set.
- 
- For example, making a <tr> inside of a div via setting the div's innerHTML doesn't work correctly (the tr element is missing in the result in most browsers). There may be other cases where similar rules are applied, and the reason for the existence of this function is to bypass those rules. 
- 
- For more performant code, use innerHTML - for code that may fail based on the browser's parsing rules (i.e. having the need to parse any unknown HTML into DOM nodes), this function becomes an option instead.
-@param {String} htmlString A string of HTML to turn into a DocumentFragment.
+/**Converts a HTML string into a DocumentFragment containing the parsed HTML. 
+@param {String} html A string of HTML to turn into a DocumentFragment.
 @param {EVUI.Modules.DomTree.DomTreeElementOptions} options Options to control the conversion of the string into Dom Nodes.
 @returns {DocumentFragment} */
 $evui.parseHtml = function (html, options)
@@ -2549,7 +2626,7 @@ $evui.parseHtml = function (html, options)
 };
 
 /**Converts a HTML string into a hierarchy of DomTreeElements representing a DocumentFragment containing the parsed HTML.
-@param {String} htmlString A string of HTML to turn into a hierarchy of DomTreeElements.
+@param {String} html A string of HTML to turn into a hierarchy of DomTreeElements.
 @param {EVUI.Modules.DomTree.DomTreeElementOptions} options Options to control the conversion of the string into DomTreeElements.
 @returns {EVUI.Modules.DomTree.DomTreeElement}*/
 $evui.parseHtmlToDomTree = function (html, options)

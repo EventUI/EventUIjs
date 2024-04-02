@@ -628,10 +628,9 @@ EVUI.Modules.Core.DeepExtender = (function ()
     @param {EVUI.Modules.Core.DeepExtenderOptions} options An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
     @returns {Object}*/
     DeepExtender.prototype.deepExtend = function(target, source, options)
-    {
-
-        if (typeof source !== "object" || source != null) throw Error("source must be an object.");
-        if (typeof target !== "object" || target != null) throw Error("target must be an object.");
+    {       
+        if (typeof target !== "object" && target != null) throw Error("target must be an object.");
+        if (typeof source !== "object" || source == null) return target;
 
         var session = new DeepExtendSession();
         session.target = target;
