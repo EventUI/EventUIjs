@@ -270,9 +270,20 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
             exeArgsOrFns = new EVUI.Modules.Core.AsyncSequenceExecutionArgs();
             exeArgsOrFns.functions = fns;
         }
+        else if (typeof exeArgsOrFns === "function")
+        {
+            var fns = [exeArgsOrFns];
+
+            exeArgsOrFns = new EVUI.Modules.Core.AsyncSequenceExecutionArgs();
+            exeArgsOrFns.functions = fns;
+        }
+        else if (typeof exeArgsOrFns === "object" && exeArgsOrFns != null)
+        {
+            if (EVUI.Modules.Core.Utils.isArray(exeArgsOrFns.functions) === false) exeArgsOrFns.functions = [exeArgsOrFns.functions];
+        }
         else
         {
-            if (EVUI.Modules.Core.Utils.isArray(exeArgsOrFns.functions) === false) throw Error("Cannot execute without an array of functions.");
+            throw Error("Function, Array of Functions, or Object expected.")
         }
 
         if (typeof callback !== "function") callback = function () { };
@@ -617,10 +628,9 @@ EVUI.Modules.Core.DeepExtender = (function ()
     @param {EVUI.Modules.Core.DeepExtenderOptions} options An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
     @returns {Object}*/
     DeepExtender.prototype.deepExtend = function(target, source, options)
-    {
-
-        if (typeof source !== "object" || source != null) throw Error("source must be an object.");
-        if (typeof target !== "object" || target != null) throw Error("target must be an object.");
+    {       
+        if (typeof target !== "object" && target != null) throw Error("target must be an object.");
+        if (typeof source !== "object" || source == null) return target;
 
         var session = new DeepExtendSession();
         session.target = target;
@@ -2113,9 +2123,10 @@ $evui.instanceOf = function (obj, ctor)
 @param {String} str A string to turn into a hash code.
 @returns {Number}*/
 EVUI.Modules.Core.Utils.getHashCode = function (str)
-{
+{    
     if (typeof str !== "string") throw Error("String expected.");
     var strLen = str.length;
+    if (strLen === 0) return 0;
 
     var charRatio = 0;
     var sum = 0;
@@ -2125,6 +2136,7 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
     var sumMod4 = 0;
     var sumMod5 = 0;
     var curCode = 0;
+    var mod5 = 0;
     var previousCode = 1;
 
     for (var x = 0; x < strLen; x++)
@@ -2140,26 +2152,29 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
         }
 
         charRatio = curCode - (x / previousCode);
+        if (charRatio < 0) charRatio *= -1;
 
         sum -= curCode;
         if (sum < 0) sum *= -8.1373;
 
-        if (curCode % 5 === 0)
+        mod5 = curCode % 5;
+
+        if (mod5 === 0)
         {
             sumMod5 -= charRatio;
             if (sumMod5 < 0) sumMod5 *= -112.69
         }
-        else if (curCode % 4 === 0)
+        else if (mod5 === 4)
         {
             sumMod4 -= charRatio;
             if (sumMod4 < 0) sumMod4 = (sumMod4 * -918.07);
         }
-        else if (curCode % 3 === 0)
+        else if (mod5 === 3)
         {
             sumMod3 -= charRatio;
             if (sumMod3 < 0) sumMod3 *= -213.7;
         }
-        else if (curCode % 2 === 0)
+        else if (mod5 === 2)
         {
             sumMod2 -= charRatio;
             if (sumMod2 < 0) sumMod2 *= -8.1471
@@ -2174,7 +2189,7 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
     }
 
     var final = (sumMod5 - sumMod4 - sumMod3 - sumMod2 - sumMod1 - sum) / (strLen / charRatio);
-    if (final < 0) final *= -1;
+
 
     if (sum !== 0)
     {
@@ -2194,8 +2209,13 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
     if (sumMod4 !== 0 && final !== sumMod4) final /= sumMod4;
     if (sumMod5 !== 0 && final !== sumMod5) final *= sumMod5;
     if (curCode !== 0 && final !== curCode) final /= curCode;
-    if (final < 1 && final !== 0) final = 1 / final;
-    if (final > Number.MAX_SAFE_INTEGER) final = Math.sqrt(final);
+    if (final < 1 && final !== 0 && final > -1) final = 1 / final;
+    if (final < 0) final *= -1;
+
+    if (final > Number.MAX_SAFE_INTEGER)
+    {
+        final = Math.sqrt(final);
+    }
 
     return final;
 }
@@ -2384,6 +2404,37 @@ EVUI.Modules.Core.Utils.uncacheProperties = function (obj)
 $evui.uncacheProps = function (obj)
 {
     return EVUI.Modules.Core.Utils.uncacheProperties(obj);
+};
+
+/**Creates a module's main feature controller based on the name of the module.
+@param {String} name The name of the module that contains the controller to create.
+@param {Object} args The arguments object to pass the controller's constructor. Varies by the controller being instantiated.
+@returns {Any}*/
+EVUI.Modules.Core.Utils.createController = function (name, args)
+{
+    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(name) === true) throw Error("String expected.");
+    if ((/s$/i).test(name) === true) name = name.substring(0, name.length - 1); //if it ends in an "s" already, cut it off since the regex below handles that case
+
+    var controllerRegex = new RegExp(`^${name}$|^${name}s$`, "i");
+
+    for (var ctor in EVUI.Constructors)
+    {
+        if (controllerRegex.test(ctor) === true)
+        {
+            return new EVUI.Constructors[ctor](args);
+        }
+    }
+
+    return null;
+};
+
+/**Creates a module's main feature controller based on the name of the module.
+@param {String} name The name of the module that contains the controller to create.
+@param {Object} args The arguments object to pass the controller's constructor. Varies by the controller being instantiated.
+@returns {Any}*/
+$evui.createController = function (name, args)
+{
+    return EVUI.Modules.Core.Utils.createController(name, args);
 };
 
 Object.freeze(EVUI.Modules.Core);

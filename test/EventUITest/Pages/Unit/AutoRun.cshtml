@@ -1,0 +1,28 @@
+﻿@page
+@model EventUITest.Pages.Unit.AutoRunModel
+@{
+    Layout = "_EVUITestLayout";
+}
+
+
+<div class="testOutputContainer fullscreen">
+</div>
+
+@section Scripts
+{
+    <script src="/js/UnitTesting/UnitTestHost.js"></script>
+    <script>
+        const TestHostServerArgs = @Model.GetHostArgsJSON()
+    </script>
+    <script>
+        var execute = async function ()
+        {
+            var host = new EVUIUnit.HostController();
+            host.initialize(TestHostServerArgs, document.body);
+            console.log(await host.runAllAsync());
+        };
+
+        execute();
+    </script>
+}
+

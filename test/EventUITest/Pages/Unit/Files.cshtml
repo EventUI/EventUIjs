@@ -1,0 +1,14 @@
+﻿@page
+@model EventUITest.Pages.Unit.FilesModel
+@{
+}
+
+<div>
+    <ul>
+        @foreach (string file in Model.FilesToRun)
+        { 
+            var url = EVUIConstants.Page_TestRunner + "?" + EVUIConstants.QueryString_FileName + "=" + Uri.EscapeDataString(file) + "&" + EVUIConstants.QueryString_Debug + "=true";
+            <li><a href="@url">@file</a></li>
+        }
+    </ul>
+</div>

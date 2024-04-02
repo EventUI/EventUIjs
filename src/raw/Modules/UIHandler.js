@@ -325,6 +325,9 @@ Object.defineProperty($evui, "uiHandler", {
     enumerable: true
 });
 
+/**Constructor reference for the UIHandler.*/
+EVUI.Constructors.UIHandler = EVUI.Modules.UIHandler.UIHandlerManager;
+
 /**Handles a UI event by calling the UIHandler with the matching key.
 @param {String} key The key of the UIHandler to call.
 @param {Event|Any} eventArgsOrData Either the browser's event arguments or custom data to pass into the UIHandler's handle.
