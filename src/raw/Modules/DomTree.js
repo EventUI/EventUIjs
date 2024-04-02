@@ -211,21 +211,21 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
         }
 
         session.parseOptions = buildDomTreeParseOptions(session.options);
-        applySafeMode(session);
+        if (session.parseOptions.elementOptions.safeMode === true)
+        {
+            applySafeMode(session.parseOptions);
+        }
 
         return session;
     };
 
     /**Applies the "safe mode" rules to the parse session.
-    @param {DomTreeConversionSession} parseSession The parse session in progress.
-     */
-    var applySafeMode = function (parseSession)
+    @param {EVUI.Modules.DomTree.DomTreeParseOptions} parseOptions The parse session in progress.*/
+    var applySafeMode = function (parseOptions)
     {
-        if (parseSession.options.safeMode !== true) return;
-
-        parseSession.parseOptions.elementOptions.includeOmittedElementOuterTag = false;
-        parseSession.parseOptions.elementOptions.noInlineEventHandlers = true;
-        parseSession.parseOptions.omittedElementsDic["script"] = true;
+        parseOptions.elementOptions.includeOmittedElementOuterTag = false;
+        parseOptions.elementOptions.noInlineEventHandlers = true;
+        parseOptions.omittedElementsDic["script"] = true;
     };
 
     /**Builds the options used by the parser based on the user's options object.
@@ -988,7 +988,14 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
     var ensureParseOptions = function (options)
     {
         var newOptions = (options == null || typeof options !== "object") ? new EVUI.Modules.DomTree.DomTreeElementOptions() : EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.DomTree.DomTreeElementOptions(), options);
-        return buildDomTreeParseOptions(newOptions);
+        var parseOptions = buildDomTreeParseOptions(newOptions);
+
+        if (parseOptions.elementOptions.safeMode === true)
+        {
+            applySafeMode(parseOptions);
+        }
+
+        return parseOptions;
     };
 
     /**Entry point into the conversion process where a string is turned into an object model that can be converted into actual DOM Nodes or DomTreeElements.

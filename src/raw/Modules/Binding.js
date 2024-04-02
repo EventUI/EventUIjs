@@ -6301,8 +6301,8 @@ EVUI.Modules.Binding.BindingController = function (services)
                 replacementValue = replacementValue.toString();
                 if (session.bindingHandle.options.noHtmlInjection === true) replacementValue = replacementValue.replace(/\<|\>/g, function (value)
                 {
-                    if (value === "<") return "&lt";
-                    if (value === ">") return "&gt";
+                    if (value === "<") return "&lt;";
+                    if (value === ">") return "&gt;";
 
                     return value;
                 });
@@ -7705,9 +7705,9 @@ EVUI.Modules.Binding.Binding = function (handle)
         _handle.wrapper.triggerUpdate(_handle, updateArgs, null, callback);
     };
 
-    /**Executes the binding process for itself and any of its children that have changed, unchanged children are not re-evaluated.
+    /**Awaitable. Executes the binding process for itself and any of its children that have changed, unchanged children are not re-evaluated.
     @param {EVUI.Modules.Binding.UpdateArgs} updateArgs Optional. Either a source object reference to base the update on, or a YOLO UpdateArgs object to pass into the update logic.
-    @param {EVUI.Modules.Binding.Constants.Fn_BindingCallback} callback A callback function to call once the update is complete.*/
+    @returns {Promise<EVUI.Modules.Binding.Binding>}*/
     this.updateAsync = function (updateArgs)
     {
         return new Promise(function (resolve)
@@ -7992,7 +7992,7 @@ EVUI.Modules.Binding.BindOptions = function ()
     @type {Boolean}*/
     this.shareOptions = true;
 
-    /**Boolean. When executing recursive Bindings, this controls whether or not the templateLoadSettings object reference is shared by all child Bindings of the current Binding if the child Binding is not based on a BindingTemplate that has its own templateLoadSettings, otherwise a clone of the templateLoadSettings is used instead. True by default.
+    /**Boolean. When executing recursive Bindings, this controls whether or not the contentLoadSettings object reference is shared by all child Bindings of the current Binding if the child Binding is not based on a BindingTemplate that has its own contentLoadSettings, otherwise a clone of the contentLoadSettings is used instead. True by default.
     @type {Boolean}*/
     this.shareContentLoadSettings = true;
 
