@@ -104,7 +104,7 @@ EVUI.Modules.Dom.ControlInfo = function (id, attributes)
     {
         if (reQuery !== true && _control != null) return _control;
 
-        if (EVUI.Modules.Core.Utils.stringStartsWith("#", _id) === true)
+        if (_id.startsWith("#") === true)
         {
             _control = document.getElementById(_id.substring(1));
         }
@@ -951,7 +951,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     @returns {Element[]} */
     var processElements = function (elementsOrSelector, context)
     {
-        if (typeof elementsOrSelector === "string" && EVUI.Modules.Core.Utils.stringStartsWith("<", elementsOrSelector.trim()) === false)
+        if (typeof elementsOrSelector === "string" && elementsOrSelector.trim().startsWith("<") === false)
         {
             try //this will fail if we were handed a piece of HTML
             {

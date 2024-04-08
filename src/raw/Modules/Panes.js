@@ -1430,7 +1430,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var numPanes = _entries.length;
 
         var allNeedingID = [event.currentTarget];
-        var same = EVUI.Modules.Core.Utils.stringNormalize(same);
+        var same = same.toLocaleLowerCase();
         var checkedSame = false;
         //walk every element that came back with the matching attribute and see if it's attribute value matches that of the element we're looking for equivalents to.
         var id = null;
@@ -1443,7 +1443,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
             if (id != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curID) === false && curID !== id) continue;
             if (typeof value !== "string") continue;
-            if (EVUI.Modules.Core.Utils.stringNormalize(value) !== same) continue;
+            if (value.toLocaleLowerCase() !== same) continue;
 
             if (id == null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curID) === false) //found an ID, we tag them all with the ID we just found
             {
@@ -1527,7 +1527,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var getAttributeName = function (attribute)
     {
         var lowerName = attribute.toLowerCase();
-        if (EVUI.Modules.Core.Utils.stringStartsWith(EVUI.Modules.Panes.Constants.Default_AttributePrefix, lowerName) === true)
+        if (lowerName.startsWith(EVUI.Modules.Panes.Constants.Default_AttributePrefix) === true)
         {
             return _settings.attributePrefix + attribute.substring(EVUI.Modules.Panes.Constants.Default_AttributePrefix.length);
         }
@@ -1546,7 +1546,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var settings = {};
         var properties = [];
 
-        if (EVUI.Modules.Core.Utils.stringEndsWith(";", settingsStr) === false) settingsStr += ";";
+        if (settingsStr.endsWith(";") === false) settingsStr += ";";
 
         var lastValidSemicolon = 0;
 
@@ -1711,7 +1711,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     {
         //remove all whitespace and add the prefix
         var noWhitespaceRegex = new RegExp(/\s+/g);
-        var className = _settings.cssPrefix + (EVUI.Modules.Core.Utils.stringEndsWith(_settings.cssPrefix.trim(), "-") ? "" : "-") + paneID;
+        var className = _settings.cssPrefix + (_settings.cssPrefix.trim().endsWith("-") ? "" : "-") + paneID;
         className = className.replace(noWhitespaceRegex, "");
 
         return className;

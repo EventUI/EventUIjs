@@ -6336,7 +6336,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === true) return path;
         var path = path.replace(/\.|\[|\]\.|\]/g, ".");
 
-        if (EVUI.Modules.Core.Utils.stringEndsWith(".", path) === true) path = path.substring(0, path.length - 1);
+        if (path.endsWith(".") === true) path = path.substring(0, path.length - 1);
         return path;
     };
 
@@ -6731,12 +6731,6 @@ EVUI.Modules.Binding.BindingController = function (services)
     BindingHandleState.prototype.getNormalizedPath = function ()
     {
         return getNormalizedPath(this.parentBindingPath);
-
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(this.parentBindingPath) === true) return this.parentBindingPath;
-        var path = this.parentBindingPath.replace(/\.|\[|\]\.|\]/g, ".");
-
-        if (EVUI.Modules.Core.Utils.stringEndsWith(".", path) === true) path = path.substring(0, path.length - 1);
-        return path;
     }
 
     /**Wrapper object for injecting into a Binding so that it can use parts of the controller from outside the controller.

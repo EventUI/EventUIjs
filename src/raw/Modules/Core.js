@@ -84,14 +84,6 @@ EVUI.Modules.Core.Settings.stepsBetweenWaits = 250;
 @type {Number}*/
 EVUI.Modules.Core.Settings.defaultMinimumZIndex = 100;
 
-/**Boolean. Whether or not to normalize the case of strings when doing string comparisons. False by default. 
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.normalizeStringCase = false;
-
-/**Boolean. Whether or not to use .toLocaleUpper/LowerCase when normalizing strings. False by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.localizeStringComparison = false;
-
 /**Constants table for the Core module.*/
 EVUI.Modules.Core.Constants = {};
 
@@ -142,7 +134,7 @@ EVUI.Modules.Core.Constants.Symbol_HasPrototypeMembers = "evui-proto-list";
 
 Object.freeze(EVUI.Modules.Core.Constants);
 
-/**Exection arguments to feed into the AsyncSequenceExecutor.
+/**Execution arguments to feed into the AsyncSequenceExecutor.
 @class*/
 EVUI.Modules.Core.AsyncSequenceExecutionArgs = function ()
 {
@@ -595,7 +587,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
         @type {Boolean} */
         this.filterViaFn = false;
 
-        /**Whether or not to filter by an array od disallowed property names.
+        /**Whether or not to filter by an array of disallowed property names.
         @type {Boolean} */
         this.filterViaArray = false;
 
@@ -1289,7 +1281,7 @@ $evui.isArray = function (arr)
 };
 
 /**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code
-that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web app session where the odds of collision are basically zero.
+that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web application session where the odds of collision are basically zero.
 @returns {String}*/
 EVUI.Modules.Core.Utils.makeGuid = function ()
 {
@@ -1348,103 +1340,6 @@ $evui.isPromise = function (promise)
     return EVUI.Modules.Core.Utils.isPromise(promise);
 };
 
-/**Normalizes a string by clipping off whitespace and optionally lower casing or locale lower casing it.
-@param {String} str The string to normalize.
-@param {Boolean} lowerCase Whether or not to normalize case. If omitted the normalizeStringCase setting is used instead.
-@param {Boolean} localeCase Whether or not to normalize to localeLowerCase. If omitted the localseStringComparison setting is used instead.
-@returns {String} */
-EVUI.Modules.Core.Utils.stringNormalize = function (str, lowerCase, localeCase)
-{
-    if (typeof str !== "string") return null;
-
-    if (typeof lowerCase !== "boolean") lowerCase = EVUI.Modules.Core.Utils.getSetting("normalizeStringCase");
-    if (typeof lowerCase !== "boolean") lowerCase = true;
-
-    if (typeof localeCase !== "boolean") localeCase = EVUI.Modules.Core.Utils.getSetting("localizeStringComparison");
-    if (typeof localeCase !== "boolean") localeCase = false;
-
-    str = str.trim();
-
-    if (lowerCase === true)
-    {
-        if (localeCase === true)
-        {
-            return str.toLocaleLowerCase();
-        }
-        else
-        {
-            return str.toLowerCase();
-        }
-    }
-    else
-    {
-        if (localeCase === true)
-        {
-            return str.toLocaleLowerCase();
-        }
-
-        return str;
-    }
-};
-
-/**Normalizes a string by clipping off whitespace and optionally lower casing or locale lower casing it.
-@param {String} str The string to normalize.
-@param {Boolean} lowerCase Whether or not to normalize case. If omitted the normalizeStringCase setting is used instead.
-@param {Boolean} localeCase Whether or not to normalize to localeLowerCase. If omitted the localseStringComparison setting is used instead.
-@returns {String} */
-$evui.strNormalize = function (str, lowerCase, localeCalse)
-{
-    return EVUI.Modules.Core.Utils.stringNormalize(str, lowerCase, localeCalse);
-};
-
-/**Normalizes and compares two strings. Returns 0 if equal, 1 if the first string comes before the second in the sort order, or -1 if the opposite is true.
-@param {String} str1 A string to normalize and compare.
-@param {String} str2 A string to normalize and compare.
-@param {Boolean} lowerCase Whether or not to normalize case. If omitted the normalizeStringCase setting is used instead.
-@param {Boolean} useLocale Whether or not to normalize to localeLowerCase. If omitted the localseStringComparison setting is used instead.
-@returns {Number} */
-EVUI.Modules.Core.Utils.stringCompare = function (str1, str2, lowerCase, useLocale)
-{
-    if (typeof str1 !== "string" && typeof str2 !== "string") return null;
-
-    if (typeof lowerCase !== "boolean") lowerCase = EVUI.Modules.Core.Utils.getSetting("normalizeStringCase");
-    if (typeof lowerCase !== "boolean") lowerCase = true;
-
-    if (typeof useLocale !== "boolean") useLocale = EVUI.Modules.Core.Utils.getSetting("localizeStringComparison");
-    if (typeof useLocale !== "boolean") useLocale = false;
-
-    str1 = EVUI.Modules.Core.Utils.stringNormalize(str1, lowerCase, useLocale);
-    str2 = EVUI.Modules.Core.Utils.stringNormalize(str2, lowerCase, useLocale);
-
-    var result = 0;
-
-    if (useLocale === true)
-    {
-        result = str1.trim().localeCompare(str2.trim());
-        if (result <= -1) result = -1;
-        if (result => 1) result = 1;
-    }
-    else
-    {
-        if (str1 < str2) result = -1;
-        if (str2 < str1) result = 1;
-    }
-
-    return result;
-};
-
-/**Normalizes and compares two strings. Returns 0 if equal, 1 if the first string comes before the second in the sort order, or -1 if the opposite is true.
-@param {String} str1 A string to normalize and compare.
-@param {String} str2 A string to normalize and compare.
-@param {Boolean} lowerCase Whether or not to normalize case. If omitted the normalizeStringCase setting is used instead.
-@param {Boolean} useLocale Whether or not to normalize to localeLowerCase. If omitted the localseStringComparison setting is used instead.
-@returns {Number} */
-$evui.strCompare = function (str1, str2, lowerCase, useLocale)
-{
-    return EVUI.Modules.Core.Utils.stringCompare(str1, str2, lowerCase, useLocale);
-};
-
-
 /**Determines if the parameter passed in is 1) not null, 2) a string, and 3) not composed of only whitespace characters. It is used when we want to make sure a string being used as a key or
 name for something is garbage. Returns a boolean.
 @param {String} str The string to check.
@@ -1456,68 +1351,12 @@ EVUI.Modules.Core.Utils.stringIsNullOrWhitespace = function (str)
     return isOnlyWhitespace;
 };
 
-/**Determines if the parameter passed in is 1) not null, 2) a string, and 3) not composed of only whitespace characters. It is used when we want to make sure a string being used as a key or
-name for something is garbage. Returns a boolean.
+/**Determines if the parameter passed in is 1) not null, 2) a string, and 3) not composed of only whitespace characters. It is used when we want to make sure a string being used as a key or name for something is garbage. Returns a boolean.
 @param {String} str The string to check.
 @returns {Boolean}*/
-$evui.strIsValid = function (str)
+$evui.isStringValid = function (str)
 {
     return !EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(str);
-};
-
-/**Determines if a string starts with the given phrase.
-@param {String} startPhrase The phrase to check for.
-@param {String} str The string being checked.
-@returns {Boolean}*/
-EVUI.Modules.Core.Utils.stringStartsWith = function (startPhrase, str)
-{
-    if (typeof str !== "string" || typeof startPhrase !== "string") return false;
-    if (str.indexOf(startPhrase) !== 0) return false;
-    return true;
-};
-
-/**Determines if a string starts with the given phrase.
-@param {String} startPhrase The phrase to check for.
-@param {String} str The string being checked.
-@returns {Boolean}*/
-$evui.strStartsWith = function (startPhrase, str)
-{
-    return EVUI.Modules.Core.Utils.stringStartsWith(startPhrase, str);
-};
-
-/**Determines if a string ends with the given phrase.
-@param {String} endPhrase The phrase to check for.
-@param {String} str The string being checked.
-@returns {Boolean}*/
-EVUI.Modules.Core.Utils.stringEndsWith = function (endPhrase, str)
-{
-    if (typeof str !== "string" || typeof endPhrase !== "string") return false;
-
-    var endLength = endPhrase.length;
-    var strLen = str.length;
-
-    if (endLength > strLen) return false;
-
-    try
-    {
-        var ending = str.substring(strLen - endLength);
-        if (ending === endPhrase) return true;
-        return false;
-    }
-    catch (ex)
-    {
-        return false;
-    }
-
-};
-
-/**Determines if a string ends with the given phrase.
-@param {String} endPhrase The phrase to check for.
-@param {String} str The string being checked.
-@returns {Boolean}*/
-$evui.strEndsWith = function (endPhrase, str)
-{
-    return EVUI.Modules.Core.Utils.stringEndsWith(endPhrase, str);
 };
 
 /**Console logging function that can be disabled by setting $evui.settings.loggingEnabled to false. If disabled, it will attempt to fire $evui.settings.alternateLoggingFunction if one was provided.
@@ -1691,20 +1530,6 @@ EVUI.Modules.Core.Utils.debugReturn = function (controller, method, message, ret
     EVUI.Modules.Core.Utils.log(logStatement);
 
     return returnValue;
-};
-
-/**Utility method for simultaneously logging a debug message and returning a value. Exists for the purpose of returning and logging from a single-line if statement.
-This is used to create consistently formatted debug messages for an end user so that they can get some insight into why and where something isn't working. Wherever an unusable input or 
-a broken state is detected, this function is used to log it and return safely. Can be silenced via setting $evui.settings.debug to false. Critically important to the guts of EventUI, 
-but admittedly of little use to others - use $evui.debug(message, returnValue) for a more generic version. 
-@param {String} controller The EventUI controller or object logging the message.
-@param {String} method The function that is logging the message.
-@param {String} message The message to log.
-@param {Any} returnValue Any value to return.
-@returns {Any}*/
-$evui.debugReturn = function (controller, method, message, returnValue)
-{
-    return EVUI.Modules.Core.Utils.debugReturn(controller, method, message, returnValue);
 };
 
 /**Utility method for simultaneously logging a debug message and returning a value. Exists for the purpose of returning and logging from a single-line if statement.
@@ -1900,72 +1725,6 @@ EVUI.Modules.Core.Utils.makeOrExtendObject = function (newObj, existingObj, modi
     }
 };
 
-/**Combines segments of a URL into a complete url regardless if the segments have leading, lagging, or no slashes at all.
-@param {Array} pathSegments An array of strings to concatenate into a slash delineated path.
-@returns {String}*/
-EVUI.Modules.Core.Utils.combinePaths = function (pathSegments)
-{
-    if (EVUI.Modules.Core.Utils.isArray(pathSegments) === false) return pathSegments;
-
-    var path = "";
-
-    var numPaths = pathSegments.length;
-    for (var x = 0; x < numPaths; x++)
-    {
-        var curSeg = pathSegments[x];
-        if (typeof curSeg !== "string") continue;
-        if (x === 0)
-        {
-            path = curSeg;
-            continue;
-        }
-
-        var currentPathEndsWithSlash = path[path.length - 1] === "/";
-        var currentSegmentStartsWithSlash = curSeg[0] === "/";
-
-        if (currentPathEndsWithSlash === false && currentSegmentStartsWithSlash === true)
-        {
-            path += curSeg; //we have something like root.com and /folder
-        }
-        else if (currentPathEndsWithSlash === true && currentSegmentStartsWithSlash === true)
-        {
-            path += curSeg.substring(1); //we have something like root.com/ and /folder
-        }
-        else if (currentPathEndsWithSlash === false && currentSegmentStartsWithSlash === false)
-        {
-            if (curSeg[0] === ".") //we have something like root.com/file and .html
-            {
-                path += curSeg;
-            }
-            else
-            {
-                path += "/" + curSeg; //we have something like root.com/folder and folder2
-            }
-        }
-        else if (currentPathEndsWithSlash === true && currentSegmentStartsWithSlash === false)
-        {
-            if (curSeg[0] === ".") //we have something like root.com/file/ and .html
-            {
-                path = path.substring(0, path.length - 1) + curSeg;
-            }
-            else
-            {
-                path += curSeg //we have something like root.com/ and file.txt
-            }
-        }
-    }
-
-    return path;
-};
-
-/**Combines segments of a URL into a complete url regardless if the segments have leading, lagging, or no slashes at all.
-@param {Array} pathSegments An array of strings to concatenate into a slash delineated path.
-@returns {String}*/
-$evui.combinePaths = function (pathSegments)
-{
-    return EVUI.Modules.Core.Utils.combinePaths(pathSegments);
-};
-
 /**An awaitable function that waits a given amount of time in milliseconds.
 @param {Number} duration The number of milliseconds to wait.
 @returns {Promise} */
@@ -2069,32 +1828,6 @@ EVUI.Modules.Core.Utils.requireAll = function (dependencies)
     dependencies.checked = true;
 };
 
-/**Determines whether or not an element is in the Shadow Dom.
-@param {Element} element The element to check for existence in the Shadow Dom.
-@returns {Boolean} */
-EVUI.Modules.Core.Utils.isInShadowDom = function (element)
-{
-    if (EVUI.Modules.Core.Utils.isElement(element) === false) return false;
-
-    if (element instanceof ShadowRoot) return true;
-
-    var curParent = element.parentNode;
-    while (curParent != null)
-    {
-        if (curParent instanceof ShadowRoot) return true;
-        curParent = curParent.parentNode;
-    }
-
-    return false;
-};
-
-/**Determines whether or not an element is in the Shadow Dom.
-@param {Element} element The element to check for existence in the Shadow Dom.
-@returns {Boolean} */
-$evui.isShadow = function (element)
-{
-    return EVUI.Modules.Core.Utils.isInShadowDom(element);
-};
 
 /**Determines if an object was constructed using the given (native) constructor. Performs cross-window constructor checks in addition to simple instanceof checks.
  @param {Any} obj The object to test.
