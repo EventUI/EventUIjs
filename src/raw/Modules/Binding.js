@@ -2664,18 +2664,22 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         if (session.bindingHandle.currentState.source === session.bindingHandle.oldState.source) return;
 
-        var numDiffs = session.observedDifferences.rootComparison.differences.length;
-        if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
+        //var numDiffs = session.observedDifferences.rootComparison.differences.length;
+        //if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
+        //{
+        //    var numOldBoundContent = session.bindingHandle.oldState.boundContent.length;
+        //    for (var x = 0; x < numOldBoundContent; x++)
+        //    {
+        //        var curContent = session.bindingHandle.oldState.boundContent[x];
+        //        curContent.remove();
+        //    }
+
+        //    return;
+        //}
+
+        if (session.parentSession != null && session.parentSession.isArray === true)
         {
 
-            var numOldBoundContent = session.bindingHandle.oldState.boundContent.length;
-            for (var x = 0; x < numOldBoundContent; x++)
-            {
-                var curContent = session.bindingHandle.oldState.boundContent[x];
-                curContent.remove();
-            }
-
-            return;
         }
 
         //finally, do a purge of any nodes that aren't in the new bound content list.
@@ -4573,21 +4577,21 @@ EVUI.Modules.Binding.BindingController = function (services)
                 }
 
                 //check to see if there already is a binding with a different object at the same path. If these is, we are technically rebinding that same handle, so we need to carry over some information for things to work properly
-                //var existingAtPath = getBindingContentList(mappingSession.unfoundPathDic, getNormalizedPath(path));
-                //if (existingAtPath != null)
-                //{
-                //    var nextUnprocessed = existingAtPath.getNextUnprocessedBinding();
-                //    if (nextUnprocessed != null)
-                //    {
-                //        //all of these values get moved into the "oldState" when this bindingHandle goes through its own binding process starting in swapStates()
-                //        nextUnprocessed.processed = true;
-                //        bindingHandle.currentState.boundContent = nextUnprocessed.binding.currentState.boundContent.slice(); //we need to remember the content to remove
-                //        bindingHandle.currentState.source = nextUnprocessed.binding.currentState.source; // we need the source object for diff comparisons
-                //        bindingHandle.currentState.childBindingHandles = nextUnprocessed.binding.currentState.childBindingHandles.slice(); //we need the child handles so the diffing works correctly                        
-                //        bindingHandle.newStateBound = nextUnprocessed.binding.newStateBound; //we need to flag it as having been bound
-                //        disposeBindingDispatchHandles(nextUnprocessed.binding); //clean up the old dispatch handles so we don't get a memory leak
-                //    }
-                //}
+                var existingAtPath = getBindingContentList(mappingSession.unfoundPathDic, getNormalizedPath(path));
+                if (existingAtPath != null)
+                {
+                    var nextUnprocessed = existingAtPath.getNextUnprocessedBinding();
+                    if (nextUnprocessed != null)
+                    {
+                        //all of these values get moved into the "oldState" when this bindingHandle goes through its own binding process starting in swapStates()
+                        nextUnprocessed.processed = true;
+                        bindingHandle.currentState.boundContent = nextUnprocessed.binding.currentState.boundContent.slice(); //we need to remember the content to remove
+                        bindingHandle.currentState.source = nextUnprocessed.binding.currentState.source; // we need the source object for diff comparisons
+                        bindingHandle.currentState.childBindingHandles = nextUnprocessed.binding.currentState.childBindingHandles.slice(); //we need the child handles so the diffing works correctly                        
+                        bindingHandle.newStateBound = nextUnprocessed.binding.newStateBound; //we need to flag it as having been bound
+                        //disposeBindingDispatchHandles(nextUnprocessed.binding); //clean up the old dispatch handles so we don't get a memory leak
+                    }
+                }
 
                 session.bindingHandle.currentState.childBindingHandles.push(bindingHandle);
             }
@@ -4735,6 +4739,11 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (curChange.bindingStructureChangeType === BindingStructureChangeType.Added) //item was added to the list of bindingChildren, add it to the process list. The processing will add it like normal.
             {
+                if (session.isArray === true)
+                {
+                    curChange.binding.currentState.boundContent = null;
+                }
+
                 changedBindings.push(curChange.binding);
                 curChange.applied = true;
                 continue;
@@ -5161,7 +5170,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                     modifiedPaths[objectPath] = curBinding.makeChangeArray(function (change)
                     {
-                        getSpecialChangeType(session, change, allBindings, allOldBindings);
+                        getSpecialChangeType(session, change, allBindings, allOldBindings, arrayDiffs, allOldArrayDiffs);
                         return change.bindingStructureChangeType;
                     });
                 }
@@ -5243,29 +5252,46 @@ EVUI.Modules.Binding.BindingController = function (services)
     var getSpecialChangeType = function (session, change, allBindings, allOldBindings, newArrayDiffs, oldArrayDiffs)
     {
         var changeTypeSet = false;
-        var newArrayChange = newArrayDiffs[change.binding.currentState.parentBindingKey];
-        if (newArrayChange != null)
-        {
-            changeTypeSet = true;
+        var otherState = change.binding.pendingState != null ? change.binding.pendingState : change.binding.oldState;
 
-            switch (newArrayChange.changeType)
+        if (session.isArray === true)
+        {
+            var arrayChange = newArrayDiffs[change.binding.currentState.parentBindingKey];
+            if (arrayChange == null)
             {
-                case EVUI.Modules.Observers.ArrayChangeType.Added:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Added;
-                    break;
-                case EVUI.Modules.Observers.ArrayChangeType.Moved:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Moved;
-                    break;
-                case EVUI.Modules.Observers.ArrayChangeType.Removed:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Removed;
-                    break;
-                case EVUI.Modules.Observers.ArrayChangeType.Shifted:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Shifted;
-                    break;
+                arrayChange = oldArrayDiffs[change.binding.currentState.parentBindingKey];
+                if (arrayChange != null) delete oldArrayDiffs[change.binding.currentState.parentBindingKey];
+            }
+            else
+            {
+                delete newArrayDiffs[change.binding.currentState.parentBindingKey];
+            }
+            
+            if (arrayChange != null)
+            {        
+                switch (arrayChange.changeType)
+                {
+                    case EVUI.Modules.Observers.ArrayChangeType.Added:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Added;
+                        changeTypeSet = true;
+                        break;
+                    case EVUI.Modules.Observers.ArrayChangeType.Moved:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Moved;
+                        changeTypeSet = true;
+                        break;
+                    case EVUI.Modules.Observers.ArrayChangeType.Removed:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Removed;
+                        changeTypeSet = true;
+                        break;
+                    case EVUI.Modules.Observers.ArrayChangeType.Shifted:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Shifted;
+                        changeTypeSet = true;
+                        break;
+                }                
             }
         }
 
-        var otherState = change.binding.pendingState != null ? change.binding.pendingState : change.binding.oldState;
+       
         if (otherState == null || otherState.parentBindingKey === change.binding.currentState.parentBindingKey) //if there was no old state or the keys match, the object was changed in place.
         {
             change.contentsModified = true;
