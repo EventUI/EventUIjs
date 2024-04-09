@@ -5148,6 +5148,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                 left: resizeArgs.left + "px"
             }
 
+            _settings.stylesheetManager.removeRules(_settings.cssSheetName, movedSelector);
             _settings.stylesheetManager.setRules(_settings.cssSheetName, movedSelector, rules);
             helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);
             entry.link.lastResizeArgs = resizeArgs;
@@ -5282,6 +5283,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             rules.top = resizeArgs.top + "px";
             rules.left = resizeArgs.left + "px";
 
+            _settings.stylesheetManager.removeRules(_settings.cssSheetName, resizedSelector);
             _settings.stylesheetManager.setRules(_settings.cssSheetName, resizedSelector, rules);
             helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
 
