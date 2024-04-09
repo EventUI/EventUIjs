@@ -2700,7 +2700,6 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (oldNodes[x][key] !== true) oldNodes[x].remove();
         }
 
-        var key = Math.random();
         for (var x = 0; x < numNew; x++)
         {
             delete session.bindingHandle.currentState.boundContent[x][key];
