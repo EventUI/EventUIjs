@@ -1285,13 +1285,35 @@ that result in having a much higher (but still infinitesimal) odds of collision.
 @returns {String}*/
 EVUI.Modules.Core.Utils.makeGuid = function ()
 {
-    return "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, function ()
+    var guid = "";
+    for (var x = 0; x < 36; x++)
     {
-        var random = Math.random() * 16;
-        random = Math.floor(random);
+        switch (x)
+        {
+            //indexes of the "-" in a guid
+            case 8:
+            case 13:
+            case 18:
+            case 23:
+                guid += "-";
+                break;
 
-        return random.toString(16);
-    });
+            //slot 14 can only be 1-5, so we just hard code a 4 here
+            case 14:
+                guid += "4";
+                break;
+
+            //slot 19 can only be 8, 9, a, or b, so we just hard code a 8 here
+            case 19:
+                guid += "8";
+                break;
+
+            default:
+                guid += Math.floor(Math.random() * 16).toString(16);
+        }
+    }
+
+    return guid;
 };
 
 /**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code
@@ -1852,7 +1874,7 @@ $evui.instanceOf = function (obj, ctor)
     return EVUI.Modules.Core.Utils.instanceOf(obj, ctor);
 };
 
-/**Returns a hash that uniquely identifies a string. Intended for identifying strings in a web application.
+/**Returns a hash that uniquely identifies a string.
 @param {String} str A string to turn into a hash code.
 @returns {Number}*/
 EVUI.Modules.Core.Utils.getHashCode = function (str)
@@ -1953,7 +1975,7 @@ EVUI.Modules.Core.Utils.getHashCode = function (str)
     return final;
 }
 
-/**Returns a hash that uniquely identifies a string. Not meant to be secure, it is designed for identifying strings in a web application.
+/**Returns a hash that uniquely identifies a string.
 @param {String} str A string to turn into a hash code.
 @returns {String}*/
 $evui.getHashCode = function (str)
