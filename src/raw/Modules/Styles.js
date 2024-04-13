@@ -986,7 +986,7 @@ EVUI.Modules.Styles.StyleSheetManager = function ()
         var numAggregationSets = _aggregationSets.length;
         for (var x = 0; x < numAggregationSets; x++)
         {
-            if (EVUI.Modules.Core.Utils.stringStartsWith(_aggregationSets[x], selector) === true) return true;
+            if (selector.startsWith(_aggregationSets[x]) === true) return true;
         }
 
         return false;

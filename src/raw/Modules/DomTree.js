@@ -443,12 +443,12 @@ EVUI.Modules.DomTree.DomTreeConverter = function ()
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(aTag.search) === false)
         {
-            fullURL += ((EVUI.Modules.Core.Utils.stringStartsWith("?", aTag.search) === false) ? "?" + aTag.search : aTag.search);
+            fullURL += (aTag.search.startsWith("?") === false) ? "?" + aTag.search : aTag.search;
         }
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(aTag.hash) === false)
         {
-            fullURL += ((EVUI.Modules.Core.Utils.stringStartsWith("#", aTag.hash) === false) ? "#" + aTag.hash : aTag.hash);
+            fullURL +=  (aTag.hash.startsWith("#") === false) ? "#" + aTag.hash : aTag.hash;
         }
 
         return fullURL;

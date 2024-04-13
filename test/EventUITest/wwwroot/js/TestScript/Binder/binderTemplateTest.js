@@ -18,9 +18,9 @@
             args.context.now = Date.now();
             console.log(args.binding.id + " onBind")
         },
-        onSetTemplate: function (args)
+        onSetHtmlContent: function (args)
         {
-            console.log(args.binding.id + " onSetTemplate " + (Date.now() - args.context.now));
+            console.log(args.binding.id + " onSetHtmlContent " + (Date.now() - args.context.now));
         },
         onSetBindings: function (args)
         {
