@@ -190,7 +190,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
     if (EVUI.Modules.Panes.Constants.GlobalZIndex == null)
     {
-        var minZIndex = EVUI.Modules.Core.Utils.getSetting("defaultMinimumZIndex");
+        var minZIndex = EVUI.Modules.Core.Settings.defaultMinimumZIndex;
         if (typeof minZIndex !== "number") minZIndex = 100;
 
         EVUI.Modules.Panes.Constants.GlobalZIndex = minZIndex;
@@ -2099,11 +2099,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         }
 
         //then cancel the normal step that calls the callback for the previous event stream.
-        var completeStep = opSession.entry.link.eventStream.getStep(EVUI.Modules.Panes.Constants.Job_OnComplete);
+        var completeStep = opSession.entry.link.eventStream.getStep(EVUI.Modules.Panes.Constants.Job_Complete);
         completeStep.handler = function (jobArgs) { jobArgs.resolve(); }
 
         //then get the same step, but in the new event stream and overwrite its handler to call BOTH callback stacks. We must the last one first and the first one last - this  because of some kind of race condition that predictably inverts the sequence, so we call them backwards 
-        var realCompleteStep = eventStream.getStep(EVUI.Modules.Panes.Constants.Job_OnComplete);
+        var realCompleteStep = eventStream.getStep(EVUI.Modules.Panes.Constants.Job_Complete);
         realCompleteStep.handler = function (jobArgs)
         {
             callCallbackStack(opSession.entry.link, opSession.action, true, function ()
@@ -2258,12 +2258,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         eventStream.onCancel = function ()
         {
-            eventStream.seek(EVUI.Modules.Panes.Constants.Job_OnComplete);
+            eventStream.seek(EVUI.Modules.Panes.Constants.Job_Complete);
         };
 
         eventStream.onError = function (args, error)
         {
-            eventStream.seek(EVUI.Modules.Panes.Constants.Job_OnComplete);
+            eventStream.seek(EVUI.Modules.Panes.Constants.Job_Complete);
         }
     };
 

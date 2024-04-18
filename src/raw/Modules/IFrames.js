@@ -771,7 +771,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
                 var incomingIFrame = getIFrameFromContentWindow(messageEvent.source); //go find the iframe element on the page that sent the message
                 if (incomingIFrame == null) return; //couldn't find it, bail
 
-                if (EVUI.Modules.Core.Utils.isSettingTrue("autoAddIncomingIFrames") === true) //if we're auto-adding iframes, register the new iframe with the manager.
+                if (EVUI.Modules.Core.Settings.autoAddIncomingIFrames === true) //if we're auto-adding iframes, register the new iframe with the manager.
                 {
                     var addResult = _self.addIFrame(targetIframe);
                     if (addResult == null) return; //adding failed, bail

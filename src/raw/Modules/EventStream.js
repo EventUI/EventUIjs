@@ -148,7 +148,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
 
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
     @type {Number}*/
-    this.skipInterval = EVUI.Modules.Core.Utils.getSetting("stepsBetweenWaits");
+    this.skipInterval = EVUI.Modules.Core.Settings.stepsBetweenWaits;
 
     /**Boolean. Whether or not the steps added to the EventStream should have their properties extended onto a fresh step object.
     @type {Boolean}*/

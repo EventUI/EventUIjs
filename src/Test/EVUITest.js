@@ -23,8 +23,8 @@ EVUITest.Constants.Fn_TestPass = function () { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
 @param {String} reason The reason why the test failed.  
-@param {Boolean} intentionalFailure Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
-EVUITest.Constants.Fn_TestFail = function (reason, intentionalFailure) { };
+@param {Boolean} isSimulatedFailure Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
+EVUITest.Constants.Fn_TestFail = function (reason, isSimulatedFailure) { };
 
 /**A predicate function that is fed the assertion value and returns true or false. 
 @param {Any} assertionValue The value wrapped by the assertion.
@@ -250,7 +250,7 @@ EVUITest.LogLevel =
 @class*/
 EVUITest.TestOptions = function ()
 {
-    /**Number. The number of milliseconds to wait before automatically failing the test. 100ms by default.
+    /**Number. The number of milliseconds to wait before automatically failing the test. 100ms by default. Note that this cannot be set once the test has begun.
     @type {Number}*/
     this.timeout = 100;
 

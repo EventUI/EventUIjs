@@ -26,32 +26,6 @@ Object.defineProperty($evui, "settings", {
     enumerable: true
 });
 
-/**Gets a value from a settings table.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Any} */
-$evui.getSetting = function (setting, settingsObj)
-{
-    return EVUI.Modules.Core.Utils.getSetting(setting, settingsObj);
-};
-
-/**Checks to see if a value is one of the possible values that are commonly used that can mean true (true, 1, "true", or "1") rather than doing JavaScript's implicit typecasting for "truthy" values. 
-@param {Any} value The value to check.
-@returns {Boolean} */
-$evui.isTrue = function (value)
-{
-    return EVUI.Modules.Core.Utils.isTrue(value);
-};
-
-/**Checks to see if one of the constants from a settings table is true.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Boolean} */
-$evui.isSettingTrue = function (setting, settingsObj)
-{   
-    return EVUI.Modules.Core.Utils.isSettingTrue(setting, settingsObj);
-};
-
 /**Boolean. Whether or not EventUI can emit any log messages. True by default.
 @type {Boolean}*/
 EVUI.Modules.Core.Settings.loggingEnabled = true;
@@ -87,17 +61,15 @@ EVUI.Modules.Core.Settings.defaultMinimumZIndex = 100;
 /**Constants table for the Core module.*/
 EVUI.Modules.Core.Constants = {};
 
-/**A function used to kick start an application.
-@param {EVUI.Modules.Core.Settings} settings The $evui.settings object.*/
-EVUI.Modules.Core.Constants.Fn_Init = function (settings)
+/**A function used to kick start an application.*/
+EVUI.Modules.Core.Constants.Fn_Init = function ()
 {
         
 };
 
 /**A function used to kick start an application.
-@param {EVUI.Modules.Core.Settings} settings The $evui.settings object.
 @returns {Promise}*/
-EVUI.Modules.Core.Constants.Fn_InitAsync = function (settings)
+EVUI.Modules.Core.Constants.Fn_InitAsync = function ()
 {
 
 };
@@ -298,7 +270,7 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
     {
         return new Promise(function (resolve, reject)
         {
-            AsyncSequenceExecutor.execute(fns, parameter, function (ex)
+            AsyncSequenceExecutor.execute(exeArgsOrFns, function (ex)
             {
                 if (ex instanceof Error) return reject(ex);
                 if (EVUI.Modules.Core.Utils.isArray(ex) === true && ex.length > 0) return reject(ex);
@@ -321,7 +293,7 @@ $evui.executeSequence = function (exeArgsOrFns, callback)
 /**Awaitable. Executes a batch of functions in order based on their indexes in the functions array regardless if they are async or not. Designed to prevent race conditions between competing functions.
 @param {EVUI.Modules.Core.AsyncSequenceExecutionArgs|Function[]} exeArgsOrFns Either a YOLO AsyncSequenceExecutionArgs object or an array of functions.
 @returns {Promise<Error>|Promise<Error[]>}*/
-$evui.executeSequenceAsync = function (exeArgsOrFns, callback)
+$evui.executeSequenceAsync = function (exeArgsOrFns)
 {
     return EVUI.Modules.Core.AsyncSequenceExecutor.executeAsync(exeArgsOrFns, callback);
 };
@@ -357,6 +329,8 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
     @returns {Promise}*/
     EVUI.Modules.Core.Initialize = function (initFn)
     {
+        if (typeof initFn !== "function") throw Error("Function expected.");
+
         //add the function to the queue for init functions
         EVUI.Modules.Core.Initializers.push(initFn);
 
@@ -391,7 +365,6 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
 
                         var exeArgs = new EVUI.Modules.Core.AsyncSequenceExecutionArgs();
                         exeArgs.functions = initFns;
-                        exeArgs.parameter = $evui.settings;
 
                         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
                         {
@@ -1215,19 +1188,6 @@ EVUI.Modules.Core.Utils.setValue = function (path, target, value, fill)
 $evui.set = function (path, target, value, fill)
 {
     return EVUI.Modules.Core.Utils.setValue(path, target, value, fill);
-}
-
-/**Gets a value from a settings table.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Any} */
-EVUI.Modules.Core.Utils.getSetting = function (setting, settingsObj)
-{
-    if (setting == null || (typeof setting !== "string" && typeof setting !== "number" && typeof setting !== "symbol")) return null;
-
-    //if for some reason the $evui.settings object is null, we get it from the EVUI.Modules.Core.Settings object, which cannot be set to null.
-    if (settingsObj != null && typeof settingsObj === "object") return settingsObj[setting];
-    return ($evui.settings == null) ? EVUI.Modules.Core.Settings[setting] : $evui.settings[setting];
 };
 
 /**Checks to see if a value is one of the possible values that are commonly used that can mean true (true, 1, "true", or "1") rather than doing JavaScript's implicit typecasting for "truthy" values. 
@@ -1239,15 +1199,6 @@ EVUI.Modules.Core.Utils.isTrue = function (value)
     if (typeof value === "string") value = value.toLowerCase();
     if (value === "true" || value === 1 || value === "1" || value === true) return true;
     return false;
-};
-
-/**Checks to see if one of the constants from a settings table is true.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Boolean} */
-EVUI.Modules.Core.Utils.isSettingTrue = function (setting, settingsObj)
-{
-    return EVUI.Modules.Core.Utils.isTrue(EVUI.Modules.Core.Utils.getSetting(setting, settingsObj));
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
@@ -1387,13 +1338,13 @@ EVUI.Modules.Core.Utils.log = function (message)
 {
     try
     {
-        if (EVUI.Modules.Core.Utils.isSettingTrue("loggingEnabled"))
+        if (EVUI.Modules.Core.Settings.loggingEnabled === true)
         {
             console.log(message);
         }
         else
         {
-            var alternateLog = EVUI.Modules.Core.Utils.getSetting("alternateLoggingFunction");
+            var alternateLog = EVUI.Modules.Core.Settings.alternateLoggingFunction;
             if (typeof alternateLog === "function") alternateLog(message);
         }
     }
@@ -1516,7 +1467,7 @@ but admittedly of little use to others - use $evui.debug(message, returnValue) f
 @returns {Any}*/
 EVUI.Modules.Core.Utils.debugReturn = function (controller, method, message, returnValue)
 {
-    if (EVUI.Modules.Core.Utils.isSettingTrue("debug") === false) return returnValue;
+    if (EVUI.Modules.Core.Settings.debug === false) return returnValue;
 
     var logStatement = "";
     if (typeof controller === "string")

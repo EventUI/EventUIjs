@@ -173,7 +173,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     @returns {DomMetadata}*/
     var getDomMetadata = function (element)
     {
-        if (_domMetadataPropName == null) _domMetadataPropName = EVUI.Modules.Core.Utils.getHashCode("@BTMDom:" + EVUI.Modules.Core.Utils.makeGuid()).toString(36);
+        if (_domMetadataPropName == null) _domMetadataPropName = EVUI.Modules.Core.Utils.getHashCode("@EVUIDom:" + EVUI.Modules.Core.Utils.makeGuid()).toString(36);
 
         var metadata = element[_domMetadataPropName];
         if (metadata == null)
@@ -343,7 +343,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     };
 
     /**Appends content to the elements referenced by the DomHelper. Returns a new DomHelper with the new content.
-    @param {String|Element} htmlOrElement Either a string of HTML or an Element to inserrt after each element in the DomHelper.
+    @param {String|Element} htmlOrElement Either a string of HTML or an Element to insert after each element in the DomHelper.
     @returns {EVUI.Modules.Dom.DomHelper}*/
     DomHelper.prototype.insertAfter = function (htmlOrElement)
     {
@@ -365,7 +365,7 @@ EVUI.Modules.Dom.DomHelper = function ()
         return this;
     };
 
-    /**Removes all child nodes from the elememnts references by the DomHelper.
+    /**Removes all child nodes from the elements references by the DomHelper.
     @returns {EVUI.Modules.Dom.DomHelper}*/
     DomHelper.prototype.empty = function ()
     {
@@ -627,7 +627,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     @param {Element[]} elements The elements that are the target of the class operation.
     @param {String|String[]} cssClasses The CSS classes that are the subject of the operation.
     @param {String} op The operation to perform. Can be one of the following: add, remove, or toggle.
-    @param {Boolean} force In a "toggle" conext, and is true, forces the class to be added to the element. If false, forces the class to be removed from the element.*/
+    @param {Boolean} force In a "toggle" context, and is true, forces the class to be added to the element. If false, forces the class to be removed from the element.*/
     var classOp = function (elements, cssClasses, op, force)
     {
         if (cssClasses == null || elements == null) return;
@@ -675,7 +675,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
     /**Gets the outerHeight of an element.
     @param {Element|Document|Window} element The element to get the outer hight of.
-    @param {Bololean} includeMargin Whether or not to include the element's margins in the calcuation.
+    @param {Bololean} includeMargin Whether or not to include the element's margins in the calculation.
     @returns {Number}*/
     var outerHeight = function (element, includeMargin)
     {
@@ -712,7 +712,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
     /**Gets the outerWidth of an element.
     @param {Element|Document|Window} element The element to get the outer width of.
-    @param {Bololean} includeMargin Whether or not to include the element's margins in the calcuation.
+    @param {Bololean} includeMargin Whether or not to include the element's margins in the calculation.
     @returns {Number}*/
     var outerWidth = function (element, includeMargin, style)
     {
@@ -856,7 +856,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
     /**Injects HTML into the DOM and returns a DomHelper with the new content. 
      * @param {Element[]} elements The elements to have HTML content added to or around them.
-     * @param {String|Element} htmlOrElement The conent to add to or around the elements.
+     * @param {String|Element} htmlOrElement The content to add to or around the elements.
      * @param {String} action The action to perform. Can be one of: "append", "prepend", "after", or "before".
      */
     var injectHtml = function (elements, htmlOrElement, action) 
@@ -1015,7 +1015,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     return DomHelper;
 }();
 
-/**The current bounds of the element relative to the entire document using the curreent style and the outerWidth and outerHeight functions.
+/**The current bounds of the element relative to the entire document using the current style and the outerWidth and outerHeight functions.
 @class*/
 EVUI.Modules.Dom.ElementBounds = function ()
 {
