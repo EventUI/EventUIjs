@@ -164,3 +164,42 @@ $evui.testAsync({
         $evui.assert(went).isEquivalentTo([0, 1, 2]);
     }
 });
+
+$evui.testAsync({
+    name: "Multiple Initialize - Awiated Sync/Async Mix",
+    options:
+    {
+        timeout: 1000
+    },
+    test: async function (args)
+    {
+        var went = [];
+
+        await $evui.init(async function ()
+        {
+            await $evui.waitAsync(90);
+            went.push(0)
+        });
+
+        $evui.assert(went).isEquivalentTo([0]);
+        await $evui.init(function ()
+        {
+            return new Promise(function (resolve)
+            {
+                setTimeout(function ()
+                {
+                    went.push(1)
+                    resolve();
+                }, 50);
+            });
+        });
+
+        $evui.assert(went).isEquivalentTo([0, 1]);
+        await $evui.init(function ()
+        {
+            went.push(2)
+        });
+
+        $evui.assert(went).isEquivalentTo([0, 1, 2]);
+    }
+});

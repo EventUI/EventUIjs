@@ -457,9 +457,9 @@ EVUI.Modules.Events.EventManager = function ()
 
                         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
                         {
-                            if (error != null)
+                            if (error != null && error.length > 0)
                             {
-                                throw error;
+                                throw error[0];
                             }
 
                             args.resolve();

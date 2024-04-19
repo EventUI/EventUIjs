@@ -173,7 +173,7 @@ EVUI.Modules.UIHandler.UIHandlerManager = function ()
 
         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
         {
-            if (error instanceof Error) throw error;
+            if (error != null && error.length > 0) throw error[0];
         });
     };
 

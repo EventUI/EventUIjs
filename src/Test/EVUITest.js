@@ -770,6 +770,7 @@ EVUITest.TestHostController = function ()
 
                     result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
+                        console.log(args);
                         fail(ex);
                     });
                 }

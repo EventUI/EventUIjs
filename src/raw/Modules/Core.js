@@ -75,7 +75,7 @@ EVUI.Modules.Core.Constants.Fn_InitAsync = function ()
 };
 
 /**A function that is called once the AsyncSequenceExecutor has completed executing all of its functions. 
-@param {Error|Error[]} error Any exception that was thrown while the functions were executing. If foceCompletion was set to true, this will be an array of all errors that occurred during the exection.*/
+@param {Error[]} error Any exception that was thrown while the functions were executing. If foceCompletion was set to true, this will be an array of all errors that occurred during the exection.*/
 EVUI.Modules.Core.Constants.Fn_ExecutorCallback = function (error)
 {
 
@@ -171,19 +171,20 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
                 result.then(function ()
                 {
                     execute(session);
+                });
 
-                }).catch(function (ex)
+                result.catch(function (ex)
                 {
+                    EVUI.Modules.Core.Utils.log(ex);
+                    session.errors.push(ex);
+
                     if (session.forceCompletion === true)
                     {
-                        EVUI.Modules.Core.Utils.log(ex);
-                        session.errors.push(ex);
-
                         execute(session);
                     }
                     else
                     {
-                        session.callback(ex)
+                        session.callback(session.errors)
                     }
                 });
             }
@@ -194,16 +195,16 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
         }
         catch (ex)
         {
+            EVUI.Modules.Core.Utils.log(ex);
+            session.errors.push(ex);
+
             if (session.forceCompletion === true)
             {
-                EVUI.Modules.Core.Utils.log(ex);
-                session.errors.push(ex);
-
                 execute(session);
             }
             else
             {
-                session.callback(ex)
+                session.callback(session.errors)
             }
         }
     };
@@ -270,11 +271,9 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
     {
         return new Promise(function (resolve, reject)
         {
-            AsyncSequenceExecutor.execute(exeArgsOrFns, function (ex)
+            AsyncSequenceExecutor.prototype.execute(exeArgsOrFns, function (ex)
             {
-                if (ex instanceof Error) return reject(ex);
-                if (EVUI.Modules.Core.Utils.isArray(ex) === true && ex.length > 0) return reject(ex);
-                resolve();
+                resolve(ex);
             });
         });
     };
@@ -295,7 +294,7 @@ $evui.executeSequence = function (exeArgsOrFns, callback)
 @returns {Promise<Error>|Promise<Error[]>}*/
 $evui.executeSequenceAsync = function (exeArgsOrFns)
 {
-    return EVUI.Modules.Core.AsyncSequenceExecutor.executeAsync(exeArgsOrFns, callback);
+    return EVUI.Modules.Core.AsyncSequenceExecutor.executeAsync(exeArgsOrFns);
 };
 
 /**Array of all the initialization functions passed into the Initialize function.
@@ -1231,8 +1230,7 @@ $evui.isArray = function (arr)
     return EVUI.Modules.Core.Utils.isArray(arr);
 };
 
-/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code
-that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web application session where the odds of collision are basically zero.
+/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web application session where the odds of collision are basically zero.
 @returns {String}*/
 EVUI.Modules.Core.Utils.makeGuid = function ()
 {
@@ -1249,16 +1247,17 @@ EVUI.Modules.Core.Utils.makeGuid = function ()
                 guid += "-";
                 break;
 
-            //slot 14 can only be 1-5, so we just hard code a 4 here
+            //slot 14 can only be 1-5
             case 14:
-                guid += "4";
+                guid += (Math.floor(Math.random() * 4) + 1).toString(16);
                 break;
 
-            //slot 19 can only be 8, 9, a, or b, so we just hard code a 8 here
+            //slot 19 can only be 8, 9, a, or b
             case 19:
-                guid += "8";
+                guid += (Math.floor(Math.random() * 4) + 8).toString(16);
                 break;
 
+            //all other slots are any hexadecimal value
             default:
                 guid += Math.floor(Math.random() * 16).toString(16);
         }
@@ -1267,8 +1266,7 @@ EVUI.Modules.Core.Utils.makeGuid = function ()
     return guid;
 };
 
-/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code
-that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web app session where the odds of collision are basically zero.
+/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web app session where the odds of collision are basically zero.
 @returns {String}*/
 $evui.guid = function ()
 {
