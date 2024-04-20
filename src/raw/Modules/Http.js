@@ -319,11 +319,12 @@ EVUI.Modules.Http.HttpManager = function ()
                     {
                         var numHeaders = requestArgs.headers.length;
                         for (var x = 0; x < numHeaders; x++)
-                        {
-                            //we make a case insensitive object because in case users do not use the correct casing.
-                            var cio = new EVUI.Modules.Core.CaseInsensitiveObject(requestArgs.headers[x]);
-                            var key = cio.getValue("Key");
-                            var value = cio.getValue("Value");
+                        {                            
+                            var header = requestArgs.headers[x];
+                            if (header == null || typeof header !== "object") continue;
+
+                            var key = header.key;
+                            var value = header.value;
 
                             if (typeof key !== "string" && typeof key !== "number") continue; //invalid key type
                             if (value != null && typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") continue; //value is an object or a function, which are invalid

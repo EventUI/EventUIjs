@@ -76,7 +76,7 @@ EVUI.Modules.Diff.DiffController = function ()
         @type {Object[]}*/
         this.objectParentage = [];
 
-        /**Number. A counter that keeps track of the number of conversions in an object graph and ensures a unique ID for each.
+        /**Number. A counter that keeps track of the number of comparisons in an object graph and ensures a unique ID for each.
         @type {Number}*/
         this.counter = 0;
 
@@ -321,13 +321,11 @@ EVUI.Modules.Diff.DiffController = function ()
                 comparison = compareObjects(session, comparison);
                 if (a.constructor.prototype !== b.constructor.prototype) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Prototype;
             }
-            else //otherwise, if one is null, don't bother doing a comparison.
+            else
             {
                 if (aNull === false || bNull === false)
                 {
                     comparison.flags |= (aNull === false) ? EVUI.Modules.Diff.DiffFlags.AOnly : EVUI.Modules.Diff.DiffFlags.BOnly;
-
-                    //if (session.compareResult.options.compareValuesOnly === false) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Reference;
                     comparison.flags |= EVUI.Modules.Diff.DiffFlags.Reference;
                 }
 

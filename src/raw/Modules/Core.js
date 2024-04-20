@@ -439,7 +439,7 @@ EVUI.Modules.Core.CaseInsensitiveObject = function (source)
     for (var x = 0; x < numKeys; x++)
     {
         var prop = keys[x];
-        this.setValue(prop, source[prop]);
+        this[prop] = source[prop];
     }
 };
 
@@ -455,7 +455,13 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.getValue = function (valueName
     if (this[valueName] !== undefined) return this[valueName];
 
     //normalize the case if we're dealing with a string
-    if (typeof valueName === "string") valueName = valueName.toLowerCase();
+    if (typeof valueName === "string")
+    {
+        valueName = valueName.toLowerCase();
+
+        //check to see if the lower version is an exact match, if so return the value
+        if (this[valueName] !== undefined) return this[valueName];
+    }
 
     var keys = Object.keys(this);
     var numKeys = keys.length;
