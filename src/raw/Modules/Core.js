@@ -504,7 +504,7 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.setValue = function (valueName
             {
                 try
                 {
-                    delete propName;
+                    delete this[propName];
                 }
                 catch (ex)
                 {

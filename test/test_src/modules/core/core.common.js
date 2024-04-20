@@ -310,3 +310,93 @@ CoreTest.makeParameterlessExecutorFunction = function (valueToAdd, mode, waitDur
         }
     }
 }
+
+CoreTest.makeCIOGetValueArgs = function* ()
+{
+    var sourceObj = null;
+    var valuesToGet = null;
+    var name = null;
+
+    name = "Exact property matches";
+    sourceObj = {
+        a: 0,
+        Aa: 1,
+        AA: 2,
+        aA: 3,
+        aa: 4,
+        b: 5,
+        B: 6,
+    };
+
+    valuesToGet = {
+        a: 0,
+        aa: 4,
+        b: 5
+    };
+
+    yield [name, sourceObj, valuesToGet];
+
+    name = "Case-adjusted property matches";
+    sourceObj = {
+        Aa: 1,
+        AA: 2,
+        aA: 3,
+        bB: 5,
+        Bb: 6,
+        BB: 7,
+        B: 8
+    };
+
+    valuesToGet = {
+        aa: 1,
+        bb: 5,
+        b: 8
+    };
+
+    yield [name, sourceObj, valuesToGet];
+};
+
+CoreTest.makeCIOSetValueArgs = function* ()
+{
+    var sourceObj = null;
+    var valuesToSet = null;
+    var name = null;
+
+    name = "Exact property matches";
+    sourceObj = {
+        a: 0,
+        Aa: 1,
+        AA: 2,
+        aA: 3,
+        aa: 4,
+        b: 5,
+        B: 6,
+    };
+
+    valuesToSet = {
+        a: 0,
+        aa: 4,
+        b: 5
+    };
+
+    yield [name, sourceObj, valuesToSet];
+
+    name = "Case-adjusted property matches";
+    sourceObj = {
+        Aa: 1,
+        AA: 2,
+        aA: 3,
+        bB: 5,
+        Bb: 6,
+        BB: 7,
+        B: 8
+    };
+
+    valuesToSet = {
+        aa: 1,
+        bb: 5,
+        b: 8
+    };
+
+    yield [name, sourceObj, valuesToSet];
+};
