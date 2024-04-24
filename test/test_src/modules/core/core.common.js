@@ -400,3 +400,84 @@ CoreTest.makeCIOSetValueArgs = function* ()
 
     yield [name, sourceObj, valuesToSet];
 };
+
+CoreTest.makeDeepExtendArgs = function* ()
+{
+    var source = null;
+    var target = null;
+    var name = null;
+    var result = null;
+    var shouldFail = false;
+
+    name = "Simple Merge";
+    source = { C: 2 };
+    target = { D: 1 };
+    result = { C: 2, D: 1 };
+    shouldFail = false;
+
+    yield [name, target, source, result, shouldFail];
+
+    name = "Recursive Merge";
+    source = {
+        C: 2,
+        E: {
+            A: 3
+        }
+    };
+    target = {
+        D: 1,
+        E: {
+            B: 4
+        }
+    };
+
+    result = {
+        C: 2,
+        D: 1,
+        E: {
+            A: 3,
+            B: 4
+        }
+    };
+
+    yield [name, target, source, result, shouldFail];
+
+    name = "Array Merge - Longer Source";
+    source = [0, 1, 3];
+    target = [4];
+    result = [4, 1, 3];
+    shouldFail = false;
+
+    yield [name, source, target, result, shouldFail];
+
+    name = "Array Merge - Longer Target";
+    source = [0, 1, 3];
+    target = [4, 5, 6, 7];
+    result = [4, 5, 6, 7];
+    shouldFail = false;
+
+    yield [name, source, target, result, shouldFail];
+
+    name = "Array Merge - Object Array";
+    source = [{ A: 1 }];
+    target = [{ B: 2 }];
+    result = [{ A: 1, B: 2 }];
+    shouldFail = false;
+
+    yield [name, source, target, result, shouldFail];
+
+    name = "Recursive Duplicates - Reference Hierarchy Maintained";
+    var dupe = { A: "a", C: "c" };
+    dupe.B = dupe;
+
+    source = { One: dupe, Two: "2", Three: dupe };
+    target = { Four: "4" };
+
+    var resultDupe = { A: "a", C: "c" };
+    resultDupe.B = resultDupe;
+
+    result = { One: resultDupe, Two: "2", Three: resultDupe, Four: 4 };
+    shouldFail = true;
+
+    yield [name, source, target, result, shouldFail];
+};

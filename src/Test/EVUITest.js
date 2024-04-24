@@ -417,7 +417,14 @@ EVUITest.TestHostController = function ()
             }
             else if (typeof arguments === "object")
             {
-                argsStr += JSON.stringify(testResult.arguments);
+                try
+                {
+                    argsStr += JSON.stringify(testResult.arguments);
+                }
+                catch (ex)
+                {
+                    argsStr += "<JSON.stringify crashed: " + ex.message.replace(/\n\r|\r\n|\n|\r|\t/g, " ").replace(/\s+/g, " ") + ">";
+                }
             }
             else
             {
