@@ -1050,16 +1050,6 @@ EVUI.Modules.Core.Utils.wrapProperties = function (source, target, propertyMappi
     return new EVUI.Modules.Core.ObjectPropertyWrapper().wrap(source, target, propertyMappings, settings);
 };
 
-/**Wraps all the properties specified in the property mappings parameter so that they are settable on the source object but are set and read from the target object.
-@param {Object} source The source object to receive the properties.
-@param {Object} target The target object to be manipulated by the getters and setters on the source object.
-@param {EVUI.Modules.Core.ObjectPropertyMapping|EVUI.Modules.Core.ObjectPropertyMapping[]} propertyMappings An array of ObjectPropertyMapping describing the mappings between the two objects.
-@param {EVUI.Modules.Core.ObjectPropertyMappingSettings} settings The settings to apply to each mapping if the mappings do not have their own settings defined.*/
-$evui.wrap = function (source, target, propertyMappings, settings)
-{
-    return new EVUI.Modules.Core.Utils.wrapProperties(source, target, propertyMappings, settings);
-};
-
 /**Gets a property of an object based on its path starting at the source object.
 @param {String} path The dot or bracket delineated path from the source object to the property to get. I.e. a path of "a.b[2].c" would get the value of source.a.b[2].c.
 @param {Object} source The starting point of the operation to get the value of the source object.
@@ -1108,9 +1098,43 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
     var propType = typeof propertyPath;
     if (propType !== "string") throw Error("Cannot get path segments from a non-string.");
 
-    var segs = propertyPath.split(/\.|\[|\]\.|\]/g); //split based on dots, open braces, close braces followed by a dot, and close braces (in that order so that close braces followed by a dot do not turn into two matches)
-    var numSegs = segs.length;
-    if (segs[numSegs - 1] === "") segs = segs.slice(0, segs.length - 1);
+    var segs = [];
+
+    //match any character that can be used as a property separator in a string property path: ".", "[", "]" and "?"
+    var deliminiterRegex = /\[|\]|\.|\?/;
+
+    //see if there's any match at all in the path
+    var match = deliminiterRegex.test(propertyPath);
+
+    //if not, all done.
+    if (match === false) return [propertyPath];
+
+    //if so, walk the string and compose a path made from the non-delininating characters
+    var index = 0;
+    var len = propertyPath.length;
+    var curSeg = "";
+
+    while (index < len)
+    {
+        var curChar = propertyPath[index];
+        if (deliminiterRegex.test(curChar) === true) //it is a delininator 
+        {
+            if (curSeg.length > 0) //we have a non-empty segment, so it's a valid path segment. Add it to the segments array and reset the next segment
+            {
+                segs.push(curSeg);
+                curSeg = "";
+            }
+        }
+        else //its not a delinator - add it as a regualar character to the current segment
+        {
+            curSeg += curChar;
+        }
+
+        index++;
+    }
+
+    //if we had an incomplete segment by the time the string ran out, add it as well
+    if (curSeg.length > 0) segs.push(curSeg);
 
     return segs;
 };

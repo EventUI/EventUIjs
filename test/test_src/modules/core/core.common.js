@@ -481,3 +481,120 @@ CoreTest.makeDeepExtendArgs = function* ()
 
     yield [name, source, target, result, shouldFail];
 };
+
+CoreTest.makeGetVaueArgs = function* ()
+{
+    var name = null; 
+    var source = null;
+    var path = null;
+    var result = null;
+
+    name = "Simple Get";
+    source = { A: 1 };
+    path = "A";
+    result = 1;
+
+    yield [name, source, path, result];
+
+    name = "Deep Get";
+    source = {
+        A: 1,
+        B: {
+            C: 0
+        }
+    };
+    path = "B.C";
+    result = 0;
+
+    yield [name, source, path, result];
+
+    name = "Deeper Get";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -1
+            }
+        }
+    };
+    path = "B.D.E";
+    result = -1;
+
+    yield [name, source, path, result];
+
+    name = "Deeper Get - Braket Notation 1";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -1
+            }
+        }
+    };
+    path = "B[D].E";
+    result = -1;
+
+    yield [name, source, path, result];
+
+    name = "Deeper Get - Braket Notation 2";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -1
+            }
+        }
+    };
+    path = "[B].[D].E";
+    result = -1;
+
+    yield [name, source, path, result];
+
+    name = "Deeper Get - Braket Notation 3";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -1
+            }
+        }
+    };
+    path = "[B].[D][E]";
+    result = -1;
+
+    yield [name, source, path, result];
+
+    name = "Deeper Get - Braket Notation 4";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -1
+            }
+        }
+    };
+    path = "[B].D.E";
+    result = -1;
+
+    yield [name, source, path, result];
+
+    name = "Deeper Get - Braket Notation 5";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -1
+            }
+        }
+    };
+    path = "[B].D[E]";
+    result = -1;
+
+    yield [name, source, path, result];
+};
