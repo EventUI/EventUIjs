@@ -1090,33 +1090,103 @@ $evui.get = function (path, source)
     return EVUI.Modules.Core.Utils.getValue(path, source);
 };
 
+/**Cache for saving the results of getValuePathSegments so the same path isn't digested over and over. Keys are the paths, values are the FROZEN cached arrays of path segments.*/
+EVUI.Modules.Core.Utils.PathCache = {};
+
 /**Breaks up a "property path" (a "path" of properties that are separated by dots or braces that leads from a parent object to a child property in it or a child object) into an array of path segments.
+
+Note that property names in the path segment that contain a dot or brace, that segment must be wrapped in (unescaped) quote characters in order to avoid a parse error. 
+
+If the property name contains a quote character it must be escaped.
 @param {String} propertyPath The path to a property.
 @returns {String[]} */
 EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
 {
     var propType = typeof propertyPath;
-    if (propType !== "string") throw Error("Cannot get path segments from a non-string.");
+    if (propType === "number")
+    {
+        propertyPath = propertyPath.toString();
+    }
+    else if (propType !== "string")
+    {
+        throw Error("Cannot get path segments from a non-string.");
+    }
+
+    if (propertyPath === "") return [];
+
+    //check the cache for the resolved path first - if we already did this path, just return a copy of the path's array
+    var existing = EVUI.Modules.Core.Utils.PathCache[propertyPath];
+    if (existing != null) return existing.slice();
 
     var segs = [];
 
     //match any character that can be used as a property separator in a string property path: ".", "[", "]" and "?"
     var deliminiterRegex = /\[|\]|\.|\?/;
 
-    //see if there's any match at all in the path
-    var match = deliminiterRegex.test(propertyPath);
+    //match any quote characters so signal the beginning of a literal string
+    var quoteRegex = /"|'|`/;
+
+    //see if there's any match at all in the path for either a deliminiter or a literal text span beginner
+    var match = deliminiterRegex.test(propertyPath) === true || quoteRegex.test(propertyPath) === true;
 
     //if not, all done.
-    if (match === false) return [propertyPath];
+    if (match === false)
+    {
+        EVUI.Modules.Core.Utils.PathCache[propertyPath] = Object.freeze([propertyPath]);
+        return [propertyPath];
+    }
 
     //if so, walk the string and compose a path made from the non-delininating characters
-    var index = 0;
     var len = propertyPath.length;
     var curSeg = "";
+    var inLiteral = false;
+    var literalStartCharacter = null;
 
-    while (index < len)
+    for (var index = 0; index < len; index++)
     {
         var curChar = propertyPath[index];
+        var wasInLiteral = inLiteral;
+
+        //check to see if we are in a 'literal' string - that is a run of text between two matching quote-type characters. 
+        if (quoteRegex.test(curChar) === true)
+        {
+            if (inLiteral === false) //not in a literal run of text - see if its an escaped quote
+            {
+                if (index === 0 || propertyPath[index - 1] !== "\\") //if not, we are at the beginning of a literal text run
+                {
+                    inLiteral = true;
+                    literalStartCharacter = curChar;
+                }
+            }
+            else //in a literal run of text. See if this is an unescaped matching quote character to end the 
+            {
+                if (curChar === literalStartCharacter)
+                {
+                    if (index > 0 && propertyPath[index - 1] !== "\\")
+                    {
+                        inLiteral = false;
+                    }
+                }
+            }            
+        }
+
+        //If we are in a literal string, we don't care about checking for deliniators, just add the current character to the segment
+        if (inLiteral === true)
+        {
+            if (wasInLiteral === false)
+            {
+                continue;
+            }
+
+            curSeg += curChar;
+            continue;
+        }
+
+        if (inLiteral === false && wasInLiteral === true)
+        {
+            continue;
+        }
+
         if (deliminiterRegex.test(curChar) === true) //it is a delininator 
         {
             if (curSeg.length > 0) //we have a non-empty segment, so it's a valid path segment. Add it to the segments array and reset the next segment
@@ -1129,12 +1199,18 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
         {
             curSeg += curChar;
         }
+    }
 
-        index++;
+    if (inLiteral === true)
+    {
+        throw Error("Malformed path. Literal text run starting with " + literalStartCharacter + " had no matching un-escaped close character");
     }
 
     //if we had an incomplete segment by the time the string ran out, add it as well
     if (curSeg.length > 0) segs.push(curSeg);
+
+    //cache the result as a frozen array so nothing about it can be changed
+    EVUI.Modules.Core.Utils.PathCache[propertyPath] = Object.freeze(segs.slice());
 
     return segs;
 };
@@ -1198,7 +1274,7 @@ EVUI.Modules.Core.Utils.setValue = function (path, target, value, fill)
             }
             else
             {
-                throw Error("Failed to set property at path \"" + path + "\", \"" + curSeg + "\"  was null or undefined.");
+                throw Error("Failed to set property at path \"" + path + "\", value at \"" + curSeg + "\"  was null or undefined.");
             }
         }
 

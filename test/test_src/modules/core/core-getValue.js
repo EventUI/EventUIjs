@@ -8,4 +8,4 @@ $evui.testAsync({
 
         $evui.assert(getResult).isEquivalentTo(result);
     }
-})
+});

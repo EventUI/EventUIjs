@@ -598,3 +598,269 @@ CoreTest.makeGetVaueArgs = function* ()
 
     yield [name, source, path, result];
 };
+
+CoreTest.makeSetValueArgs = function* ()
+{
+    var name = null;
+    var source = null;
+    var path = null;
+    var value = null;
+    var getter = null;
+
+    name = "Simple Set";
+    source = { A: null };
+    path = "A";
+    value = 1;
+    getter = function (obj) { return obj?.A; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deep Set";
+    source = {
+        A: 1,
+        B: {
+            C: "cat"
+        }
+    };
+    path = "B.C";
+    value = 0;
+    getter = function (obj) { return obj.B.C; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: 5
+            }
+        }
+    };
+    path = "B.D.E";
+    value = -1;
+    getter = function (obj) { return obj.B.D.E; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set - Braket Notation 1";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: 2
+            }
+        }
+    };
+    path = "B[D].E";
+    value = -1;
+    getter = function (obj) { return obj.B.D.E; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set - Braket Notation 2";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: -11
+            }
+        }
+    };
+    path = "[B].[D].E";
+    value = -1;
+    getter = function (obj) { return obj.B.D.E; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set - Braket Notation 3";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: 9
+            }
+        }
+    };
+    path = "[B].[D][E]";
+    value = -1;
+    getter = function (obj) { return obj.B.D.E; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set - Braket Notation 4";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: "element"
+            }
+        }
+    };
+    path = "[B].D.E";
+    value = -1;
+    getter = function (obj) { return obj.B.D.E; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set - Braket Notation 5";
+    source = {
+        A: 1,
+        B: {
+            C: 0,
+            D: {
+                E: "F"
+            }
+        }
+    };
+    path = "[B].D[E]";
+    value = -1;
+    getter = function (obj) { return obj.B.D.E; }
+
+    yield [name, source, path, value, getter];
+};
+
+CoreTest.makeSetValueArgsAppendGaps = function* ()
+{
+    var name = null;
+    var source = null;
+    var path = null;
+    var value = null;
+    var getter = null;
+
+    name = "Simple Add Object - Null Source";
+    source = null,
+    path = "A";
+    value = 1;
+    getter = function (obj) { return obj?.A; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deep Set";
+    source = {
+        A: 1,
+    };
+    path = "B.C";
+    value = 0;
+    getter = function (obj) { return obj.B?.C; }
+
+    yield [name, source, path, value, getter];
+
+    name = "Deeper Set";
+    source = {
+        A: 1,
+    };
+    path = "B.D.E";
+    value = -1;
+    getter = function (obj) { return obj.B?.D?.E; }
+
+    yield [name, source, path, value, getter];
+};
+
+CoreTest.makeGetPathSegmentsArgs = function* ()
+{
+    var name = null;
+    var path = null;
+    var result = null;
+
+    name = "No Path";
+    path = null;
+    result = null;
+
+    yield [name, path, result];
+
+    name = "Empty Path";
+    path = "";
+    result = [];
+
+    yield [name, path, result];
+
+    name = "Simple Path";
+    path = "A";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - Brackets First";
+    path = "[A]";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - In Single-Quotes";
+    path = "'A'";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - In Double-Quotes";
+    path = "\"A\"";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - In Graves";
+    path = "`A`";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - In Single-Quotes";
+    path = "'A'";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - Dot First";
+    path = ".A";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - Null Chain Dot";
+    path = "?.A";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Simple Path - Null Chain Brackets";
+    path = "?[A]";
+    result = ["A"]
+
+    yield [name, path, result];
+
+    name = "Deep Path";
+    path = "A.B.C";
+    result = ["A", "B", "C"]
+
+    yield [name, path, result];
+
+    name = "Deep Path - Brckets First";
+    path = "[A].B.C";
+    result = ["A", "B", "C"]
+
+    yield [name, path, result];
+
+    name = "Deep Path - With Literals";
+    path = "[A].'B.123'.C";
+    result = ["A", "B.123", "C"]
+
+    yield [name, path, result];
+
+    name = "Deep Path - With Literals - 2";
+    path = "[A].`[B.12[3]`.C";
+    result = ["A", "[B.12[3]", "C"]
+
+    yield [name, path, result];
+
+    name = "Deep Path - With Literals - 3";
+    path = "[A].`[B.12[3]`.\"\\\"C\"";
+    result = ["A", "[B.12[3]", "\\\"C"]
+
+    yield [name, path, result];
+};
