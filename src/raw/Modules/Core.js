@@ -1126,7 +1126,7 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
     //match any quote characters so signal the beginning of a literal string
     var quoteRegex = /"|'|`/;
 
-    //see if there's any match at all in the path for either a deliminiter or a literal text span beginner
+    //see if there's any match at all in the path for either a delineator or a literal text span beginner
     var match = deliminiterRegex.test(propertyPath) === true || quoteRegex.test(propertyPath) === true;
 
     //if not, all done.
@@ -1136,7 +1136,7 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
         return [propertyPath];
     }
 
-    //if so, walk the string and compose a path made from the non-delininating characters
+    //if so, walk the string and compose a path made from the non-delineating characters
     var len = propertyPath.length;
     var curSeg = "";
     var inLiteral = false;
@@ -1158,7 +1158,7 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
                     literalStartCharacter = curChar;
                 }
             }
-            else //in a literal run of text. See if this is an unescaped matching quote character to end the 
+            else //in a literal run of text. See if this is an un-escaped matching quote character to end the 
             {
                 if (curChar === literalStartCharacter)
                 {
@@ -1170,7 +1170,7 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
             }            
         }
 
-        //If we are in a literal string, we don't care about checking for deliniators, just add the current character to the segment
+        //If we are in a literal string, we don't care about checking for delineators, just add the current character to the segment
         if (inLiteral === true)
         {
             if (wasInLiteral === false)
@@ -1187,7 +1187,7 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
             continue;
         }
 
-        if (deliminiterRegex.test(curChar) === true) //it is a delininator 
+        if (deliminiterRegex.test(curChar) === true) //it is a delineator 
         {
             if (curSeg.length > 0) //we have a non-empty segment, so it's a valid path segment. Add it to the segments array and reset the next segment
             {
@@ -1195,7 +1195,7 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
                 curSeg = "";
             }
         }
-        else //its not a delinator - add it as a regualar character to the current segment
+        else //its not a delineator - add it as a regular character to the current segment
         {
             curSeg += curChar;
         }

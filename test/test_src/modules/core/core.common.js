@@ -864,3 +864,10 @@ CoreTest.makeGetPathSegmentsArgs = function* ()
 
     yield [name, path, result];
 };
+
+CoreTest.makeGetElementAttributesArgs = function* ()
+{
+    var name = null;
+    var attrs = null;
+    var tagName = null;
+};
