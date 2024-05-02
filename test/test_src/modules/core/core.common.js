@@ -869,5 +869,19 @@ CoreTest.makeGetElementAttributesArgs = function* ()
 {
     var name = null;
     var attrs = null;
-    var tagName = null;
+
+    name = "No Attributes";
+    attrs = {};
+
+    yield [name, attrs];
+
+    name = "Single Attribute";
+    attrs = { "a": "1" };
+
+    yield [name, attrs];
+
+    name = "Multiple Attributes";
+    attrs = { "a": "1", B: "c", Dd: "123" };
+
+    yield [name, attrs];
 };
