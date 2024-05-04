@@ -885,3 +885,94 @@ CoreTest.makeGetElementAttributesArgs = function* ()
 
     yield [name, attrs];
 };
+
+CoreTest.makeStringIsValidArgs = function* ()
+{
+    var isValid = false;
+    var name = null;
+    var str = null;
+
+    name = "Null String";
+    isValid = false;
+    str = null;
+
+    yield [name, str, isValid];
+
+    name = "Not a String - Number"
+    isValid = false;
+    str = 123.456;
+
+    yield [name, str, isValid];
+
+    name = "Not a String - Object"
+    isValid = false;
+    str = {a: 123};
+
+    yield [name, str, isValid];
+
+    name = "Not a String - Function"
+    isValid = false;
+    str = function () { return "abc"};
+
+    yield [name, str, isValid];
+
+    name = "Not a String - Symbol"
+    isValid = false;
+    str = Symbol("abc");
+
+    yield [name, str, isValid];
+
+    name = "Empty String"
+    isValid = false;
+    str = "";
+
+    yield [name, str, isValid];
+
+    name = "Single Space"
+    isValid = false;
+    str = " ";
+
+    yield [name, str, isValid];
+
+    name = "Newline"
+    isValid = false;
+    str = "\r\n";
+
+    yield [name, str, isValid];
+
+    name = "Tab"
+    isValid = false;
+    str = "\t";
+
+    yield [name, str, isValid];
+
+    name = "Whitespace Mix"
+    isValid = false;
+    str = "  \t\r\n   \t";
+
+    yield [name, str, isValid];
+
+    name = "Valid - no whitespace"
+    isValid = true;
+    str = "abc";
+
+    yield [name, str, isValid];
+
+    name = "Valid - leading whitespace"
+    isValid = true;
+    str = " abc";
+
+    yield [name, str, isValid];
+
+    name = "Valid - trailing whitespace"
+    isValid = true;
+    str = "abc ";
+
+    yield [name, str, isValid];
+
+    name = "Valid - leading and trailing whitespace"
+    isValid = true;
+    str = " abc ";
+
+    yield [name, str, isValid];
+};

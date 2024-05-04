@@ -999,7 +999,6 @@ EVUI.Modules.Core.Utils.deepExtend = function (target, source, options)
     return new EVUI.Modules.Core.DeepExtender.deepExtend(target, source, options);
 };
 
-
 /**Extends one object's hierarchy onto another object recursively.
 @param {Object} target The target object to extend properties on to.
 @param {Object} source The source object to extend.
@@ -1293,17 +1292,6 @@ EVUI.Modules.Core.Utils.setValue = function (path, target, value, fill)
 $evui.set = function (path, target, value, fill)
 {
     return EVUI.Modules.Core.Utils.setValue(path, target, value, fill);
-};
-
-/**Checks to see if a value is one of the possible values that are commonly used that can mean true (true, 1, "true", or "1") rather than doing JavaScript's implicit typecasting for "truthy" values. 
-@param {Any} value The value to check.
-@returns {Boolean} */
-EVUI.Modules.Core.Utils.isTrue = function (value)
-{
-    if (value == null) return false;
-    if (typeof value === "string") value = value.toLowerCase();
-    if (value === "true" || value === 1 || value === "1" || value === true) return true;
-    return false;
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
