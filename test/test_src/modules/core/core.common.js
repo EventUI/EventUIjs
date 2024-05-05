@@ -976,3 +976,109 @@ CoreTest.makeStringIsValidArgs = function* ()
 
     yield [name, str, isValid];
 };
+
+CoreTest.getFlagArgs = function* ()
+{
+    var name = null;
+    var flagSet = null;
+    var flag = null;
+    var action = null;
+    var result = null;
+
+    name = "Add flag to Zero";
+    flagSet = CoreTest.FlagSet.None;
+    flag = CoreTest.FlagSet.FirstFlag;
+    action = CoreTest.FlagAction.AddFlag;
+    result = CoreTest.FlagSet.FirstFlag;
+
+    yield [name, flag, flagSet, action, result];
+
+    name = "Add flag to Itself";
+    flagSet = CoreTest.FlagSet.FirstFlag;
+    flag = CoreTest.FlagSet.FirstFlag;
+    action = CoreTest.FlagAction.AddFlag;
+    result = CoreTest.FlagSet.FirstFlag;
+
+    yield [name, flag, flagSet, action, result];
+
+    name = "Add flag to Another Flag";
+    flagSet = CoreTest.FlagSet.SecondFlag;
+    flag = CoreTest.FlagSet.FirstFlag;
+    action = CoreTest.FlagAction.AddFlag;
+    result = CoreTest.FlagSet.FirstFlag | CoreTest.FlagSet.SecondFlag
+
+    yield [name, flag, flagSet, action, result];
+
+    name = "Remove flag from Zero";
+    flagSet = CoreTest.FlagSet.None;
+    flag = CoreTest.FlagSet.FirstFlag;
+    action = CoreTest.FlagAction.RemoveFlag;
+    result = CoreTest.FlagSet.None;
+
+    yield [name, flag, flagSet, action, result]
+
+    name = "Remove flag from Itself";
+    flagSet = CoreTest.FlagSet.SecondFlag;
+    flag = CoreTest.FlagSet.SecondFlag;
+    action = CoreTest.FlagAction.RemoveFlag;
+    result = CoreTest.FlagSet.None;
+
+    yield [name, flag, flagSet, action, result]
+
+    name = "Remove flag from Another Flag";
+    flagSet = CoreTest.FlagSet.SecondFlag | CoreTest.FlagSet.ThirdFlag;
+    flag = CoreTest.FlagSet.SecondFlag;
+    action = CoreTest.FlagAction.RemoveFlag;
+    result = CoreTest.FlagSet.ThirdFlag;
+
+    yield [name, flag, flagSet, action, result]
+
+    name = "HasFlag from Zero";
+    flagSet = CoreTest.FlagSet.None;
+    flag = CoreTest.FlagSet.SecondFlag;
+    action = CoreTest.FlagAction.HasFlag;
+    result = false;
+
+    yield [name, flag, flagSet, action, result]
+
+    name = "HasFlag from Itself";
+    flagSet = CoreTest.FlagSet.ThirdFlag;
+    flag = CoreTest.FlagSet.ThirdFlag;
+    action = CoreTest.FlagAction.HasFlag;
+    result = true;
+
+    yield [name, flag, flagSet, action, result]
+
+    name = "HasFlag From Set Without Flag";
+    flagSet = CoreTest.FlagSet.ThirdFlag | CoreTest.FlagSet.FourthFlag;
+    flag = CoreTest.FlagSet.FirstFlag;
+    action = CoreTest.FlagAction.HasFlag;
+    result = false;
+
+    yield [name, flag, flagSet, action, result]
+
+    name = "HasFlag From Set With Flag";
+    flagSet = CoreTest.FlagSet.ThirdFlag | CoreTest.FlagSet.FourthFlag;
+    flag = CoreTest.FlagSet.ThirdFlag;
+    action = CoreTest.FlagAction.HasFlag;
+    result = true;
+
+    yield [name, flag, flagSet, action, result]
+};
+
+CoreTest.FlagAction =
+{
+    None: "none",
+    HasFlag: "hasFlag",
+    AddFlag: "addFlag",
+    RemoveFlag: "removeFlag"
+};
+
+CoreTest.FlagSet =
+{
+    None: 0,
+    FirstFlag: 1,
+    SecondFlag: 2,
+    ThirdFlag: 4,
+    FourthFlag: 8
+};
