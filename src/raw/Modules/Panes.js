@@ -1618,7 +1618,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             index = quoteIndex + 1;
         }
 
-        if (openIndex !== -1) return EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "getQuoteSpans", "Invalid settings string, unclosed quote starting at position " + openIndex, null);
+        if (openIndex !== -1) return EVUI.Modules.Core.Utils.log("Invalid settings string, unclosed quote starting at position " + openIndex);
         return spans;
     };
 
@@ -1663,7 +1663,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         }
         catch (ex)
         {
-            EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "assignSetting", "Could not parse setting value \"" + escaped + "\" from JSON: " + ex.message);
+            EVUI.Modules.Core.Utils.log(ex);
         }
     };
 
@@ -5890,19 +5890,16 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         {
             if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(html) === true)
             {
-                EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "getElementViaHttp", "No HTML was returned from the server, or an error occurred in loading the HTML from the server.");
                 return callback(false);
             }
 
             var contents = new EVUI.Modules.Dom.DomHelper(html);
-            if (contents.elements.length === 0)
+            if (contents.elements.length === 0) //no element
             {
-                EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "getElementViaHttp", "Could not parse returned HTML into an HTML element.");
                 return callback(false);
             }
-            else if (contents.elements.length > 1)
+            else if (contents.elements.length > 1) //too many elements, but be exactly one
             {
-                EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "getElementViaHttp", "Too many elements returned from server, must be exactly one element.");
                 return callback(false);
             }
             else
@@ -5921,14 +5918,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     {
         _settings.htmlLoader.loadPlaceholder(loadSettings.placeholderLoadArgs, function (placeholderLoadResult)
         {
-            if (placeholderLoadResult.loadedContent == null || placeholderLoadResult.loadedContent.length === 0)
+            if (placeholderLoadResult.loadedContent == null || placeholderLoadResult.loadedContent.length === 0) //no elements
             {
-                EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "getElementViaPlaceholder", "Failed to inject placeholder element.");
                 return callback(false);
             }
-            else if (placeholderLoadResult.loadedContent.length > 1)
+            else if (placeholderLoadResult.loadedContent.length > 1) //too many elements
             {
-                EVUI.Modules.Core.Utils.debugReturn(_settings.managerName, "getElementViaPlaceholder", "Too many elements returned from server, must be exactly one element.");
                 return callback(false);
             }
             else

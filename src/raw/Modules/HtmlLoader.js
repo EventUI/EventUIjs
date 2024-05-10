@@ -262,7 +262,8 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         }
         catch (ex)
         {
-            return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.HtmlLoaderController.Manager", "translateResponseToText", ex.stack, null);
+            EVUI.Modules.Core.Utils.log(ex);
+            callback(null);
         }
     };
 

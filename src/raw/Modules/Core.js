@@ -929,7 +929,7 @@ EVUI.Modules.Core.ObjectPropertyWrapper = function ()
         }
         catch (ex)
         {
-            EVUI.Modules.Core.Utils.debugReturn("ObjectPropertyWrapper", "mapProperty", ex.stack);
+            EVUI.Modules.Core.Utils.log(ex);
         }
     };
 };
@@ -1546,64 +1546,6 @@ EVUI.Modules.Core.Utils.isElement = function (object)
 $evui.isElement = function (object)
 {
     return EVUI.Modules.Core.Utils.isElement(object);
-};
-
-/**Utility method for simultaneously logging a debug message and returning a value. Exists for the purpose of returning and logging from a single-line if statement.
-This is used to create consistently formatted debug messages for an end user so that they can get some insight into why and where something isn't working. Wherever an unusable input or 
-a broken state is detected, this function is used to log it and return safely. Can be silenced via setting $evui.settings.debug to false. Critically important to the guts of EventUI, 
-but admittedly of little use to others - use $evui.debug(message, returnValue) for a more generic version. 
-@param {String} controller The EventUI controller or object logging the message.
-@param {String} method The function that is logging the message.
-@param {String} message The message to log.
-@param {Any} returnValue Any value to return.
-@returns {Any}*/
-EVUI.Modules.Core.Utils.debugReturn = function (controller, method, message, returnValue)
-{
-    if (EVUI.Modules.Core.Settings.debug === false) return returnValue;
-
-    var logStatement = "";
-    if (typeof controller === "string")
-    {
-        logStatement = controller;
-    }
-
-    if (typeof method === "string")
-    {
-        if (logStatement !== "")
-        {
-            logStatement += "." + method;
-        }
-        else
-        {
-            logStatement = method;
-        }
-    }
-
-    if (typeof message === "string")
-    {
-        if (logStatement !== "")
-        {
-            logStatement += ": " + message;
-        }
-        else
-        {
-            logStatement = message;
-        }
-    }
-
-    if (logStatement === "") return returnValue;
-    EVUI.Modules.Core.Utils.log(logStatement);
-
-    return returnValue;
-};
-
-/**Utility method for simultaneously logging a debug message and returning a value. Exists for the purpose of returning and logging from a single-line if statement.
-@param {String} message The message to log.
-@param {Any} returnValue Any value to return.
-@returns {Any}*/
-$evui.debug = function (message, returnValue)
-{
-    return EVUI.Modules.Core.Utils.debugReturn(message, null, null, returnValue);
 };
 
 /**Determines whether one element contains another.
