@@ -991,6 +991,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var eventArgs = new EVUI.Modules.EventStream.EventStreamEventArgs(_self.eventState);
         eventArgs.currentStep = sequence.indexOf(step);
         eventArgs.key = step.key;
+        eventArgs.name = step.name;
         eventArgs.stepType = step.type;
         eventArgs.totalSteps = sequence.length;
         eventArgs.status = _self.getStatus();
