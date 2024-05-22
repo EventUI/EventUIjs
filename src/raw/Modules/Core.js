@@ -665,7 +665,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
 
             if (session.filterViaFn === true)
             {
-                if (session.options.filter(prop, source, target) === true) continue; //true means don't include
+                if (session.options.filter(prop, source, target) === false) continue; //false means don't include
             }
             else if (session.filterViaArray === true)
             {
@@ -828,7 +828,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
 /**Options for configuring the DeepExtender.*/
 EVUI.Modules.Core.DeepExtenderOptions = function ()
 {
-    /**filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+    /**filter An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
     @type {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]}*/
     this.filter = null;
 };
@@ -1652,31 +1652,17 @@ EVUI.Modules.Core.Utils.shallowExtend = function (target, source, filter)
         var prop = keys[x];
         if (filterViaFn === true)
         {
-            if (filter(prop, source, target) !== false)
-            {
-                var sourceValue = source[prop];
-                if (sourceValue === undefined) continue;
-
-                target[prop] = sourceValue; //anything other than false means include in target
-            }
+            if (filter(prop, source, target) === false) continue;
         }
         else if (filterViaArray === true)
         {
-            if (filterDictionary[prop] !== true)
-            {
-                var sourceValue = source[prop];
-                if (sourceValue === undefined) continue;
-
-                target[prop] = sourceValue; //was not in the filter array, include in target
-            }           
+            if (filterDictionary[prop] === true) continue;
         }
-        else //no filter, include always
-        {
-            var sourceValue = source[prop];
-            if (sourceValue === undefined) continue;
+       
+        var sourceValue = source[prop];
+        if (sourceValue === undefined) continue;
 
-            target[prop] = sourceValue;
-        }
+        target[prop] = sourceValue;        
     }
 
     return target;

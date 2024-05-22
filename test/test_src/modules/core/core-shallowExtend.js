@@ -1,5 +1,5 @@
 $evui.testAsync({
-	name: "Deep Extend - Extend Onto Blank",
+	name: "Shallow Extend - Extend Onto Blank",
 	test: function (hostArgs)
 	{
 		var source =
@@ -12,14 +12,14 @@ $evui.testAsync({
 			}
 		};
 
-		var deepExtended = $evui.deepExtend({}, source);
+		var shallowExtended = $evui.extend({}, source);
 
-		$evui.assert(source).isEquivalentTo(deepExtended);
+		$evui.assert(source).isEquivalentTo(shallowExtended);
 	}
 });
 
 $evui.testAsync({
-	name: "Deep Extend - Extend Onto Blank - Same Object in Multiple Places",
+	name: "Shallow Extend - Extend Onto Blank - Same Object in Multiple Places",
 	test: function (hostArgs)
 	{
 		var source =
@@ -36,15 +36,15 @@ $evui.testAsync({
 
 		source.d = source.c;
 
-		var deepExtended = $evui.deepExtend({}, source);
+		var shallowExtended = $evui.extend({}, source);
 
-		$evui.assert(source).isEquivalentTo(deepExtended);
-		$evui.assert(deepExtended.d).is(deepExtended.c);
+		$evui.assert(source).isEquivalentTo(shallowExtended);
+		$evui.assert(shallowExtended.d).is(shallowExtended.c);
 	}
 });
 
 $evui.testAsync({
-	name: "Deep Extend - Extend Onto Blank - Circular Reference",
+	name: "Shallow Extend - Extend Onto Blank - Circular Reference",
 	test: function (hostArgs)
 	{
 		var source =
@@ -61,16 +61,15 @@ $evui.testAsync({
 
 		source.d = source;
 
-		var deepExtended = $evui.deepExtend({}, source);
+		var shallowExtended = $evui.extend({}, source);
 
-		$evui.assert(source).isEquivalentTo(deepExtended);
-		$evui.assert(deepExtended.d).is(deepExtended);
+		$evui.assert(source).isEquivalentTo(shallowExtended);
 	}
 });
 
 $evui.testAsync({
-	name: "Deep Extend Use Cases",
-	testArgs: CoreTest.makeDeepExtendArgs,
+	name: "Shallow Extend Use Cases",
+	testArgs: CoreTest.makeShallowExtendArgs,
 	test: function (hostArgs, name, source, target, result, shouldFail)
 	{
 		hostArgs.outputWriter.logDebug(name);
@@ -80,14 +79,14 @@ $evui.testAsync({
 			hostArgs.options.shouldFail = true;
 		}
 
-		var extended = $evui.deepExtend(source, target);
+		var extended = $evui.extend(source, target);
 
 		$evui.assert(extended).isEquivalentTo(result);
 	}
 });
 
 $evui.testAsync({
-	name: "Deep Extend Options - Function Filter",
+	name: "Shallow Extend Options - Function Filter",
 	test: function (hostArgs)
 	{
 		var source = {
@@ -105,18 +104,18 @@ $evui.testAsync({
 			a: 1,
 			c:
 			{
-				d: 3
+				d: 3,
+				e: "4"
 			}
 		};
 
-		var options = new EVUI.Modules.Core.DeepExtenderOptions();
-		options.filter = function (propName, sourceObj, targetObj)
+		var filter = function (propName, sourceObj, targetObj)
 		{
 			if (typeof sourceObj[propName] === "string") return false;
 			return true;
 		};
 
-		$evui.deepExtend(target, source, options);
+		$evui.extend(target, source, filter);
 		$evui.assert(target).isEquivalentTo(result);
 	}
 });
@@ -142,14 +141,14 @@ $evui.testAsync({
 			b: "2",
 			c:
 			{
+				d: 3,
 				e: "4"
 			}
 		};
 
-		var options = new EVUI.Modules.Core.DeepExtenderOptions();
-		options.filter = ["a", "d"];
+		var filter = ["a", "d"];
 
-		$evui.deepExtend(target, source, options);
+		$evui.extend(target, source, filter);
 		$evui.assert(target).isEquivalentTo(result);
 	}
 });
