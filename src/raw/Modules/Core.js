@@ -26,32 +26,6 @@ Object.defineProperty($evui, "settings", {
     enumerable: true
 });
 
-/**Gets a value from a settings table.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Any} */
-$evui.getSetting = function (setting, settingsObj)
-{
-    return EVUI.Modules.Core.Utils.getSetting(setting, settingsObj);
-};
-
-/**Checks to see if a value is one of the possible values that are commonly used that can mean true (true, 1, "true", or "1") rather than doing JavaScript's implicit typecasting for "truthy" values. 
-@param {Any} value The value to check.
-@returns {Boolean} */
-$evui.isTrue = function (value)
-{
-    return EVUI.Modules.Core.Utils.isTrue(value);
-};
-
-/**Checks to see if one of the constants from a settings table is true.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Boolean} */
-$evui.isSettingTrue = function (setting, settingsObj)
-{   
-    return EVUI.Modules.Core.Utils.isSettingTrue(setting, settingsObj);
-};
-
 /**Boolean. Whether or not EventUI can emit any log messages. True by default.
 @type {Boolean}*/
 EVUI.Modules.Core.Settings.loggingEnabled = true;
@@ -87,23 +61,21 @@ EVUI.Modules.Core.Settings.defaultMinimumZIndex = 100;
 /**Constants table for the Core module.*/
 EVUI.Modules.Core.Constants = {};
 
-/**A function used to kick start an application.
-@param {EVUI.Modules.Core.Settings} settings The $evui.settings object.*/
-EVUI.Modules.Core.Constants.Fn_Init = function (settings)
+/**A function used to kick start an application.*/
+EVUI.Modules.Core.Constants.Fn_Init = function ()
 {
         
 };
 
 /**A function used to kick start an application.
-@param {EVUI.Modules.Core.Settings} settings The $evui.settings object.
 @returns {Promise}*/
-EVUI.Modules.Core.Constants.Fn_InitAsync = function (settings)
+EVUI.Modules.Core.Constants.Fn_InitAsync = function ()
 {
 
 };
 
 /**A function that is called once the AsyncSequenceExecutor has completed executing all of its functions. 
-@param {Error|Error[]} error Any exception that was thrown while the functions were executing. If foceCompletion was set to true, this will be an array of all errors that occurred during the exection.*/
+@param {Error[]} error Any exception that was thrown while the functions were executing. If foceCompletion was set to true, this will be an array of all errors that occurred during the exection.*/
 EVUI.Modules.Core.Constants.Fn_ExecutorCallback = function (error)
 {
 
@@ -199,19 +171,20 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
                 result.then(function ()
                 {
                     execute(session);
+                });
 
-                }).catch(function (ex)
+                result.catch(function (ex)
                 {
+                    EVUI.Modules.Core.Utils.log(ex);
+                    session.errors.push(ex);
+
                     if (session.forceCompletion === true)
                     {
-                        EVUI.Modules.Core.Utils.log(ex);
-                        session.errors.push(ex);
-
                         execute(session);
                     }
                     else
                     {
-                        session.callback(ex)
+                        session.callback(session.errors)
                     }
                 });
             }
@@ -222,16 +195,16 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
         }
         catch (ex)
         {
+            EVUI.Modules.Core.Utils.log(ex);
+            session.errors.push(ex);
+
             if (session.forceCompletion === true)
             {
-                EVUI.Modules.Core.Utils.log(ex);
-                session.errors.push(ex);
-
                 execute(session);
             }
             else
             {
-                session.callback(ex)
+                session.callback(session.errors)
             }
         }
     };
@@ -298,11 +271,9 @@ EVUI.Modules.Core.AsyncSequenceExecutor = (function ()
     {
         return new Promise(function (resolve, reject)
         {
-            AsyncSequenceExecutor.execute(fns, parameter, function (ex)
+            AsyncSequenceExecutor.prototype.execute(exeArgsOrFns, function (ex)
             {
-                if (ex instanceof Error) return reject(ex);
-                if (EVUI.Modules.Core.Utils.isArray(ex) === true && ex.length > 0) return reject(ex);
-                resolve();
+                resolve(ex);
             });
         });
     };
@@ -321,9 +292,9 @@ $evui.executeSequence = function (exeArgsOrFns, callback)
 /**Awaitable. Executes a batch of functions in order based on their indexes in the functions array regardless if they are async or not. Designed to prevent race conditions between competing functions.
 @param {EVUI.Modules.Core.AsyncSequenceExecutionArgs|Function[]} exeArgsOrFns Either a YOLO AsyncSequenceExecutionArgs object or an array of functions.
 @returns {Promise<Error>|Promise<Error[]>}*/
-$evui.executeSequenceAsync = function (exeArgsOrFns, callback)
+$evui.executeSequenceAsync = function (exeArgsOrFns)
 {
-    return EVUI.Modules.Core.AsyncSequenceExecutor.executeAsync(exeArgsOrFns, callback);
+    return EVUI.Modules.Core.AsyncSequenceExecutor.executeAsync(exeArgsOrFns);
 };
 
 /**Array of all the initialization functions passed into the Initialize function.
@@ -357,6 +328,8 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
     @returns {Promise}*/
     EVUI.Modules.Core.Initialize = function (initFn)
     {
+        if (typeof initFn !== "function") throw Error("Function expected.");
+
         //add the function to the queue for init functions
         EVUI.Modules.Core.Initializers.push(initFn);
 
@@ -391,7 +364,6 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
 
                         var exeArgs = new EVUI.Modules.Core.AsyncSequenceExecutionArgs();
                         exeArgs.functions = initFns;
-                        exeArgs.parameter = $evui.settings;
 
                         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
                         {
@@ -467,7 +439,7 @@ EVUI.Modules.Core.CaseInsensitiveObject = function (source)
     for (var x = 0; x < numKeys; x++)
     {
         var prop = keys[x];
-        this.setValue(prop, source[prop]);
+        this[prop] = source[prop];
     }
 };
 
@@ -483,7 +455,13 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.getValue = function (valueName
     if (this[valueName] !== undefined) return this[valueName];
 
     //normalize the case if we're dealing with a string
-    if (typeof valueName === "string") valueName = valueName.toLowerCase();
+    if (typeof valueName === "string")
+    {
+        valueName = valueName.toLowerCase();
+
+        //check to see if the lower version is an exact match, if so return the value
+        if (this[valueName] !== undefined) return this[valueName];
+    }
 
     var keys = Object.keys(this);
     var numKeys = keys.length;
@@ -526,7 +504,7 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.setValue = function (valueName
             {
                 try
                 {
-                    delete propName;
+                    delete this[propName];
                 }
                 catch (ex)
                 {
@@ -617,7 +595,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
     /**Extends one object's hierarchy onto another object recursively.
     @param {Object} target The target object to extend properties on to.
     @param {Object} source The source object to extend.
-    @param {EVUI.Modules.Core.DeepExtenderOptions} options An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+    @param {EVUI.Modules.Core.DeepExtenderOptions} options Configuration options for the deep extend operation.
     @returns {Object}*/
     DeepExtender.prototype.deepExtend = function(target, source, options)
     {       
@@ -641,19 +619,19 @@ EVUI.Modules.Core.DeepExtender = (function ()
     {
         if (session.options.filter != null)
         {
-            if (typeof filter === "function")
+            if (typeof session.options.filter === "function")
             {
                 session.filterViaFn = true;
             }
-            else if (EVUI.Modules.Core.Utils.isArray(filter) === true)
+            else if (EVUI.Modules.Core.Utils.isArray(session.options.filter) === true)
             {
                 session.filterViaArray = true;
 
                 session.filterLookup = {};
-                var numInFilter = filter.length;
+                var numInFilter = session.options.filter.length;
                 for (var x = 0; x < numInFilter; x++)
                 {
-                    var curInFilter = filter[x];
+                    var curInFilter = session.options.filter[x];
                     session.filterLookup[curInFilter] = true;
                 }
             }
@@ -687,75 +665,74 @@ EVUI.Modules.Core.DeepExtender = (function ()
 
             if (session.filterViaFn === true)
             {
-                if (session.filter(prop, session.source, target) === true) continue; //true means don't include
+                if (session.options.filter(prop, source, target) === false) continue; //false means don't include
             }
             else if (session.filterViaArray === true)
             {
                 if (session.filterLookup[prop] === true) continue; //was in the filter array, do not include
             }
-            else
+
+            val = source[prop];
+            var valType = typeof val;
+
+            if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
             {
-                val = source[prop];
-                var valType = typeof val;
+                var curPath = (path == null) ? prop : path + "." + prop;
+                var targetObj = target[prop];
+                var sameObj = (typeof targetObj === "object" && targetObj === val); //determine if we have the same object reference in both graphs
 
-                if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
+                if (val instanceof Node === true) //no deep cloning of nodes.
                 {
-                    var curPath = (path == null) ? prop : path + "." + prop;
-                    var targetObj = target[prop];
-                    var sameObj = (typeof targetObj === "object" && targetObj === val); //determine if we have the same object reference in both graphs
+                    target[prop] = val;
+                    continue;
+                }
 
-                    if (val instanceof Node === true) //no deep cloning of nodes.
+                var existingObject = getExistingObject(session, val); //make sure we haven't already processed this object (without this check circular references cause an error)
+                if (existingObject != null) //already did this one, just pull out the existing object
+                {
+                    if (existingObject.sameReference === false) //we already figured out that the existing object appeared in both graphs and assigned the clone to be the same reference as the session.source, so we have no work to do
                     {
-                        target[prop] = val;
-                        continue;
+                        if (sameObj === true) //both objects are the same, and we have already run into the session.source object before
+                        {
+                            existingObject.clone = targetObj;
+
+                            //find each location where the clone was stored and switch it with the correct reference
+                            var numLocations = existingObject.paths.length;
+                            for (var y = 0; y < numLocations; y++)
+                            {
+                                EVUI.Modules.Core.Utils.setValue(existingObject.paths[y], session.rootObj, val);
+                            }
+
+                            existingObject.paths.splice(0, numLocations);
+                            existingObject.sameReference = true;
+                        }
+                        else //otherwise, record where we put the object
+                        {
+                            existingObject.paths.push(curPath);
+                            existingObject.sameReference = false;
+                        }
                     }
 
-                    var existingObject = getExistingObject(session, val); //make sure we haven't already processed this object (without this check circular references cause an error)
-                    if (existingObject != null) //already did this one, just pull out the existing object
+                    target[prop] = existingObject.clone;
+                }
+                else //haven't done it yet
+                {
+                    if (typeof targetObj !== "object" || targetObj == null)
                     {
-                        if (existingObject.sameReference === false) //we already figured out that the existing object appeared in both graphs and assigned the clone to be the same reference as the session.source, so we have no work to do
-                        {
-                            if (sameObj === true) //both objects are the same, and we have already run into the session.source object before
-                            {
-                                existingObject.clone = targetObj;
-
-                                //find each location where the clone was stored and switch it with the correct reference
-                                var numLocations = existingObject.paths.length;
-                                for (var y = 0; y < numLocations; y++)
-                                {
-                                    EVUI.Modules.Core.Utils.setValue(existingObject.paths[y], session.rootObj, val);
-                                }
-
-                                existingObject.paths.splice(0, numLocations);
-                                existingObject.sameReference = true;
-                            }
-                            else //otherwise, record where we put the object
-                            {
-                                existingObject.paths.push(curPath);
-                                existingObject.sameReference = false;
-                            }
-                        }
-
-                        target[prop] = existingObject.clone;
+                        targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
                     }
-                    else //haven't done it yet
-                    {
-                        if (typeof targetObj !== "object" || targetObj == null)
-                        {
-                            targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
-                        }
 
-                        addExistingObject(session, val, targetObj, curPath);
+                    addExistingObject(session, val, targetObj, curPath);
 
                         
-                        target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
-                    }
-                }
-                else //anything else, just set its value
-                {
-                    if (val !== undefined) target[prop] = val;
+                    target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
                 }
             }
+            else //anything else, just set its value
+            {
+                if (val !== undefined) target[prop] = val;
+            }
+            
         }
 
         return target;
@@ -851,7 +828,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
 /**Options for configuring the DeepExtender.*/
 EVUI.Modules.Core.DeepExtenderOptions = function ()
 {
-    /**filter An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+    /**filter An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
     @type {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]}*/
     this.filter = null;
 };
@@ -951,7 +928,7 @@ EVUI.Modules.Core.ObjectPropertyWrapper = function ()
         }
         catch (ex)
         {
-            EVUI.Modules.Core.Utils.debugReturn("ObjectPropertyWrapper", "mapProperty", ex.stack);
+            EVUI.Modules.Core.Utils.log(ex);
         }
     };
 };
@@ -1021,7 +998,6 @@ EVUI.Modules.Core.Utils.deepExtend = function (target, source, options)
     return new EVUI.Modules.Core.DeepExtender.deepExtend(target, source, options);
 };
 
-
 /**Extends one object's hierarchy onto another object recursively.
 @param {Object} target The target object to extend properties on to.
 @param {Object} source The source object to extend.
@@ -1072,16 +1048,6 @@ EVUI.Modules.Core.Utils.wrapProperties = function (source, target, propertyMappi
     return new EVUI.Modules.Core.ObjectPropertyWrapper().wrap(source, target, propertyMappings, settings);
 };
 
-/**Wraps all the properties specified in the property mappings parameter so that they are settable on the source object but are set and read from the target object.
-@param {Object} source The source object to receive the properties.
-@param {Object} target The target object to be manipulated by the getters and setters on the source object.
-@param {EVUI.Modules.Core.ObjectPropertyMapping|EVUI.Modules.Core.ObjectPropertyMapping[]} propertyMappings An array of ObjectPropertyMapping describing the mappings between the two objects.
-@param {EVUI.Modules.Core.ObjectPropertyMappingSettings} settings The settings to apply to each mapping if the mappings do not have their own settings defined.*/
-$evui.wrap = function (source, target, propertyMappings, settings)
-{
-    return new EVUI.Modules.Core.Utils.wrapProperties(source, target, propertyMappings, settings);
-};
-
 /**Gets a property of an object based on its path starting at the source object.
 @param {String} path The dot or bracket delineated path from the source object to the property to get. I.e. a path of "a.b[2].c" would get the value of source.a.b[2].c.
 @param {Object} source The starting point of the operation to get the value of the source object.
@@ -1122,17 +1088,127 @@ $evui.get = function (path, source)
     return EVUI.Modules.Core.Utils.getValue(path, source);
 };
 
+/**Cache for saving the results of getValuePathSegments so the same path isn't digested over and over. Keys are the paths, values are the FROZEN cached arrays of path segments.*/
+EVUI.Modules.Core.Utils.PathCache = {};
+
 /**Breaks up a "property path" (a "path" of properties that are separated by dots or braces that leads from a parent object to a child property in it or a child object) into an array of path segments.
+
+Note that property names in the path segment that contain a dot or brace, that segment must be wrapped in (unescaped) quote characters in order to avoid a parse error. 
+
+If the property name contains a quote character it must be escaped.
 @param {String} propertyPath The path to a property.
 @returns {String[]} */
 EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
 {
     var propType = typeof propertyPath;
-    if (propType !== "string") throw Error("Cannot get path segments from a non-string.");
+    if (propType === "number")
+    {
+        propertyPath = propertyPath.toString();
+    }
+    else if (propType !== "string")
+    {
+        throw Error("Cannot get path segments from a non-string.");
+    }
 
-    var segs = propertyPath.split(/\.|\[|\]\.|\]/g); //split based on dots, open braces, close braces followed by a dot, and close braces (in that order so that close braces followed by a dot do not turn into two matches)
-    var numSegs = segs.length;
-    if (segs[numSegs - 1] === "") segs = segs.slice(0, segs.length - 1);
+    if (propertyPath === "") return [];
+
+    //check the cache for the resolved path first - if we already did this path, just return a copy of the path's array
+    var existing = EVUI.Modules.Core.Utils.PathCache[propertyPath];
+    if (existing != null) return existing.slice();
+
+    var segs = [];
+
+    //match any character that can be used as a property separator in a string property path: ".", "[", "]" and "?"
+    var deliminiterRegex = /\[|\]|\.|\?/;
+
+    //match any quote characters so signal the beginning of a literal string
+    var quoteRegex = /"|'|`/;
+
+    //see if there's any match at all in the path for either a delineator or a literal text span beginner
+    var match = deliminiterRegex.test(propertyPath) === true || quoteRegex.test(propertyPath) === true;
+
+    //if not, all done.
+    if (match === false)
+    {
+        EVUI.Modules.Core.Utils.PathCache[propertyPath] = Object.freeze([propertyPath]);
+        return [propertyPath];
+    }
+
+    //if so, walk the string and compose a path made from the non-delineating characters
+    var len = propertyPath.length;
+    var curSeg = "";
+    var inLiteral = false;
+    var literalStartCharacter = null;
+
+    for (var index = 0; index < len; index++)
+    {
+        var curChar = propertyPath[index];
+        var wasInLiteral = inLiteral;
+
+        //check to see if we are in a 'literal' string - that is a run of text between two matching quote-type characters. 
+        if (quoteRegex.test(curChar) === true)
+        {
+            if (inLiteral === false) //not in a literal run of text - see if its an escaped quote
+            {
+                if (index === 0 || propertyPath[index - 1] !== "\\") //if not, we are at the beginning of a literal text run
+                {
+                    inLiteral = true;
+                    literalStartCharacter = curChar;
+                }
+            }
+            else //in a literal run of text. See if this is an un-escaped matching quote character to end the 
+            {
+                if (curChar === literalStartCharacter)
+                {
+                    if (index > 0 && propertyPath[index - 1] !== "\\")
+                    {
+                        inLiteral = false;
+                    }
+                }
+            }            
+        }
+
+        //If we are in a literal string, we don't care about checking for delineators, just add the current character to the segment
+        if (inLiteral === true)
+        {
+            if (wasInLiteral === false)
+            {
+                continue;
+            }
+
+            curSeg += curChar;
+            continue;
+        }
+
+        if (inLiteral === false && wasInLiteral === true)
+        {
+            continue;
+        }
+
+        if (deliminiterRegex.test(curChar) === true) //it is a delineator 
+        {
+            if (curSeg.length > 0) //we have a non-empty segment, so it's a valid path segment. Add it to the segments array and reset the next segment
+            {
+                segs.push(curSeg);
+                curSeg = "";
+            }
+        }
+        else //its not a delineator - add it as a regular character to the current segment
+        {
+            curSeg += curChar;
+        }
+    }
+
+    if (inLiteral === true)
+    {
+        throw Error("Malformed path. Literal text run starting with " + literalStartCharacter + " had no matching un-escaped close character");
+    }
+
+    //if we had an incomplete segment by the time the string ran out, add it as well
+    if (curSeg.length > 0) segs.push(curSeg);
+
+    //cache the result as a frozen array so nothing about it can be changed
+    EVUI.Modules.Core.Utils.PathCache[propertyPath] = Object.freeze(segs.slice());
 
     return segs;
 };
@@ -1196,7 +1272,7 @@ EVUI.Modules.Core.Utils.setValue = function (path, target, value, fill)
             }
             else
             {
-                throw Error("Failed to set property at path \"" + path + "\", \"" + curSeg + "\"  was null or undefined.");
+                throw Error("Failed to set property at path \"" + path + "\", value at \"" + curSeg + "\"  was null or undefined.");
             }
         }
 
@@ -1215,39 +1291,6 @@ EVUI.Modules.Core.Utils.setValue = function (path, target, value, fill)
 $evui.set = function (path, target, value, fill)
 {
     return EVUI.Modules.Core.Utils.setValue(path, target, value, fill);
-}
-
-/**Gets a value from a settings table.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Any} */
-EVUI.Modules.Core.Utils.getSetting = function (setting, settingsObj)
-{
-    if (setting == null || (typeof setting !== "string" && typeof setting !== "number" && typeof setting !== "symbol")) return null;
-
-    //if for some reason the $evui.settings object is null, we get it from the EVUI.Modules.Core.Settings object, which cannot be set to null.
-    if (settingsObj != null && typeof settingsObj === "object") return settingsObj[setting];
-    return ($evui.settings == null) ? EVUI.Modules.Core.Settings[setting] : $evui.settings[setting];
-};
-
-/**Checks to see if a value is one of the possible values that are commonly used that can mean true (true, 1, "true", or "1") rather than doing JavaScript's implicit typecasting for "truthy" values. 
-@param {Any} value The value to check.
-@returns {Boolean} */
-EVUI.Modules.Core.Utils.isTrue = function (value)
-{
-    if (value == null) return false;
-    if (typeof value === "string") value = value.toLowerCase();
-    if (value === "true" || value === 1 || value === "1" || value === true) return true;
-    return false;
-};
-
-/**Checks to see if one of the constants from a settings table is true.
-@param {String} setting The name of the setting to get.
-@param {Object} settingsObj The object to get the setting from. If omitted, the $evui.settings object is used by default.
-@returns {Boolean} */
-EVUI.Modules.Core.Utils.isSettingTrue = function (setting, settingsObj)
-{
-    return EVUI.Modules.Core.Utils.isTrue(EVUI.Modules.Core.Utils.getSetting(setting, settingsObj));
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
@@ -1280,8 +1323,7 @@ $evui.isArray = function (arr)
     return EVUI.Modules.Core.Utils.isArray(arr);
 };
 
-/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code
-that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web application session where the odds of collision are basically zero.
+/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web application session where the odds of collision are basically zero.
 @returns {String}*/
 EVUI.Modules.Core.Utils.makeGuid = function ()
 {
@@ -1298,16 +1340,17 @@ EVUI.Modules.Core.Utils.makeGuid = function ()
                 guid += "-";
                 break;
 
-            //slot 14 can only be 1-5, so we just hard code a 4 here
+            //slot 14 can only be 1-5
             case 14:
-                guid += "4";
+                guid += (Math.floor(Math.random() * 4) + 1).toString(16);
                 break;
 
-            //slot 19 can only be 8, 9, a, or b, so we just hard code a 8 here
+            //slot 19 can only be 8, 9, a, or b
             case 19:
-                guid += "8";
+                guid += (Math.floor(Math.random() * 4) + 8).toString(16);
                 break;
 
+            //all other slots are any hexadecimal value
             default:
                 guid += Math.floor(Math.random() * 16).toString(16);
         }
@@ -1316,8 +1359,7 @@ EVUI.Modules.Core.Utils.makeGuid = function ()
     return guid;
 };
 
-/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code
-that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web app session where the odds of collision are basically zero.
+/**Makes a new GUID. Note that this GUID generation function is not intended to create GUIDs to be persisted in any sort of database, shortcuts were taken to simplify the code that result in having a much higher (but still infinitesimal) odds of collision. It is intended for temporary ID's in a single web app session where the odds of collision are basically zero.
 @returns {String}*/
 $evui.guid = function ()
 {
@@ -1368,7 +1410,7 @@ name for something is garbage. Returns a boolean.
 @returns {Boolean}*/
 EVUI.Modules.Core.Utils.stringIsNullOrWhitespace = function (str)
 {
-    if (str == null || typeof str !== "string") return true;
+    if (typeof str !== "string") return true;
     var isOnlyWhitespace = (str.trim().length === 0);
     return isOnlyWhitespace;
 };
@@ -1387,13 +1429,13 @@ EVUI.Modules.Core.Utils.log = function (message)
 {
     try
     {
-        if (EVUI.Modules.Core.Utils.isSettingTrue("loggingEnabled"))
+        if (EVUI.Modules.Core.Settings.loggingEnabled === true)
         {
             console.log(message);
         }
         else
         {
-            var alternateLog = EVUI.Modules.Core.Utils.getSetting("alternateLoggingFunction");
+            var alternateLog = EVUI.Modules.Core.Settings.alternateLoggingFunction;
             if (typeof alternateLog === "function") alternateLog(message);
         }
     }
@@ -1481,13 +1523,6 @@ EVUI.Modules.Core.Utils.isjQuery = function (object)
     return false;
 };
 
-/**Checks to see if an object is an instance of a jQuery object.
-@param {Object} object The object to check.
-@returns {Boolean}*/
-$evui.isjQuery = function (object)
-{
-    return EVUI.Modules.Core.Utils.isjQuery(object);
-};
 
 /**Checks to see if an object is derived from an Element-derived object.
 @param {Object} object The object to check.
@@ -1497,71 +1532,6 @@ EVUI.Modules.Core.Utils.isElement = function (object)
     return object instanceof Element;
 };
 
-/**Checks to see if an object is derived from an Element-derived object.
-@param {Object} object The object to check.
-@returns {Boolean}*/
-$evui.isElement = function (object)
-{
-    return EVUI.Modules.Core.Utils.isElement(object);
-};
-
-/**Utility method for simultaneously logging a debug message and returning a value. Exists for the purpose of returning and logging from a single-line if statement.
-This is used to create consistently formatted debug messages for an end user so that they can get some insight into why and where something isn't working. Wherever an unusable input or 
-a broken state is detected, this function is used to log it and return safely. Can be silenced via setting $evui.settings.debug to false. Critically important to the guts of EventUI, 
-but admittedly of little use to others - use $evui.debug(message, returnValue) for a more generic version. 
-@param {String} controller The EventUI controller or object logging the message.
-@param {String} method The function that is logging the message.
-@param {String} message The message to log.
-@param {Any} returnValue Any value to return.
-@returns {Any}*/
-EVUI.Modules.Core.Utils.debugReturn = function (controller, method, message, returnValue)
-{
-    if (EVUI.Modules.Core.Utils.isSettingTrue("debug") === false) return returnValue;
-
-    var logStatement = "";
-    if (typeof controller === "string")
-    {
-        logStatement = controller;
-    }
-
-    if (typeof method === "string")
-    {
-        if (logStatement !== "")
-        {
-            logStatement += "." + method;
-        }
-        else
-        {
-            logStatement = method;
-        }
-    }
-
-    if (typeof message === "string")
-    {
-        if (logStatement !== "")
-        {
-            logStatement += ": " + message;
-        }
-        else
-        {
-            logStatement = message;
-        }
-    }
-
-    if (logStatement === "") return returnValue;
-    EVUI.Modules.Core.Utils.log(logStatement);
-
-    return returnValue;
-};
-
-/**Utility method for simultaneously logging a debug message and returning a value. Exists for the purpose of returning and logging from a single-line if statement.
-@param {String} message The message to log.
-@param {Any} returnValue Any value to return.
-@returns {Any}*/
-$evui.debug = function (message, returnValue)
-{
-    return EVUI.Modules.Core.Utils.debugReturn(message, null, null, returnValue);
-};
 
 /**Determines whether one element contains another.
 @param {Element} childElement The element that is contained by the parent element.
@@ -1582,15 +1552,6 @@ EVUI.Modules.Core.Utils.containsElement = function (childElement, parentElement)
     if (parentElement instanceof Node === false) return false;
 
     return parentElement.contains(childElement);
-};
-
-/**Determines whether one element contains another.
-@param {Object} childElement The element that is contained by the parent element.
-@param {Object} parentElement The element that contains the child element.
-@returns {Boolean}*/
-$evui.containsElement = function (childElement, parentElement)
-{
-    return EVUI.Modules.Core.Utils.containsElement(childElement, parentElement);
 };
 
 /**Determines whether or not a node is an "orphan" and is not connected to the DOM, a DocumentFragment, or a Document.
@@ -1618,15 +1579,6 @@ EVUI.Modules.Core.Utils.isOrphanedNode = function (node)
     if (nodeParent != null && (nodeParent.nodeType === Node.DOCUMENT_FRAGMENT_NODE || nodeParent.nodeType === Node.DOCUMENT_NODE)) return false;
     return true;
 };
-
-/**Determines whether or not a node is an "orphan" and is not connected to the DOM, a DocumentFragment, or a Document.
-@param {Node} node The node to test to see if it is part of a Document or DocumentFragment.
-@returns {Boolean}*/
-$evui.isOrphan = function (node)
-{
-    return EVUI.Modules.Core.Utils.isOrphanedNode(node);
-}
-
 
 /**Shallow extend function.
 @param {Object} target The target object to receive properties.
@@ -1668,31 +1620,17 @@ EVUI.Modules.Core.Utils.shallowExtend = function (target, source, filter)
         var prop = keys[x];
         if (filterViaFn === true)
         {
-            if (filter(prop, source, target) !== false)
-            {
-                var sourceValue = source[prop];
-                if (sourceValue === undefined) continue;
-
-                target[prop] = sourceValue; //anything other than false means include in target
-            }
+            if (filter(prop, source, target) === false) continue;
         }
         else if (filterViaArray === true)
         {
-            if (filterDictionary[prop] !== true)
-            {
-                var sourceValue = source[prop];
-                if (sourceValue === undefined) continue;
-
-                target[prop] = sourceValue; //was not in the filter array, include in target
-            }           
+            if (filterDictionary[prop] === true) continue;
         }
-        else //no filter, include always
-        {
-            var sourceValue = source[prop];
-            if (sourceValue === undefined) continue;
+       
+        var sourceValue = source[prop];
+        if (sourceValue === undefined) continue;
 
-            target[prop] = sourceValue;
-        }
+        target[prop] = sourceValue;        
     }
 
     return target;
@@ -1799,22 +1737,6 @@ EVUI.Modules.Core.Utils.getValidElement = function (element)
 EVUI.Modules.Core.Utils.isDomHelper = function (domHelper)
 {
     return (EVUI.Modules.Dom != null && domHelper instanceof EVUI.Modules.Dom.DomHelper);
-};
-
-/**Determines if an object is a DomHelper object.
-@param {EVUI.Modules.Dom.DomHelper} domHelper A potential instance of DomHelper.
-@returns {Boolean} */
-$evui.isDomHelper = function (domHelper)
-{
-    return EVUI.Modules.Core.Utils.isDomHelper(domHelper);
-};
-
-/**Takes an ambiguous input and returns an Element if one could be extracted from the parameter.
-@param {Element|jQuery|EVUI.Modules.Dom.DomHelper} element Either an Element, a jQuery wrapper for at least one element, or a DomHelper wrapper for at least one element.
-@returns {Element} */
-$evui.getValidElement = function (element)
-{
-    return EVUI.Modules.Core.Utils.getValidElement(element);
 };
 
 /**Determines if a required dependency is present.
@@ -2034,7 +1956,7 @@ EVUI.Modules.Core.Utils.getProperties = function (obj)
     }
     else
     {
-        if (EVUI.Modules.Core.Utils.isArray(obj) === true) //if its an array, just make a list of all the indexes in the array rather than query the object for its properties
+        if (EVUI.Modules.Core.Utils.isArray(obj) === true) //if its an array, just make a list of all the indexes in the array rather than query the object for its properties (Object.Keys won't work in some situations for an array)
         {
             var len = obj.length;
 
@@ -2125,10 +2047,14 @@ EVUI.Modules.Core.Utils.cacheProperties = function (obj, props)
     if (obj == null || typeof obj !== "object") return false;
     if (Object.getPrototypeOf(obj) == Object.prototype) return false; //NEVER DO THIS FOR PLAIN OBJECTS. All plain objects will report the same list of properties, which will be wrong in 99% of cases.
 
-    if (EVUI.Modules.Core.Utils.isArray(props) === false) props = EVUI.Modules.Core.Utils.getProperties(obj);
+    if (EVUI.Modules.Core.Utils.isArray(props) === false)
+    {
+        props = EVUI.Modules.Core.Utils.getProperties(obj);
+        obj.constructor[EVUI.Modules.Core.Constants.Symbol_ObjectProperties] = props;
+        return true;
+    }
 
-    obj.constructor[EVUI.Modules.Core.Constants.Symbol_ObjectProperties] = props;
-    return true;
+    return false;
 };
 
 /**Assigns a Symbol to the object's constructor that contains an array of its property keys so that $evui.props does not have to re-query the object for its properties over and over.

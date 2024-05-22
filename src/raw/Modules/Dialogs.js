@@ -315,7 +315,7 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
         if (dialogHideArgs == null)
         {
             dialogHideArgs = new EVUI.Modules.Dialogs.DialogHideArgs(paneHideArgs);
-            dialogHideArgs.unloadArgs = new EVUI.Modules.DialogUnloadArgs(paneHideArgs.unloadArgs);
+            dialogHideArgs.unloadArgs = new EVUI.Modules.Dialogs.DialogUnloadArgs(paneHideArgs.unloadArgs);
         }
 
         _settings.currentActionArgs = makeCurrentActionArgs(dialogHideArgs);

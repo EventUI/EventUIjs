@@ -148,7 +148,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
 
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
     @type {Number}*/
-    this.skipInterval = EVUI.Modules.Core.Utils.getSetting("stepsBetweenWaits");
+    this.skipInterval = EVUI.Modules.Core.Settings.stepsBetweenWaits;
 
     /**Boolean. Whether or not the steps added to the EventStream should have their properties extended onto a fresh step object.
     @type {Boolean}*/
@@ -199,7 +199,10 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @returns {Boolean}*/
     this.clear = function ()
     {
-        if (isStable() === false) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Clear", "Cannot clear chain mid-execution.", false);
+        if (isStable() === false)
+        {
+            return false;
+        }
 
         _sequence = [];
         this.bubblingEvents = null;
@@ -234,7 +237,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @returns {Boolean}*/
     this.execute = function ()
     {
-        if (this.reset() === false) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Execute", "Failed to reset EventStream, cannot begin execution.", false);
+        if (this.reset() === false) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
 
@@ -274,7 +277,11 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @returns {Boolean}*/
     this.reset = function ()
     {
-        if (isStable() === false) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Reset", "Cannot reset chain mid-execution.", false);
+        if (isStable() === false)
+        {
+            return false;
+        }
+
         clearQueuedTimeout();
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.NotStarted;
@@ -364,14 +371,14 @@ EVUI.Modules.EventStream.EventStream = function (config)
             return true;
         }
 
-        return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Pause", "Chain is not currently executing, nothing to pause.", false);
+        return false;
     };
 
     /**Resumes the operation in progress if it has been paused.
     @returns {Boolean}*/
     this.resume = function ()
     {
-        if (_status !== EVUI.Modules.EventStream.EventStreamStatus.Paused) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Resume", "Chain is not paused, cannot resume.", false);
+        if (_status !== EVUI.Modules.EventStream.EventStreamStatus.Paused) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
 
@@ -424,7 +431,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             if (_sequence.indexOf(indexOrKey) !== -1) step = indexOrKey;
         }
 
-        if (step == null) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Seek", "Invalid parameters, could not find a step in the internal protected sequence to seek to.", false);
+        if (step == null) return false;
         var currentlyExecuting = _status === EVUI.Modules.EventStream.EventStreamStatus.Working;
         _status = EVUI.Modules.EventStream.EventStreamStatus.Seeking;
 
@@ -450,7 +457,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @param {String} message A message to display in the error.*/
     this.error = function (ex, message)
     {
-        if (isStable() === true) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Error", "Chain is stopped, cannot trigger error.", false);
+        if (isStable() === true) return false;
 
         _error = new EVUI.Modules.EventStream.EventStreamError("A manual error was thrown" + ((typeof message === "string" && message.length > 0) ? ": " + message : "."), ex, EVUI.Modules.EventStream.EventStreamStage.ErrorCommand, ((_currentStep != null) ? _currentStep.key : null));
 
@@ -473,7 +480,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     this.stopPropagation = function ()
     {
         if (_currentStep == null) return false;
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(_currentStep.key) === true) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "StopPropagation", "Cannot stop the propagation of an event with no key.", false);
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(_currentStep.key) === true) return false;
 
         if (_nonPropagatedEvents.indexOf(_currentStep.key) === -1)
         {
@@ -984,6 +991,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var eventArgs = new EVUI.Modules.EventStream.EventStreamEventArgs(_self.eventState);
         eventArgs.currentStep = sequence.indexOf(step);
         eventArgs.key = step.key;
+        eventArgs.name = step.name;
         eventArgs.stepType = step.type;
         eventArgs.totalSteps = sequence.length;
         eventArgs.status = _self.getStatus();
@@ -1186,7 +1194,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "finish", "OnComplete crashed: " + ex.stack);
+                EVUI.Modules.Core.Utils.log(ex);
             }
         }
 
@@ -1260,12 +1268,13 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "fail", "OnError crashed: " + ex.stack);
+                EVUI.Modules.Core.Utils.log(ex);
+                return false;
             }
         }
         else
         {
-            EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "fail", "An error was encountered executing the chain. Hook into OnError for more details.", false);
+            return false;
         }
     };
 
@@ -1293,7 +1302,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "cancel", "OnCancel crashed: " + ex.stack);
+                EVUI.Modules.Core.Utils.log(ex);
             }
         }
     };
@@ -2208,34 +2217,8 @@ EVUI.Modules.EventStream.EventStreamStepType =
         return this.Job;
     }
 };
+
 Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
-
-/**Creates the beginning of an deferred stream of asynchronous of promises.
-@param {EVUI.Modules.EventStream.Constants.Fn_Job_Handler|EVUI.Modules.EventStream.EventStreamConfig} jobOrConfig Either a function to execute that takes a EventStreamJobArgs object as a parameter or the configuration options for the underlying EventStream.
-@param {EVUI.Modules.EventStream.Constants.Fn_Job_Handler} job A function to execute that takes a EventStreamJobArgs object as a parameter.
-@returns {EVUI.Modules.EventStream.EventStream}*/
-$evui.vow = function (jobOrConfig, job)
-{
-    var config = null;
-
-    if (typeof jobOrConfig === "function")
-    {
-        job = jobOrConfig;
-    }
-
-    if (jobOrConfig != null && typeof jobOrConfig === "object")
-    {
-        config = jobOrConfig;
-    }
-
-    var es = new EVUI.Modules.EventStream.EventStream(config);
-
-    if (typeof job === "function") es.addJob(job);
-    es.execute();
-
-    return es;
-};
-
 Object.freeze(EVUI.Modules.EventStream);
 
 /**Constructor reference for the EventStream.*/

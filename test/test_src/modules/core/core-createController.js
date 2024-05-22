@@ -14,7 +14,6 @@ var mappings = [
     { keys: ["popin", "popins", "POPin", "PoPINS"], controller: EVUI.Modules.PopIns.PopInManager },
     { keys: ["style", "styles", "STYle", "styLEs"], controller: EVUI.Modules.Styles.StyleSheetManager },
     { keys: ["treeview", "treeviews", "TREEview", "treeVIEWs"], controller: EVUI.Modules.TreeView.TreeViewController },
-    { keys: ["uihandler", "uihandlers", "UIHandler", "UIHandlers"], controller: EVUI.Modules.UIHandler.UIHandlerManager },
     { keys: ["null", "ddsfs", "BsdsddsS"], controller: null },
     { keys: ["", null, 1, {}], controller: null, shouldFail: true },
 ];

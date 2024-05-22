@@ -12,7 +12,7 @@
 
     var timedEvent = function (args)
     {
-        console.log(args.key + " : " + (Date.now() - args.context));
+        console.log(args.eventName + " : " + (Date.now() - args.context));
     }
 
     $evui.panes.onHide = timedEvent;

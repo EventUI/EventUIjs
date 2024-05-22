@@ -1958,7 +1958,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         exeArgs.forceCompletion = true;
         exeArgs.functions = callbacks;
 
-        EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
+        EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (errors)
         {
             postBindCleanUp(session);
             jobArgs.resolve();

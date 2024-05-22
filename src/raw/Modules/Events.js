@@ -368,7 +368,7 @@ EVUI.Modules.Events.EventManager = function ()
     @param {InternalEventListener} eventListener An instance of InternalEventListener.*/
     var trace = function (triggerArgs, eventListener)
     {
-        if (EVUI.Modules.Core.Utils.isSettingTrue("traceEvents") === false) return;
+        if (EVUI.Modules.Core.Settings.traceEvents === false) return;
 
         var handlerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventListener.handlerName) ? "unknown" : eventListener.handlerName;
         var triggerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(triggerArgs.triggerName) ? "unknown" : triggerArgs.triggerName;
@@ -457,9 +457,9 @@ EVUI.Modules.Events.EventManager = function ()
 
                         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
                         {
-                            if (error != null)
+                            if (error != null && error.length > 0)
                             {
-                                throw error;
+                                throw error[0];
                             }
 
                             args.resolve();
