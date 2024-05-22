@@ -84,4 +84,72 @@ $evui.testAsync({
 
 		$evui.assert(extended).isEquivalentTo(result);
 	}
-})
+});
+
+$evui.testAsync({
+	name: "Deep Extend Options - Function Filter",
+	test: function (hostArgs)
+	{
+		var source = {
+			a: 1,
+			b: "2",
+			c: {
+				d: 3,
+				e: "4"
+			}
+		};
+
+		var target = {};
+
+		var result = {
+			a: 1,
+			c:
+			{
+				d: 3
+			}
+		};
+
+		var options = new EVUI.Modules.Core.DeepExtenderOptions();
+		options.filter = function (propName, sourceObj, targetObj)
+		{
+			if (typeof sourceObj[propName] === "string") return true;
+			return false;
+		};
+
+		$evui.deepExtend(target, source, options);
+		$evui.assert(target).isEquivalentTo(result);
+	}
+});
+
+$evui.testAsync({
+	name: "Deep Extend Options - Property Filter",
+	test: function (hostArgs)
+	{
+
+
+		var source = {
+			a: 1,
+			b: "2",
+			c: {
+				d: 3,
+				e: "4"
+			}
+		};
+
+		var target = {};
+
+		var result = {
+			b: "2",
+			c:
+			{
+				e: "4"
+			}
+		};
+
+		var options = new EVUI.Modules.Core.DeepExtenderOptions();
+		options.filter = ["a", "d"];
+
+		$evui.deepExtend(target, source, options);
+		$evui.assert(target).isEquivalentTo(result);
+	}
+});

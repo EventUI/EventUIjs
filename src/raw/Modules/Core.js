@@ -595,7 +595,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
     /**Extends one object's hierarchy onto another object recursively.
     @param {Object} target The target object to extend properties on to.
     @param {Object} source The source object to extend.
-    @param {EVUI.Modules.Core.DeepExtenderOptions} options An optional filter function used to filter out properties from the source to extend onto the target, return true to filter the property. Or an array of property names to not extend onto the target object.
+    @param {EVUI.Modules.Core.DeepExtenderOptions} options Configuration options for the deep extend operation.
     @returns {Object}*/
     DeepExtender.prototype.deepExtend = function(target, source, options)
     {       
@@ -619,19 +619,19 @@ EVUI.Modules.Core.DeepExtender = (function ()
     {
         if (session.options.filter != null)
         {
-            if (typeof filter === "function")
+            if (typeof session.options.filter === "function")
             {
                 session.filterViaFn = true;
             }
-            else if (EVUI.Modules.Core.Utils.isArray(filter) === true)
+            else if (EVUI.Modules.Core.Utils.isArray(session.options.filter) === true)
             {
                 session.filterViaArray = true;
 
                 session.filterLookup = {};
-                var numInFilter = filter.length;
+                var numInFilter = session.options.filter.length;
                 for (var x = 0; x < numInFilter; x++)
                 {
-                    var curInFilter = filter[x];
+                    var curInFilter = session.options.filter[x];
                     session.filterLookup[curInFilter] = true;
                 }
             }
@@ -665,75 +665,74 @@ EVUI.Modules.Core.DeepExtender = (function ()
 
             if (session.filterViaFn === true)
             {
-                if (session.filter(prop, session.source, target) === true) continue; //true means don't include
+                if (session.options.filter(prop, source, target) === true) continue; //true means don't include
             }
             else if (session.filterViaArray === true)
             {
                 if (session.filterLookup[prop] === true) continue; //was in the filter array, do not include
             }
-            else
+
+            val = source[prop];
+            var valType = typeof val;
+
+            if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
             {
-                val = source[prop];
-                var valType = typeof val;
+                var curPath = (path == null) ? prop : path + "." + prop;
+                var targetObj = target[prop];
+                var sameObj = (typeof targetObj === "object" && targetObj === val); //determine if we have the same object reference in both graphs
 
-                if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
+                if (val instanceof Node === true) //no deep cloning of nodes.
                 {
-                    var curPath = (path == null) ? prop : path + "." + prop;
-                    var targetObj = target[prop];
-                    var sameObj = (typeof targetObj === "object" && targetObj === val); //determine if we have the same object reference in both graphs
+                    target[prop] = val;
+                    continue;
+                }
 
-                    if (val instanceof Node === true) //no deep cloning of nodes.
+                var existingObject = getExistingObject(session, val); //make sure we haven't already processed this object (without this check circular references cause an error)
+                if (existingObject != null) //already did this one, just pull out the existing object
+                {
+                    if (existingObject.sameReference === false) //we already figured out that the existing object appeared in both graphs and assigned the clone to be the same reference as the session.source, so we have no work to do
                     {
-                        target[prop] = val;
-                        continue;
+                        if (sameObj === true) //both objects are the same, and we have already run into the session.source object before
+                        {
+                            existingObject.clone = targetObj;
+
+                            //find each location where the clone was stored and switch it with the correct reference
+                            var numLocations = existingObject.paths.length;
+                            for (var y = 0; y < numLocations; y++)
+                            {
+                                EVUI.Modules.Core.Utils.setValue(existingObject.paths[y], session.rootObj, val);
+                            }
+
+                            existingObject.paths.splice(0, numLocations);
+                            existingObject.sameReference = true;
+                        }
+                        else //otherwise, record where we put the object
+                        {
+                            existingObject.paths.push(curPath);
+                            existingObject.sameReference = false;
+                        }
                     }
 
-                    var existingObject = getExistingObject(session, val); //make sure we haven't already processed this object (without this check circular references cause an error)
-                    if (existingObject != null) //already did this one, just pull out the existing object
+                    target[prop] = existingObject.clone;
+                }
+                else //haven't done it yet
+                {
+                    if (typeof targetObj !== "object" || targetObj == null)
                     {
-                        if (existingObject.sameReference === false) //we already figured out that the existing object appeared in both graphs and assigned the clone to be the same reference as the session.source, so we have no work to do
-                        {
-                            if (sameObj === true) //both objects are the same, and we have already run into the session.source object before
-                            {
-                                existingObject.clone = targetObj;
-
-                                //find each location where the clone was stored and switch it with the correct reference
-                                var numLocations = existingObject.paths.length;
-                                for (var y = 0; y < numLocations; y++)
-                                {
-                                    EVUI.Modules.Core.Utils.setValue(existingObject.paths[y], session.rootObj, val);
-                                }
-
-                                existingObject.paths.splice(0, numLocations);
-                                existingObject.sameReference = true;
-                            }
-                            else //otherwise, record where we put the object
-                            {
-                                existingObject.paths.push(curPath);
-                                existingObject.sameReference = false;
-                            }
-                        }
-
-                        target[prop] = existingObject.clone;
+                        targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
                     }
-                    else //haven't done it yet
-                    {
-                        if (typeof targetObj !== "object" || targetObj == null)
-                        {
-                            targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
-                        }
 
-                        addExistingObject(session, val, targetObj, curPath);
+                    addExistingObject(session, val, targetObj, curPath);
 
                         
-                        target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
-                    }
-                }
-                else //anything else, just set its value
-                {
-                    if (val !== undefined) target[prop] = val;
+                    target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
                 }
             }
+            else //anything else, just set its value
+            {
+                if (val !== undefined) target[prop] = val;
+            }
+            
         }
 
         return target;
@@ -1411,7 +1410,7 @@ name for something is garbage. Returns a boolean.
 @returns {Boolean}*/
 EVUI.Modules.Core.Utils.stringIsNullOrWhitespace = function (str)
 {
-    if (str == null || typeof str !== "string") return true;
+    if (typeof str !== "string") return true;
     var isOnlyWhitespace = (str.trim().length === 0);
     return isOnlyWhitespace;
 };
