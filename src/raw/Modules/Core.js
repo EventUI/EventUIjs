@@ -1523,13 +1523,6 @@ EVUI.Modules.Core.Utils.isjQuery = function (object)
     return false;
 };
 
-/**Checks to see if an object is an instance of a jQuery object.
-@param {Object} object The object to check.
-@returns {Boolean}*/
-$evui.isjQuery = function (object)
-{
-    return EVUI.Modules.Core.Utils.isjQuery(object);
-};
 
 /**Checks to see if an object is derived from an Element-derived object.
 @param {Object} object The object to check.
@@ -1539,13 +1532,6 @@ EVUI.Modules.Core.Utils.isElement = function (object)
     return object instanceof Element;
 };
 
-/**Checks to see if an object is derived from an Element-derived object.
-@param {Object} object The object to check.
-@returns {Boolean}*/
-$evui.isElement = function (object)
-{
-    return EVUI.Modules.Core.Utils.isElement(object);
-};
 
 /**Determines whether one element contains another.
 @param {Element} childElement The element that is contained by the parent element.
@@ -1566,15 +1552,6 @@ EVUI.Modules.Core.Utils.containsElement = function (childElement, parentElement)
     if (parentElement instanceof Node === false) return false;
 
     return parentElement.contains(childElement);
-};
-
-/**Determines whether one element contains another.
-@param {Object} childElement The element that is contained by the parent element.
-@param {Object} parentElement The element that contains the child element.
-@returns {Boolean}*/
-$evui.containsElement = function (childElement, parentElement)
-{
-    return EVUI.Modules.Core.Utils.containsElement(childElement, parentElement);
 };
 
 /**Determines whether or not a node is an "orphan" and is not connected to the DOM, a DocumentFragment, or a Document.
@@ -1602,15 +1579,6 @@ EVUI.Modules.Core.Utils.isOrphanedNode = function (node)
     if (nodeParent != null && (nodeParent.nodeType === Node.DOCUMENT_FRAGMENT_NODE || nodeParent.nodeType === Node.DOCUMENT_NODE)) return false;
     return true;
 };
-
-/**Determines whether or not a node is an "orphan" and is not connected to the DOM, a DocumentFragment, or a Document.
-@param {Node} node The node to test to see if it is part of a Document or DocumentFragment.
-@returns {Boolean}*/
-$evui.isOrphan = function (node)
-{
-    return EVUI.Modules.Core.Utils.isOrphanedNode(node);
-}
-
 
 /**Shallow extend function.
 @param {Object} target The target object to receive properties.
@@ -1769,22 +1737,6 @@ EVUI.Modules.Core.Utils.getValidElement = function (element)
 EVUI.Modules.Core.Utils.isDomHelper = function (domHelper)
 {
     return (EVUI.Modules.Dom != null && domHelper instanceof EVUI.Modules.Dom.DomHelper);
-};
-
-/**Determines if an object is a DomHelper object.
-@param {EVUI.Modules.Dom.DomHelper} domHelper A potential instance of DomHelper.
-@returns {Boolean} */
-$evui.isDomHelper = function (domHelper)
-{
-    return EVUI.Modules.Core.Utils.isDomHelper(domHelper);
-};
-
-/**Takes an ambiguous input and returns an Element if one could be extracted from the parameter.
-@param {Element|jQuery|EVUI.Modules.Dom.DomHelper} element Either an Element, a jQuery wrapper for at least one element, or a DomHelper wrapper for at least one element.
-@returns {Element} */
-$evui.getValidElement = function (element)
-{
-    return EVUI.Modules.Core.Utils.getValidElement(element);
 };
 
 /**Determines if a required dependency is present.
@@ -2004,7 +1956,7 @@ EVUI.Modules.Core.Utils.getProperties = function (obj)
     }
     else
     {
-        if (EVUI.Modules.Core.Utils.isArray(obj) === true) //if its an array, just make a list of all the indexes in the array rather than query the object for its properties
+        if (EVUI.Modules.Core.Utils.isArray(obj) === true) //if its an array, just make a list of all the indexes in the array rather than query the object for its properties (Object.Keys won't work in some situations for an array)
         {
             var len = obj.length;
 
@@ -2095,10 +2047,14 @@ EVUI.Modules.Core.Utils.cacheProperties = function (obj, props)
     if (obj == null || typeof obj !== "object") return false;
     if (Object.getPrototypeOf(obj) == Object.prototype) return false; //NEVER DO THIS FOR PLAIN OBJECTS. All plain objects will report the same list of properties, which will be wrong in 99% of cases.
 
-    if (EVUI.Modules.Core.Utils.isArray(props) === false) props = EVUI.Modules.Core.Utils.getProperties(obj);
+    if (EVUI.Modules.Core.Utils.isArray(props) === false)
+    {
+        props = EVUI.Modules.Core.Utils.getProperties(obj);
+        obj.constructor[EVUI.Modules.Core.Constants.Symbol_ObjectProperties] = props;
+        return true;
+    }
 
-    obj.constructor[EVUI.Modules.Core.Constants.Symbol_ObjectProperties] = props;
-    return true;
+    return false;
 };
 
 /**Assigns a Symbol to the object's constructor that contains an array of its property keys so that $evui.props does not have to re-query the object for its properties over and over.
