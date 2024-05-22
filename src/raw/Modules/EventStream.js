@@ -2217,34 +2217,8 @@ EVUI.Modules.EventStream.EventStreamStepType =
         return this.Job;
     }
 };
+
 Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
-
-/**Creates the beginning of an deferred stream of asynchronous of promises.
-@param {EVUI.Modules.EventStream.Constants.Fn_Job_Handler|EVUI.Modules.EventStream.EventStreamConfig} jobOrConfig Either a function to execute that takes a EventStreamJobArgs object as a parameter or the configuration options for the underlying EventStream.
-@param {EVUI.Modules.EventStream.Constants.Fn_Job_Handler} job A function to execute that takes a EventStreamJobArgs object as a parameter.
-@returns {EVUI.Modules.EventStream.EventStream}*/
-$evui.vow = function (jobOrConfig, job)
-{
-    var config = null;
-
-    if (typeof jobOrConfig === "function")
-    {
-        job = jobOrConfig;
-    }
-
-    if (jobOrConfig != null && typeof jobOrConfig === "object")
-    {
-        config = jobOrConfig;
-    }
-
-    var es = new EVUI.Modules.EventStream.EventStream(config);
-
-    if (typeof job === "function") es.addJob(job);
-    es.execute();
-
-    return es;
-};
-
 Object.freeze(EVUI.Modules.EventStream);
 
 /**Constructor reference for the EventStream.*/
