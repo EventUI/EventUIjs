@@ -211,6 +211,31 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
         }
     };
 
+    /**Indicates whether or not a Dialog has been shown and is visible in the DOM.
+    @param {String} dialogId
+    @returns {Boolean}*/
+    this.isDialogActive = function (dialogId)
+    {
+        var dialog = this.getDialog(dialogId);
+        if (dialog == null) return false;
+
+        return dialog.isVisible;
+    };
+
+    /**Gets an array of all the Dialogs that are currently shown and are visible in the DOM.
+    @returns {EVUI.Modules.Dialogs.Dialog[]}*/
+    this.getActiveDialogs = function ()
+    {
+        return this.getDialog(function (dialog) { return dialog.isVisible; }, true)
+    };
+
+    /**Gets all the active Dialogs registered with this controller.
+    @returns {EVUI.Modules.Dialogs.Dialog[]}*/
+    this.getDialogs = function ()
+    {
+        return this.getDialog(function () { return true }, true);
+    };
+
     /**Shows (and loads, if necessary or if a reload is requested) a Dialog asynchronously. Provides a callback that is called once the Dialog operation has completed successfully or otherwise.
     @param {EVUI.Modules.Dialogs.Dialog|String} dialogOrID Either a YOLO Dialog object to extend into the existing Dialog, the real Dialog reference, or the string ID of the Dialog to show.
     @param {EVUI.Modules.Dialogs.DialogShowArgs|EVUI.Modules.Dialogs.Constants.Fn_DialogOperationCallback} dialogShowArgs Optional.  The arguments for showing the Dialog, or the callback. If omitted or passed as a function, the Dialog's existing show/load settings are used instead.
@@ -343,7 +368,7 @@ EVUI.Modules.Dialogs.DialogManager = function (services)
     this.hideAllDialogs = function (dialogHideArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
-        var allVisible = this.getDialog(function (dd) { return dd.isVisible; });
+        var allVisible = this.getDialog(function (dd) { return dd.isVisible; }, true);
         var numVisible = allVisible.length;
         var numHidden = 0;
 

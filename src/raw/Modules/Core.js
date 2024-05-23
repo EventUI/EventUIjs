@@ -1091,8 +1091,7 @@ $evui.get = function (path, source)
 /**Cache for saving the results of getValuePathSegments so the same path isn't digested over and over. Keys are the paths, values are the FROZEN cached arrays of path segments.*/
 EVUI.Modules.Core.Utils.PathCache = {};
 
-/**Breaks up a "property path" (a "path" of properties that are separated by dots or braces that leads from a parent object to a child property in it or a child object) into an array of path segments.
-
+/**Breaks up a "property path" (a "path" of properties that are separated by dots or braces that leads from a parent object to a child property in it or a child object) into an array of path segments  
 Note that property names in the path segment that contain a dot or brace, that segment must be wrapped in (unescaped) quote characters in order to avoid a parse error. 
 
 If the property name contains a quote character it must be escaped.

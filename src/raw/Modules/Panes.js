@@ -926,6 +926,31 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         }
     };
 
+    /**Indicates whether or not a Pane has been shown and is visible in the DOM.
+    @param {String} paneId
+    @returns {Boolean}*/
+    this.isPaneActive = function (paneId)
+    {
+        var pane = this.getPane(paneId);
+        if (pane == null) return false;
+
+        return pane.isVisible;
+    };
+
+    /**Gets an array of all the Panes that are currently shown and are visible in the DOM.
+    @returns {EVUI.Modules.Panes.Pane[]}*/
+    this.getActivePanes = function ()
+    {
+        return this.getPane(function (pane) { return pane.isVisible; }, true)
+    };
+
+    /**Gets all the active Panes registered with this controller.
+    @returns {EVUI.Modules.Panes.Pane[]}*/
+    this.getPanes = function ()
+    {
+        return this.getPane(function () { return true }, true);
+    };
+
     /**Shows (and loads, if necessary or if a reload is requested) a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
     @param {EVUI.Modules.Panes.Pane|String} paneOrID Either a YOLO Pane object to extend into the existing Pane, the real Pane reference, or the string ID of the Pane to show.
     @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneShowArgs Optional.  The arguments for showing the Pane, or the callback. If omitted or passed as a function, the Pane's existing show/load settings are used instead.
@@ -1062,7 +1087,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     this.hideAllPanes = function (paneHideArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
-        var allVisible = this.getPane(function (pane) { return pane.isVisible; });
+        var allVisible = this.getPane(function (pane) { return pane.isVisible; }, true);
         var numVisible = allVisible.length;
         var numHidden = 0;
 

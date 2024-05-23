@@ -194,6 +194,31 @@ EVUI.Modules.PopIns.PopInManager = function (services)
         }
     };
 
+    /**Indicates whether or not a PopIn has been shown and is visible in the DOM.
+    @param {String} popInId
+    @returns {Boolean}*/
+    this.isPopInActive = function (popInId)
+    {
+        var popIn = this.getPopIn(popInId);
+        if (popIn == null) return false;
+
+        return popIn.isVisible;
+    };
+
+    /**Gets an array of all the PopIns that are currently shown and are visible in the DOM.
+    @returns {EVUI.Modules.PopIns.PopIn[]}*/
+    this.getActivePopIns = function ()
+    {
+        return this.getPopIn(function (popIn) { return popIn.isVisible; }, true)
+    };
+
+    /**Gets all the active PopIns registered with this controller.
+    @returns {EVUI.Modules.PopIns.PopIn[]}*/
+    this.getPopIns = function ()
+    {
+        return this.getPopIn(function () { return true }, true);
+    };
+
     /**Shows (and loads, if necessary or if a reload is requested) a PopIn asynchronously. Provides a callback that is called once the PopIn operation has completed successfully or otherwise.
     @param {EVUI.Modules.PopIns.PopIn|String} popInOrID Either a YOLO PopIn object to extend into the existing PopIn, the real PopIn reference, or the string ID of the PopIn to show.
     @param {EVUI.Modules.PopIns.PopInShowArgs|EVUI.Modules.PopIns.Constants.Fn_PopInOperationCallback} popInShowArgs Optional.  The arguments for showing the PopIn, or the callback. If omitted or passed as a function, the PopIn's existing show/load settings are used instead.
@@ -327,7 +352,7 @@ EVUI.Modules.PopIns.PopInManager = function (services)
     this.hideAllPopIns = function (popInHideArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
-        var allVisible = this.getPopIn(function (dd) { return dd.isVisible; });
+        var allVisible = this.getPopIn(function (dd) { return dd.isVisible; }, true);
         var numVisible = allVisible.length;
         var numHidden = 0;
 

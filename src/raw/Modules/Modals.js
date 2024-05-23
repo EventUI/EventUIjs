@@ -187,6 +187,31 @@ EVUI.Modules.Modals.ModalManager = function (services)
         }
     };
 
+    /**Indicates whether or not a Modal has been shown and is visible in the DOM.
+@param {String} modalId
+@returns {Boolean}*/
+    this.isModalActive = function (modalId)
+    {
+        var modal = this.getModal(modalId);
+        if (modal == null) return false;
+
+        return modal.isVisible;
+    };
+
+    /**Gets an array of all the Modals that are currently shown and are visible in the DOM.
+    @returns {EVUI.Modules.Modals.Modal[]}*/
+    this.getActiveModals = function ()
+    {
+        return this.getModal(function (modal) { return modal.isVisible; }, true)
+    };
+
+    /**Gets all the active Modals registered with this controller.
+    @returns {EVUI.Modules.Modals.Modal[]}*/
+    this.getModals = function ()
+    {
+        return this.getModal(function () { return true }, true);
+    };
+
     /**Shows (and loads, if necessary or if a reload is requested) a Modal asynchronously. Provides a callback that is called once the Modal operation has completed successfully or otherwise.
     @param {EVUI.Modules.Modals.Modal|String} modalOrID Either a YOLO Modal object to extend into the existing Modal, the real Modal reference, or the string ID of the Modal to show.
     @param {EVUI.Modules.Modals.ModalShowArgs|EVUI.Modules.Modals.Constants.Fn_ModalOperationCallback} modalShowArgs Optional.  The arguments for showing the Modal, or the callback. If omitted or passed as a function, the Modal's existing show/load settings are used instead.
@@ -320,7 +345,7 @@ EVUI.Modules.Modals.ModalManager = function (services)
     this.hideAllModals = function (modalHideArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
-        var allVisible = this.getModal(function (dd) { return dd.isVisible; });
+        var allVisible = this.getModal(function (dd) { return dd.isVisible; }, true);
         var numVisible = allVisible.length;
         var numHidden = 0;
 

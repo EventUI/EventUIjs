@@ -193,6 +193,31 @@ EVUI.Modules.Dropdowns.DropdownManager = function (services)
         }
     };
 
+    /**Indicates whether or not a Dropdown has been shown and is visible in the DOM.
+    @param {String} dropdownId
+    @returns {Boolean}*/
+    this.isDropdownActive = function (dropdownId)
+    {
+        var dropdown = this.getDropdown(dropdownId);
+        if (dropdown == null) return false;
+
+        return dropdown.isVisible;
+    };
+
+    /**Gets an array of all the Dropdowns that are currently shown and are visible in the DOM.
+    @returns {EVUI.Modules.Dropdowns.Dropdown[]}*/
+    this.getActiveDropdowns = function ()
+    {
+        return this.getDropdown(function (dropdown) { return dropdown.isVisible; }, true)
+    };
+
+    /**Gets all the active Dropdowns registered with this controller.
+    @returns {EVUI.Modules.Dropdowns.Dropdown[]}*/
+    this.getDropdowns = function ()
+    {
+        return this.getDropdown(function () { return true }, true);
+    };
+
     /**Shows (and loads, if necessary or if a reload is requested) a Dropdown asynchronously. Provides a callback that is called once the Dropdown operation has completed successfully or otherwise.
     @param {EVUI.Modules.Dropdowns.Dropdown|String} dropdownOrID Either a YOLO Dropdown object to extend into the existing Dropdown, the real Dropdown reference, or the string ID of the Dropdown to show.
     @param {EVUI.Modules.Dropdowns.DropdownShowArgs|EVUI.Modules.Dropdowns.Constants.Fn_DropdownOperationCallback} dropdownShowArgs Optional.  The arguments for showing the Dropdown, or the callback. If omitted or passed as a function, the Dropdown's existing show/load settings are used instead.
@@ -326,7 +351,7 @@ EVUI.Modules.Dropdowns.DropdownManager = function (services)
     this.hideAllDropdowns = function (dropdownHideArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
-        var allVisible = this.getDropdown(function (dd) { return dd.isVisible; });
+        var allVisible = this.getDropdown(function (dd) { return dd.isVisible; }, true);
         var numVisible = allVisible.length;
         var numHidden = 0;
 
