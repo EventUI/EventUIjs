@@ -899,7 +899,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onBuild === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onBuild(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onBuild.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -961,7 +961,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onBuildChildren === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onBuildChildren(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onBuildChildren.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1035,7 +1035,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onChildrenBuilt === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onChildrenBuilt(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onChildrenBuilt.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1049,7 +1049,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onBuilt === "function")
                 {
-                    return opSession.nodeEntry.node.onBuilt(eventArgs);
+                    return opSession.nodeEntry.node.onBuilt.call(this, eventArgs);
                 }
             }
         });
@@ -1063,7 +1063,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onBuilt === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onBuilt(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onBuilt.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1227,7 +1227,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onExpand === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onExpand(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onExpand.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1273,7 +1273,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onExpanded === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onExpanded(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onExpanded.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1472,7 +1472,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onCollapse === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapse(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapse.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1513,9 +1513,9 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
-                if (typeof opSession.nodeEntry.treeViewEntry.treeView.onCollapseed === "function")
+                if (typeof opSession.nodeEntry.treeViewEntry.treeView.onCollapsed === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapseed(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapsed.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });

@@ -1302,7 +1302,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                             eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
                         }
 
-                        return _self.onBind(eventArgs);
+                        return _self.onBind.call(_self, eventArgs);
                     }
                 }
             }); 
@@ -1374,7 +1374,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onSetHtmlContent === "function")
                 {
-                    return _self.onSetHtmlContent(eventArgs);
+                    return _self.onSetHtmlContent.call(_self, eventArgs);
                 }
             }
         });       
@@ -1442,7 +1442,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onSetBindings === "function")
                 {
-                    return _self.onSetBindings(eventArgs);
+                    return _self.onSetBindings.call(_self, eventArgs);
                 }
             }
         });     
@@ -1558,7 +1558,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onBindHtmlContent === "function")
                 {
-                    return _self.onBindHtmlContent(eventArgs);
+                    return _self.onBindHtmlContent.call(_self, eventArgs);
                 }
             }
         });
@@ -1658,7 +1658,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 if (validateSession(session, eventArgs) === false) return;
                 if (typeof _self.onBindChildren === "function")
                 {
-                    return _self.onBindChildren(eventArgs);
+                    return _self.onBindChildren.call(_self, eventArgs);
                 }
             }
         });
@@ -1821,7 +1821,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onChildrenBound === "function")
                 {
-                    return _self.onChildrenBound(eventArgs);
+                    return _self.onChildrenBound.call(_self, eventArgs);
                 }
             }
         });
@@ -1869,7 +1869,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onBound === "function")
                 {
-                    return _self.onBound(eventArgs);
+                    return _self.onBound.call(_self, eventArgs);
                 }
             }
         });

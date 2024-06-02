@@ -182,8 +182,9 @@ EVUI.Modules.Panes.Dependencies =
 Object.freeze(EVUI.Modules.Panes.Dependencies);
 
 /**Class for managing an implementation of Pane objects.
+@param {EVUI.Modules.Panes.PaneManagerServices} paneManagerServices Controllers for accessing other parts of the EventUI API.
 @class*/
-EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
+EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 {
     if (EVUI.Modules.Core == null) throw Error("Dependency missing: EVUI.Modules.Core is required.");
     EVUI.Modules.Core.Utils.requireAll(EVUI.Modules.Panes.Dependencies);
@@ -208,11 +209,38 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
     /**Object. Special settings for the PaneManager to use.
     @type {EVUI.Modules.Panes.PaneManagerSettings}*/
-    var _settings = paneManagerSettings;
+    var _settings = null;
 
-    /**Object. The backdrop manager used by the PaneManager.
-    @type {Function}*/
-    var _managerConstructor = (typeof paneManagerSettings === "function") ? paneManagerSettings : EVUI.Modules.Panes.PaneManager;
+    /**Object. The DIV that all Panes will be placed in to be absolutely positioned on the screen.
+@   type {HTMLElement}*/
+    var _placementDiv = null;
+
+    /**Object. The DIV that all Panes will be injected into when they are first loaded and will be placed in once they are hidden.
+    @type {HTMLElement}*/
+    var _loadDiv = null;
+
+    /**Object. The DIV that all Panes will be injected into when they are measured so that their position can be calculated.
+    @type {HTMLElement}*/
+    var _measureDiv = null;
+
+    var PaneSettings = function ()
+    {
+        /**Object. The HttpManager used to make web requests from the PaneManager.
+        @type {EVUI.Modules.Http.HttpManager}*/
+        this.httpManager = null;
+
+        /**Object. The HtmlLoaderController used by the PaneManager to load and inject HTML partials.
+        @type {EVUI.Modules.HtmlLoader.HtmlLoader}*/
+        this.htmlLoader = null;
+
+        /**Object. The StylesheetManager used by the PaneManager to do runtime CSS manipulation.
+        @type {EVUI.Modules.Styles.StyleSheetManager}*/
+        this.stylesheetManager = null;
+
+        /**Object. The backdrop manager used by this PaneManager.
+        @type {BackdropManager}*/
+        this.backdropManager = null;
+    };
 
     /**Special object injected into the public facing PaneEntry that contains all of the writable versions of the public version's read-only data.
     @class*/
@@ -444,7 +472,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             var argsPackage = new EVUI.Modules.Panes.PaneArgsPackage(context);
 
             argsPackage.foreignArgs = this.foreignActionArgs;
-            if (argsPackage.foreignArgs == null && _settings.managerName !== EVUI.Modules.Panes.Constants.Default_ManagerName) EVUI.Modules.Core.Utils.wrapProperties(argsPackage, this, { sourcePath: "foreignActionArgs", targetPath: "foreignActionArgs" });
+            //if (argsPackage.foreignArgs == null && _settings.managerName !== EVUI.Modules.Panes.Constants.Default_ManagerName) EVUI.Modules.Core.Utils.wrapProperties(argsPackage, this, { sourcePath: "foreignActionArgs", targetPath: "foreignActionArgs" });
 
             argsPackage.hideArgs = this.hideArgs;
             argsPackage.loadArgs = this.loadArgs;
@@ -849,10 +877,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     @returns {EVUI.Modules.Panes.Pane}*/
     this.addPane = function (pane)
     {
-        if (pane == null) throw Error(_settings.objectName + " cannot be null.");
+        if (pane == null) throw Error("Pane cannot be null.");
 
         var creationResult = makeOrExtendPane(pane, true);
-        if (creationResult.exists === true) throw Error("A " + _settings.objectName + " with an id of \"" + creationResult.pane.id + "\" already exists.");
+        if (creationResult.exists === true) throw Error("A Pane with an id of \"" + creationResult.pane.id + "\" already exists.");
 
         return creationResult.entry.publicEntry.pane;
     };
@@ -949,6 +977,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     this.getPanes = function ()
     {
         return this.getPane(function () { return true }, true);
+    };
+
+    /**Returns the z-index of what would be the highest necessary z-index for a Pane to appear on top all other Panes.
+    @returns {Number}*/
+    this.getTopZIndex = function ()
+    {
+        return getNextZIndex();
     };
 
     /**Shows (and loads, if necessary or if a reload is requested) a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
@@ -1229,17 +1264,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
     };
 
-    /**Creates a new instance of a PaneManager that will use the resources that are shared between all instances of PaneManager.
-    @param {EVUI.Modules.Panes.PaneManagerSettings} paneManagerSettings A YOLO object representing the settings and overrides to use to change the behavior of the new PaneManager.
-    @returns {EVUI.Modules.Panes.PaneManager} */
-    this.createNewPaneManager = function (paneManagerSettings)
-    {
-        if (paneManagerSettings == null) paneManagerSettings = new EVUI.Modules.Panes.PaneManagerSettings();
-        attachGlobals(paneManagerSettings);
-
-        return new _managerConstructor(paneManagerSettings);
-    };
-
     /**************************************************************************************EVENTS*************************************************************************************************************/
 
     /**Global event that fires before the load operation begins for any Pane and is not yet in the DOM and cannot be manipulated in this stage, however the currentActionArgs.loadSettings can be manipulated to change the way the Pane's root element will be loaded.
@@ -1319,7 +1343,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     @returns {InternalPaneEntry} */
     var getPaneAmbiguously = function (paneOrID, addIfMissing)
     {
-        if (paneOrID == null || (typeof paneOrID !== "string" && typeof paneOrID !== "object")) throw Error("Invalid input: " + _settings.objectName + " or string id expected.");
+        if (paneOrID == null || (typeof paneOrID !== "string" && typeof paneOrID !== "object")) throw Error("Invalid input: Pane or string id expected.");
 
         if (paneOrID instanceof Event) //if the pane is being summoned via an event directly, figure out all we can about it based on the current target's attributes.
         {
@@ -1328,15 +1352,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         var paneID = paneOrID;
         if (typeof paneOrID === "object") paneID = paneOrID.id;
-        if (typeof paneID !== "string") throw Error("Invalid input: " + _settings.objectName + " missing id.")
+        if (typeof paneID !== "string") throw Error("Invalid input: Pane missing id.")
 
         var paneEntry = getInternalPaneEntry(paneID);
         if (paneEntry == null)
         {
-            if (typeof paneOrID === "string" || addIfMissing !== true) throw Error("No " + _settings.objectName + " with an id of \"" + paneID + "\" exists.");
+            if (typeof paneOrID === "string" || addIfMissing !== true) throw Error("No Pane with an id of \"" + paneID + "\" exists.");
 
             var addResult = _self.addPane(paneOrID);
-            if (addResult == null) throw Error("Failed to add " + _settings.objectName + " with an id of \"" + paneOrID + "\".");
+            if (addResult == null) throw Error("Failed to add Pane with an id of \"" + paneOrID + "\".");
 
             paneEntry = getInternalPaneEntry(paneID);
         }
@@ -1395,16 +1419,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         if (unloadOnHide === "true") paneSettings.unloadOnHide = true;
         if (unloadOnHide === "false") paneSettings.unloadOnHide = false;
 
-        if (_settings.interpretBrowserEvent(paneSettings, event) === false)
+
+        var showSettings = objectAttrs.getValue(getAttributeName(EVUI.Modules.Panes.Constants.Attribute_ShowSettings)); //finally, see if any show settings were attached to the element. If so, parse them into a real show settings object.
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(showSettings) === false)
         {
-            var showSettings = objectAttrs.getValue(getAttributeName(EVUI.Modules.Panes.Constants.Attribute_ShowSettings)); //finally, see if any show settings were attached to the element. If so, parse them into a real show settings object.
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(showSettings) === false)
-            {
-                var parsedSettings = parseSettingsString(showSettings);
-                if (parsedSettings.relativePosition != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativePosition.relativeElement) === true) parsedSettings.relativePosition.relativeElement = event.currentTarget;
-                if (parsedSettings != null) paneSettings.showSettings = parsedSettings;
-            }
-        }
+            var parsedSettings = parseSettingsString(showSettings);
+            if (parsedSettings.relativePosition != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativePosition.relativeElement) === true) parsedSettings.relativePosition.relativeElement = event.currentTarget;
+            if (parsedSettings != null) paneSettings.showSettings = parsedSettings;
+        }        
 
         return paneSettings;
     };
@@ -1551,11 +1573,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     @returns {String} */
     var getAttributeName = function (attribute)
     {
-        var lowerName = attribute.toLowerCase();
-        if (lowerName.startsWith(EVUI.Modules.Panes.Constants.Default_AttributePrefix) === true)
-        {
-            return _settings.attributePrefix + attribute.substring(EVUI.Modules.Panes.Constants.Default_AttributePrefix.length);
-        }
+        //var lowerName = attribute.toLowerCase();
+        //if (lowerName.startsWith(EVUI.Modules.Panes.Constants.Default_AttributePrefix) === true)
+        //{
+        //    return _settings.attributePrefix + attribute.substring(EVUI.Modules.Panes.Constants.Default_AttributePrefix.length);
+        //}
 
         return attribute;
     };
@@ -1724,9 +1746,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             if (EVUI.Modules.Core.Utils.isElement(paneElementSetter.element) !== true) throw Error("Failed to set element for pane \"" + paneElementSetter.paneID + "\": The provided value is invalid. Value must be an object derived from Element.");
         }
 
-        if (entry.link.setSecret !== paneElementSetter.setSecret) Error("Failed to set element for pane \"" + paneElementSetter.paneID + "\": Permission denied, tokens do not match.");
-
-        return entry.link.setSecret;
+        return true;
     };
 
     /**Gets the CSS class name for the Pane.
@@ -1736,7 +1756,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     {
         //remove all whitespace and add the prefix
         var noWhitespaceRegex = new RegExp(/\s+/g);
-        var className = _settings.cssPrefix + (_settings.cssPrefix.trim().endsWith("-") ? "" : "-") + paneID;
+        var className = EVUI.Modules.Panes.Constants.Default_CssPrefix + "-" + paneID;
         className = className.replace(noWhitespaceRegex, "");
 
         return className;
@@ -1820,7 +1840,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         if (EVUI.Modules.Core.Utils.isArray(safeCopy.autoHideKeys) === true) paneToExtend.autoHideKeys = safeCopy.autoHideKeys.slice();
 
-        if (typeof _settings.makeOrExtendObject === "function") result.entry.link.wrapper = _settings.makeOrExtendObject(result);
+        //if (typeof _settings.makeOrExtendObject === "function") result.entry.link.wrapper = _settings.makeOrExtendObject(result);
 
         return result;
     };
@@ -1989,8 +2009,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     @param {PaneOperationSession} opSession The operation session to execute on. */
     var performOperation = function (opSession)
     {
-        opSession.foreignActionArgs = _settings.currentActionArgs;
-        _settings.currentActionArgs = null;
+        //opSession.foreignActionArgs = _settings.currentActionArgs;
+        //_settings.currentActionArgs = null;
 
         var callbackStack = getCallbackStack(opSession.entry.link, opSession.action); //add the callback to the stack of callbacks for the current operation.
         if (callbackStack == null)
@@ -2203,8 +2223,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var buildEventStream = function (actionSequence, opSession)
     {
         var eventStream = new EVUI.Modules.EventStream.EventStream();
-        eventStream.context = opSession.entry.link.wrapper;
-        if (eventStream.context == null) eventStream.context = opSession.entry.link.pane;
+        eventStream.context = opSession.entry.link.pane;
+
+        //eventStream.context = opSession.entry.link.wrapper;
+        //if (eventStream.context == null) eventStream.context = opSession.entry.link.pane;
 
         configureEventStream(eventStream, opSession); //set the settings for the event stream to get it configured to behave properly
 
@@ -2269,8 +2291,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             paneArgs.context = curArgs.context;
 
             //let the settings object take the pane args and produce their own special event args if so desired.
-            var processedArgs = _settings.buildEventArgs(opSession.makeArgsPackage(curArgs.context), paneArgs);
-            if (processedArgs != null) return processedArgs;
+            //var processedArgs = _settings.buildEventArgs(opSession.makeArgsPackage(curArgs.context), paneArgs);
+            //if (processedArgs != null) return processedArgs;
+
             return paneArgs;
         };
 
@@ -2278,7 +2301,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         {
             curArgs.context = eventStreamArgs.context;
 
-            _settings.processReturnedEventArgs(opSession.makeArgsPackage(curArgs.context), eventStreamArgs);
+            //_settings.processReturnedEventArgs(opSession.makeArgsPackage(curArgs.context), eventStreamArgs);
         };
 
         eventStream.onCancel = function ()
@@ -2334,7 +2357,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var skipLoad = false;
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Preload,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Preload,
             key: EVUI.Modules.Panes.Constants.Job_Preload,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2352,7 +2375,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
             key: EVUI.Modules.Panes.Constants.Event_OnLoad,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2367,7 +2390,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoad,
             key: EVUI.Modules.Panes.Constants.Event_OnLoad,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2376,13 +2399,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onLoad === "function")
                 {
-                    return _self.onLoad.call(_settings.manager, eventArgs)
+                    return _self.onLoad.call(_self, eventArgs)
                 }
             }
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Load,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Load,
             key: EVUI.Modules.Panes.Constants.Job_Load,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2416,14 +2439,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                     }
                     else
                     {
-                        jobArgs.reject("Failed to load " + _settings.objectName + " root element.")
+                        jobArgs.reject("Failed to load Pane root element.")
                     }
                 });
             }
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
             key: EVUI.Modules.Panes.Constants.Event_OnLoaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2438,7 +2461,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnLoaded,
             key: EVUI.Modules.Panes.Constants.Event_OnLoaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2447,7 +2470,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onLoaded === "function")
                 {
-                    return _self.onLoaded.call(_settings.manager, eventArgs)
+                    return _self.onLoaded.call(_self, eventArgs)
                 }
             }
         });
@@ -2460,7 +2483,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var addInitSteps = function (eventStream, opSession)
     {
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
             key: EVUI.Modules.Panes.Constants.Event_OnInitialize,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2476,7 +2499,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnInitialize,
             key: EVUI.Modules.Panes.Constants.Event_OnInitialize,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2485,13 +2508,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onInitialize === "function")
                 {
-                    return _self.onInitialize.call(_settings.manager, eventArgs);
+                    return _self.onInitialize.call(_self, eventArgs);
                 }
             }
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Initialize,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Initialize,
             key: EVUI.Modules.Panes.Constants.Job_Initialize,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2509,7 +2532,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     var addShowSteps = function (eventStream, opSession)
     {
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
             key: EVUI.Modules.Panes.Constants.Event_OnShow,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2524,14 +2547,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShow,
             key: EVUI.Modules.Panes.Constants.Event_OnShow,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
             {
                 if (typeof _self.onShow === "function")
                 {
-                    return _self.onShow.call(_settings.manager, eventArgs)
+                    return _self.onShow.call(_self, eventArgs)
                 }
             }
         });
@@ -2539,7 +2562,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         addPositionSteps(eventStream, opSession);
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
             key: EVUI.Modules.Panes.Constants.Event_OnShown,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2552,14 +2575,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnShown,
             key: EVUI.Modules.Panes.Constants.Event_OnShown,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
             {
                 if (typeof _self.onShown === "function")
                 {
-                    return _self.onShown.call(_settings.manager, eventArgs)
+                    return _self.onShown.call(_self, eventArgs)
                 }
             }
         });
@@ -2574,7 +2597,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var skip = false;
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
             key: EVUI.Modules.Panes.Constants.Event_OnHide,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2594,7 +2617,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHide,
             key: EVUI.Modules.Panes.Constants.Event_OnHide,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2603,13 +2626,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onHide === "function")
                 {
-                    return _self.onHide.call(_settings.manager, eventArgs);
+                    return _self.onHide.call(_self, eventArgs);
                 }
             }
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Hide,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Hide,
             key: EVUI.Modules.Panes.Constants.Job_Hide,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2642,7 +2665,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
             key: EVUI.Modules.Panes.Constants.Event_OnHidden,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2657,7 +2680,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnHidden,
             key: EVUI.Modules.Panes.Constants.Event_OnHidden,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2666,7 +2689,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onShown === "function")
                 {
-                    return _self.onShown.call(_settings.manager, eventArgs)
+                    return _self.onShown.call(_self, eventArgs)
                 }
             }
         });
@@ -2682,7 +2705,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var showArgsObserver = null;
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_InitialPosition,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_InitialPosition,
             key: EVUI.Modules.Panes.Constants.Job_InitialPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2699,7 +2722,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
             key: EVUI.Modules.Panes.Constants.Event_OnPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2712,20 +2735,20 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnPosition,
             key: EVUI.Modules.Panes.Constants.Event_OnPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
             {
                 if (typeof _self.onPosition === "function")
                 {
-                    return _self.onPosition.call(_settings.manager, eventArgs)
+                    return _self.onPosition.call(_self, eventArgs)
                 }
             }
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_FinalPosition,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_FinalPosition,
             key: EVUI.Modules.Panes.Constants.Job_FinalPosition,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2798,7 +2821,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     {
         eventStream.addStep({
 
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Complete,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Complete,
             key: EVUI.Modules.Panes.Constants.Job_Complete,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (args)
@@ -2828,7 +2851,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         var skip = false;
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
             key: EVUI.Modules.Panes.Constants.Event_OnUnload,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2855,7 +2878,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnload,
             key: EVUI.Modules.Panes.Constants.Event_OnUnload,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2864,13 +2887,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onUnload === "function")
                 {
-                    return _self.onUnload.call(_settings.manager, eventArgs);
+                    return _self.onUnload.call(_self, eventArgs);
                 }
             }
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Unload,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Unload,
             key: EVUI.Modules.Panes.Constants.Job_Unload,
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
@@ -2893,7 +2916,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             key: EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.Event,
             handler: function (eventArgs)
@@ -2908,7 +2931,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         });
 
         eventStream.addStep({
-            name: _settings.stepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
+            name: EVUI.Modules.Panes.Constants.Default_StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             key: EVUI.Modules.Panes.Constants.Event_OnUnloaded,
             type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
             handler: function (eventArgs)
@@ -2917,7 +2940,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
                 if (typeof _self.onUnloaded === "function")
                 {
-                    return _self.onUnloaded.call(_settings.manager, eventArgs)
+                    return _self.onUnloaded.call(_self, eventArgs)
                 }
             }
         });
@@ -3210,7 +3233,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     @param {Function} callback A callback function to call once the Pane has been positioned. */
     var positionPane = function (entry, showSettings, position, callback)
     {
-        _settings.stylesheetManager.ensureSheet(_settings.cssSheetName, { lock: true });
+        _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
 
         if (position != null && (position instanceof EVUI.Modules.Panes.PanePosition || (typeof position.top === "number" && position.left === "number" && typeof position.mode === "string")))
         {
@@ -3313,7 +3336,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
             rules.zIndex = position.zIndex.toString();
 
-            _settings.stylesheetManager.setRules(_settings.cssSheetName, positionSelector, rules);
+            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, positionSelector, rules);
         }
         else if (position.mode === EVUI.Modules.Panes.PanePositionMode.Fullscreen)
         {
@@ -3339,7 +3362,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                 rules.width = (position.right - position.left) + "px";
             }
 
-            _settings.stylesheetManager.setRules(_settings.cssSheetName, positionSelector, rules);
+            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, positionSelector, rules);
         }
         else if (position.mode === EVUI.Modules.Panes.PanePositionMode.PositionClass)
         {
@@ -3364,7 +3387,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
             if (dimensionRules.setHeight === true || dimensionRules.setWidth === true)
             {
-                _settings.stylesheetManager.setRules(_settings.cssSheetName, positionSelector, rules);
+                _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, positionSelector, rules);
             }
         }
 
@@ -3417,7 +3440,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             var selector = getSelector(entry, allClasses[x]);
             if (selector == null) continue;
 
-            _settings.stylesheetManager.removeRules(_settings.cssSheetName, selector);
+            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector);
         }
     };
 
@@ -3485,8 +3508,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             EVUI.Modules.Panes.Constants.CSS_Resized,
             EVUI.Modules.Panes.Constants.CSS_Moved];
 
-        var additionalClasses = _settings.getAdditionalClassNames();
-        if (EVUI.Modules.Core.Utils.isArray(additionalClasses) === true) return allBaseClasses.concat(additionalClasses);
         return allBaseClasses;
     };
 
@@ -3594,10 +3615,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         if (entry.link.pane.element != null)
         {
-            if (entry.link.pane.element.parentNode !== _settings.placementDiv)
+            if (entry.link.pane.element.parentNode !== _placementDiv)
             {
                 entry.link.pane.element.remove();
-                _settings.placementDiv.appendChild(entry.link.pane.element);
+                _placementDiv.appendChild(entry.link.pane.element);
             }
         }
     };
@@ -3610,10 +3631,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         if (entry.link.pane.element != null)
         {
-            if (entry.link.pane.element.parentNode !==  _settings.measureDiv)
+            if (entry.link.pane.element.parentNode !== _measureDiv)
             {
                 entry.link.pane.element.remove();
-                 _settings.measureDiv.appendChild(entry.link.pane.element);
+                _measureDiv.appendChild(entry.link.pane.element);
             }
         }
     };
@@ -3627,74 +3648,74 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         if (entry.link.pane.element != null)
         {
             entry.link.pane.element.remove();
-            _settings.loadDiv.appendChild(entry.link.pane.element);
+            _loadDiv.appendChild(entry.link.pane.element);
         }
     };
 
     /**Ensures that the div used for positioning the Pane is present in the DOM with the correct in-line style properties to work correctly.*/
     var ensurePlacehmentDiv = function ()
     {
-        if (_settings.placementDiv == null)
+        if (_placementDiv == null)
         {
-            _settings.placementDiv = document.createElement("div");
-            document.body.appendChild(_settings.placementDiv);
+            _placementDiv = document.createElement("div");
+            document.body.appendChild(_placementDiv);
         }
         else
         {
-            if (_settings.placementDiv.isConnected == false)
+            if (_placementDiv.parentElement != document.body)
             {
-                if (_settings.placementDiv.parentElement != null) _settings.placementDiv.remove();
-                document.body.appendChild( _settings.measureDiv)
-            }
+                _placementDiv.remove();
+                document.body.appendChild(_placementDiv)
+            }            
         }
 
-        _settings.placementDiv.style.height = "0px";
-        _settings.placementDiv.style.width = "0px";
-        _settings.placementDiv.style.overflow = "visible";
-        _settings.placementDiv.style.display = "block";
+        _placementDiv.style.height = "0px";
+        _placementDiv.style.width = "0px";
+        _placementDiv.style.overflow = "visible";
+        _placementDiv.style.display = "block";
     };
 
     /**Ensures that the div used to keep Panes when they are not being measured or displayed is present in the DOM. */
     var ensureLoadDiv = function ()
     {
-        if (_settings.loadDiv == null)
+        if (_loadDiv == null)
         {
-            _settings.loadDiv = document.createElement("div");
-            document.body.appendChild(_settings.loadDiv);
+            _loadDiv = document.createElement("div");
+            document.body.appendChild(_loadDiv);
         }
         else
         {
-            if (_settings.loadDiv.isConnected == false)
+            if (_loadDiv.parentElement != document.body)
             {
-                if (_settings.loadDiv.parentElement != null) _settings.loadDiv.remove();
-                document.body.appendChild(_settings.loadDiv);
-            }
+                _loadDiv.remove();
+                document.body.appendChild(_loadDiv);
+            }            
         }
 
-        _settings.loadDiv.style.display = "none";
+        _loadDiv.style.display = "none";
     };
 
     /**Ensures that the div used to measure the Pane so it can be positioned correctly is in the DOM and has the correct in-line styling.*/
     var ensureMeasureDiv = function ()
     {
-        if ( _settings.measureDiv == null)
+        if (_measureDiv == null)
         {
-             _settings.measureDiv = document.createElement("div");
-            document.body.appendChild( _settings.measureDiv);
+            _measureDiv = document.createElement("div");
+            document.body.appendChild( _measureDiv);
         }
         else
         {
-            if ( _settings.measureDiv.isConnected == false)
+            if (_measureDiv.parentElement != document.body)
             {
-                if ( _settings.measureDiv.parentElement != null)  _settings.measureDiv.remove();
-                document.body.appendChild( _settings.measureDiv)
-            }
+                _measureDiv.remove();
+                document.body.appendChild(_measureDiv)
+            }            
         }
 
-         _settings.measureDiv.style.height = "0px";
-         _settings.measureDiv.style.width = "0px";
-         _settings.measureDiv.style.overflow = "hidden"; //this is the magic that makes it all work, hidden overflow is still able to be measured.
-         _settings.measureDiv.style.display = "inline-block";
+         _measureDiv.style.height = "0px";
+         _measureDiv.style.width = "0px";
+         _measureDiv.style.overflow = "hidden"; //this is the magic that makes it all work, hidden overflow is still able to be measured.
+         _measureDiv.style.display = "inline-block";
     };
 
     /**Entry point to the position calculating logic.
@@ -3767,7 +3788,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         for (var x = 0; x < numEntries; x++)
         {
             var curEntry = _entries[x];
-            var curZIndex = curEntry.link.pane.currentZIndex;
+            var curZIndex = curEntry.link.pane.getCurrentZIndex();
 
             if (curZIndex > highestZIndex) highestZIndex = curZIndex;
         }
@@ -4704,7 +4725,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                         position.classNames.push(EVUI.Modules.Panes.Constants.CSS_ScrollX);
 
                         var scrollXSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_ClippedX);
-                        _settings.stylesheetManager.setRules(_settings.cssSheetName, scrollXSelector, {
+                        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, scrollXSelector, {
                             overflowX: "scroll"
                         });
                     }
@@ -4720,7 +4741,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                     if (newHeight < originalHeight) position.classNames.push(EVUI.Modules.Panes.Constants.CSS_ScrollY);
 
                     var scrollYSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_ClippedY);
-                    _settings.stylesheetManager.setRules(_settings.cssSheetName, scrollYSelector, {
+                    _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, scrollYSelector, {
                         overflowY: "scroll"
                     });
                 }
@@ -5173,8 +5194,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
                 left: resizeArgs.left + "px"
             }
 
-            _settings.stylesheetManager.removeRules(_settings.cssSheetName, movedSelector);
-            _settings.stylesheetManager.setRules(_settings.cssSheetName, movedSelector, rules);
+            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
+            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
             helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);
             entry.link.lastResizeArgs = resizeArgs;
         }
@@ -5308,8 +5329,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             rules.top = resizeArgs.top + "px";
             rules.left = resizeArgs.left + "px";
 
-            _settings.stylesheetManager.removeRules(_settings.cssSheetName, resizedSelector);
-            _settings.stylesheetManager.setRules(_settings.cssSheetName, resizedSelector, rules);
+            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
+            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
             helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
 
             entry.link.lastResizeArgs = resizeArgs;
@@ -5365,7 +5386,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         hookUpKeydownClose(entry);
         hookUpDrag(entry);
         hookUpResize(entry);
-        _settings.hookUpEventHandlers(entry.publicEntry);
+        hookUpSetHighestZOrder(entry);
     };
 
     /**Hooks up any child elements of the Pane with the appropriate attribute on them to be auto-close zones for the Pane.
@@ -5576,8 +5597,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             var curEle = eles[x];
             var handler = new EVUI.Modules.Panes.PaneEventBinding(attributeName, "mousedown", curEle, function (downEvent)
             {
-                _settings.stylesheetManager.ensureSheet(_settings.cssSheetName, { lock: true });
-                var startPos = entry.link.pane.currentPosition;
+                _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
+                var startPos = entry.link.pane.getCurrentPosition();
                 if (getDragHandles(entry, startPos, downEvent) != null) return;
                 entry.link.lastResizeArgs = null;
 
@@ -5619,6 +5640,30 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         }
     };
 
+    /**Adds additional event handlers to the Dialog.
+    @param {InternalPaneEntry} paneEntry The pane to add the event to.*/
+    var hookUpSetHighestZOrder = function (paneEntry)
+    {
+        var handler = new EVUI.Modules.Panes.PaneEventBinding(null, "mousedown", paneEntry.link.pane.element, function (eventArgs)
+        {
+            if (paneEntry.link.pane.showSettings != null && paneEntry.link.pane.showSettings.alwaysOnTop !== true) return;
+
+            var curZIndex = paneEntry.link.pane.getCurrentZIndex();
+            if (curZIndex >= EVUI.Modules.Panes.Constants.GlobalZIndex) return;
+
+            EVUI.Modules.Panes.Constants.GlobalZIndex++;
+
+            curZIndex = EVUI.Modules.Panes.Constants.GlobalZIndex;
+            var selector = "." + paneEntry.link.paneCSSName + "." + EVUI.Modules.Dialogs.Constants.CSS_Position;
+
+            EVUI.Modules.Styles.Manager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
+            EVUI.Modules.Styles.Manager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, { zIndex: curZIndex });
+        });
+
+        handler.attach();
+        paneEntry.link.eventBindings.push(handler);
+    };
+
     /**Hooks up the resize event handler to the root Pane element.
     @param {InternalPaneEntry} entry The Pane having its grow handler hooked up. */
     var hookUpResize = function (entry)
@@ -5628,8 +5673,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
 
         var handler = new EVUI.Modules.Panes.PaneEventBinding("dragResize", "mousedown", entry.link.pane.element, function (downEvent)
         {
-            _settings.stylesheetManager.ensureSheet(_settings.cssSheetName, { locked: true });
-            startPos = entry.link.pane.currentPosition;
+            _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { locked: true });
+            startPos = entry.link.pane.getCurrentPosition();
             var dragHandles = getDragHandles(entry, startPos, downEvent);
             if (dragHandles == null) return; //see if we were in the grow zone with the mouse event. If not, do nothing.
 
@@ -5781,7 +5826,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         {
             if (transition.keyframes != null)
             {
-                _settings.stylesheetManager.setRules(_settings.cssSheetName, transition.keyframes);
+                _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, transition.keyframes);
             }
 
             if (typeof transition.css === "string") //if the css is a string, check to see if its a set of properties or selectors
@@ -5796,7 +5841,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             else
             {
                 //otherwise make a new style using the provided rules
-                _settings.stylesheetManager.setRules(_settings.cssSheetName, getSelector(entry, selector), transition.css);
+                _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, getSelector(entry, selector), transition.css);
                 element.addClass(selector);
             }
 
@@ -5861,7 +5906,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         if (entry == null || loadSettings == null) return callback(false);
 
         var mode = getLoadMode(loadSettings);
-        if (mode === EVUI.Modules.Panes.PaneLoadMode.None) throw Error("No load mode detected, cannot load root element of " + _settings.objectName + ".");
+        if (mode === EVUI.Modules.Panes.PaneLoadMode.None) throw Error("No load mode detected, cannot load root element of Pane.");
 
         if (mode === EVUI.Modules.Panes.PaneLoadMode.ExistingElement)
         {
@@ -6081,26 +6126,28 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
     /******************************************************************************STARTUP**************************************************************************************************/
 
     /**Normalizes the PaneManagerSettings to not have any gaps in them.*/
-    var normalizeSettings = function ()
+    var normalizeSettings = function (paneManagerSettings)
     {
-        if (_settings == null || typeof _settings !== "object")
+        if (paneManagerSettings == null || typeof paneManagerSettings !== "object")
         {
-            _settings = new EVUI.Modules.Panes.PaneManagerSettings();
+            _settings = new PaneSettings();
         }
         else
         {
-            _settings = EVUI.Modules.Core.Utils.shallowExtend(_settings, new EVUI.Modules.Panes.PaneManagerSettings(), function (prop, source, target) { return target[prop] == null || (typeof target[prop] === "string" && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(target[prop])) }); //guarantee that nothing in the final graph is null
+            _settings = EVUI.Modules.Core.Utils.shallowExtend(paneManagerSettings, new PaneSettings());
         }
-        
-        _settings.getPaneEntry = getPaneEntry;
-        _settings.getPaneEntryAmbiguously = function (paneOrID, addIfMissing)
-        {
-            var internalEntry = getPaneAmbiguously(paneOrID, addIfMissing);
-            if (internalEntry != null) return internalEntry.publicEntry;
-        };
-        _settings.cloneLoadSettings = cloneLoadSettings;
-        _settings.cloneShowSettings = cloneShowSettings;
-        if (_settings.backdropManager == null) _settings.backdropManager = new BackdropManager();
+
+        //_settings.getPaneEntry = getPaneEntry;
+        //_settings.getPaneEntryAmbiguously = function (paneOrID, addIfMissing)
+        //{
+        //    var internalEntry = getPaneAmbiguously(paneOrID, addIfMissing);
+        //    if (internalEntry != null) return internalEntry.publicEntry;
+        //};
+        //_settings.cloneLoadSettings = cloneLoadSettings;
+        //_settings.cloneShowSettings = cloneShowSettings;
+        //if (_settings.backdropManager == null) _settings.backdropManager = new BackdropManager();
+
+        _settings.backdropManager = new BackdropManager();
 
         if (_settings.stylesheetManager == null || typeof _settings.stylesheetManager !== "object")
         {
@@ -6132,7 +6179,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
             });
         }
 
-        if (_settings.manager == null) _settings.manager = _self;
+        //if (_settings.manager == null) _settings.manager = _self;
     };
 
     /**Attaches all global references to the PaneManagerSettings object so that they can be shared by instances 
@@ -6144,13 +6191,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerSettings)
         ensurePlacehmentDiv();
 
         paneSettings.backdropManager = _settings.backdropManager;
-        paneSettings.loadDiv = _settings.loadDiv;
-        paneSettings.measureDiv = _settings.measureDiv;
-        paneSettings.placementDiv = _settings.placementDiv;     
+        //paneSettings.loadDiv = _settings.loadDiv;
+        //paneSettings.measureDiv = _settings.measureDiv;
+        //paneSettings.placementDiv = _settings.placementDiv;     
     };
 
-    normalizeSettings(); //normalize the settings
-    _settings.stylesheetManager.ensureSheet(_settings.cssSheetName, { lock: true }); //add a locked sheet to the style sheet manager
+    normalizeSettings(paneManagerServices); //normalize the settings
+    _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true }); //add a locked sheet to the style sheet manager
 };
 
 /**Override settings for specific implementations of the Pane.
@@ -6159,39 +6206,39 @@ EVUI.Modules.Panes.PaneManagerSettings = function ()
 {
     /**String. The human-readable name of the object being managed.
     @type {String}*/
-    this.objectName = EVUI.Modules.Panes.Constants.Default_ObjectName;
+    //this.objectName = EVUI.Modules.Panes.Constants.Default_ObjectName;
 
     /**String. The human readable name of the manager, used in error reporting.
     @type {String}*/
-    this.managerName = EVUI.Modules.Panes.Constants.Default_ManagerName;
+    //this.managerName = EVUI.Modules.Panes.Constants.Default_ManagerName;
 
     /**String. The prefix to add to the beginning of all CSS classes.
     @type {String}*/
-    this.cssPrefix = EVUI.Modules.Panes.Constants.Default_CssPrefix;
+    //this.cssPrefix = EVUI.Modules.Panes.Constants.Default_CssPrefix;
 
     /**String. The name of the CSS sheet where styles will be dynamically added.
     @type {String}*/
-    this.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
+    //this.cssSheetName = EVUI.Modules.Styles.Constants.DefaultStyleSheetName;
 
     /**String. The prefix for all the events that the PaneManager will raise.
     @type {String}*/
-    this.stepPrefix = EVUI.Modules.Panes.Constants.Default_StepPrefix;
+    //this.stepPrefix = EVUI.Modules.Panes.Constants.Default_StepPrefix;
 
     /**String. The prefix for all the attributes used by the PaneManager.
     @type {String}*/
-    this.attributePrefix = EVUI.Modules.Panes.Constants.Default_AttributePrefix;
+    //this.attributePrefix = EVUI.Modules.Panes.Constants.Default_AttributePrefix;
 
     /**Object. The DIV that all Panes will be placed in to be absolutely positioned on the screen.
     @type {HTMLElement}*/
-    this.placementDiv = null;
+    //this.placementDiv = null;
 
     /**Object. The DIV that all Panes will be injected into when they are first loaded and will be placed in once they are hidden.
     @type {HTMLElement}*/
-    this.loadDiv = null;
+    //this.loadDiv = null;
 
     /**Object. The DIV that all Panes will be injected into when they are measured so that their position can be calculated.
     @type {HTMLElement}*/
-    this.measureDiv = null;
+    //this.measureDiv = null;
 
     /**Object. The backdrop manager that controls the optional backdrop settings.
     @type {BackdropManager}*/
@@ -6211,63 +6258,51 @@ EVUI.Modules.Panes.PaneManagerSettings = function ()
 
     /**Object. The manager of the Pane derived type being manipulated.
     @type {EVUI.Modules.Panes.PaneManager}*/
-    this.manager = null;
+    //this.manager = null;
 
     /**Gets the PaneEventArgs created by the PaneManager and transforms them into a more specific type of event arguments.
     @param {EVUI.Modules.Panes.PaneArgsPackage} argsPackage The object representing the Pane's current operation.
     @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event args made for the event.
     @returns {Any}*/
-    this.buildEventArgs = function (argsPackage, paneEventArgs) { return paneEventArgs; };
+    //this.buildEventArgs = function (argsPackage, paneEventArgs) { return paneEventArgs; };
 
     /**Processes the event args after the event has handled them. 
     @param {EVUI.Modules.Panes.PaneArgsPackage} argsPackage The object representing the Pane's current operation.
     @param {Any} eventArgs The event arguments created in the buildEventArgs function.*/
-    this.processReturnedEventArgs = function (argsPackage, eventArgs) { };
+    //this.processReturnedEventArgs = function (argsPackage, eventArgs) { };
 
     /**Object. The current arguments that will be used to perform an action on a Pane implementation.
     @type {Object}*/
-    this.currentActionArgs = null;
+    //this.currentActionArgs = null;
 
     /**Makes or extends an object at the end of the PaneManager's function for applying the changes made to the Pane.
     @param {PaneCreationResult} paneCreateResult The result of creating the pane.
     @returns {EVUI.Modules.Panes.Pane}*/
-    this.makeOrExtendObject = function (paneCreateResult) { return paneCreateResult.pane; };
+    //this.makeOrExtendObject = function (paneCreateResult) { return paneCreateResult.pane; };
 
     /**Gets any additional class names that can be applied to the implementation of the Pane.
     @returns {String[]}*/
-    this.getAdditionalClassNames = function () { return [] };
+    //this.getAdditionalClassNames = function () { return [] };
 
     /**Gets an PaneEntry object or an array of them.
     @param {String|EVUI.Modules.Panes.Constants.Fn_PaneEntrySelector} paneIDOrSelector Either the ID of the Pane to get or a function that will select an array of Panes.
     @param {Boolean} getAllMatches Whether or not to get all the matches if a selector function was used or to return just the first match.
     @returns {EVUI.Modules.Panes.PaneEntry|EVUI.Modules.Panes.PaneEntry[]}*/
-    this.getPaneEntry = function (paneIDOrSelector, getAllMatches) { };
+    //this.getPaneEntry = function (paneIDOrSelector, getAllMatches) { };
 
     /**Gets a Pane's InternalPaneEntry based off of a string ID, a YOLO pane object, or a real pane object.
      @param {String|EVUI.Modules.Panes.Pane} paneOrID The string ID or Pane object to get.
      @param {Boolean} addIfMissing Whether or not to add the pane if it cannot be found.
      @returns {EVUI.Modules.Panes.PaneEntry} */
-    this.getPaneEntryAmbiguously = function (paneOrID, addIfMissing) { };
+    //this.getPaneEntryAmbiguously = function (paneOrID, addIfMissing) { };
 
     /**Interprets an action beginning with a browser event. Return false to process normally.
     @param {EVUI.Modules.Panes.Pane} paneSettings The settings to apply onto an existing pane or be used to create a new pane.
     @param {Event} event The event arguments that started a show/hide/load/unload operation.
     @returns {Boolean}*/
-    this.interpretBrowserEvent = function (paneSettings, event) { return false; };
+    //this.interpretBrowserEvent = function (paneSettings, event) { return false; };
 
-    /**Makes a clone of the Pane's PaneLoadSettings.
-    @param {EVUI.Modules.Panes.PaneLoadSettings} loadSettings The load settings to clone.
-    @returns {EVUI.Modules.Panes.PaneLoadSettings} */
-    this.cloneLoadSettings = function (loadSettings) { return loadSettings; }
-
-    /**Makes a clone of the Pane's PaneShowSettings.
-    @param {EVUI.Modules.Panes.PaneShowSettings} loadSettings The show settings to clone.
-    @returns {EVUI.Modules.Panes.PaneShowSettings} */
-    this.cloneShowSettings = function (showSettings) { return showSettings; }
-
-    /**Attaches any additional event handlers required for an implementation of the Pane.
-    @param {EVUI.Modules.Panes.PaneEntry} paneEntry The entry representing the Pane to hook an event to.*/
-    this.hookUpEventHandlers = function (paneEntry) { };
+  //this.cloneShowSettings = function (showSettings) { return showSettings; }
 };
 
 /**Represents a configurable UI element that can be loaded, placed, stretched, and moved arbitrarily.
@@ -6307,12 +6342,11 @@ EVUI.Modules.Panes.Pane = function (id, options)
             var setObject =
             {
                 element: EVUI.Modules.Core.Utils.getValidElement(value),
-                paneID: _id,
-                setSecret: _options.link.setSecret
+                paneID: _id
             };
 
             if (typeof _options == null || typeof _options.canSetElement !== "function") throw Error("Failed to set element.");
-            if (_options.canSetElement(setObject) === _options.link.setSecret)
+            if (_options.canSetElement(setObject) === true)
             {
                 _element = setObject.element;
 
@@ -6333,6 +6367,10 @@ EVUI.Modules.Panes.Pane = function (id, options)
         configurable: false,
         enumerable: true
     });
+
+    /**String. A value from PaneTemplateType indicating what the initial default behavior of the Pane should be when it is first created.
+    @type {String}*/
+    this.template = EVUI.Modules.Panes.PaneTemplateType.None;
 
     /**Object. Settings for how the Pane's element will be loaded or assigned.
     @type {EVUI.Modules.Panes.PaneLoadSettings}*/
@@ -6358,40 +6396,40 @@ EVUI.Modules.Panes.Pane = function (id, options)
     @type {Boolean}*/
     this.unloadOnHide = false;
 
-    /**Object. Calculates and gets the absolute position of the Pane.
-    @type {EVUI.Modules.Dom.ElementBounds}*/
-    this.currentPosition = null;
-    Object.defineProperty(this, "currentPosition",
-    {
-        get: function ()
-        {
-            return (_helper != null) ? _helper.offset() : null;
-        },
-        configurable: false,
-        enumerable: true
-    });
+    ///**Object. Calculates and gets the absolute position of the Pane.
+    //@type {EVUI.Modules.Dom.ElementBounds}*/
+    //this.currentPosition = null;
+    //Object.defineProperty(this, "currentPosition",
+    //{
+    //    get: function ()
+    //    {
+    //        return (_helper != null) ? _helper.offset() : null;
+    //    },
+    //    configurable: false,
+    //    enumerable: true
+    //});
 
-    /**Number. Calculates and gets the Z-Index of the Pane.
-    @type {Number}*/
-    this.currentZIndex = -1;
-    Object.defineProperty(this, "currentZIndex",
-    {
-        get: function ()
-        {
-            if (_element == null)
-            {
-                return -1
-            }
-            else
-            {
-                var zIndex = parseInt(getComputedStyle(_element).zIndex);
-                if (isNaN(zIndex) === true) return -1;
-                return zIndex;
-            }
-        },
-        configurable: false,
-        enumerable: true
-    });
+    ///**Number. Calculates and gets the Z-Index of the Pane.
+    //@type {Number}*/
+    //this.currentZIndex = -1;
+    //Object.defineProperty(this, "currentZIndex",
+    //{
+    //    get: function ()
+    //    {
+    //        if (_element == null)
+    //        {
+    //            return -1
+    //        }
+    //        else
+    //        {
+    //            var zIndex = parseInt(getComputedStyle(_element).zIndex);
+    //            if (isNaN(zIndex) === true) return -1;
+    //            return zIndex;
+    //        }
+    //    },
+    //    configurable: false,
+    //    enumerable: true
+    //});
 
     /**Boolean. Whether or not the internal state of the Pane thinks it is visible or not. This will be true after the show process has completed and false after an unload or hide operation has been completed.
     @type {Boolean}*/
@@ -6492,29 +6530,97 @@ EVUI.Modules.Panes.Pane = function (id, options)
 
     };
 
-    /**Returns a copy of the internal eventBindings array.
-    @returns {EVUI.Modules.Panes.PaneEventBinding[]}*/
-    this.getEventBindings = function ()
+    ///**Returns a copy of the internal eventBindings array.
+    //@returns {EVUI.Modules.Panes.PaneEventBinding[]}*/
+    //this.getEventBindings = function ()
+    //{
+    //    return Object.freeze(_options.link.eventBindings.slice());
+    //};
+
+    ///**Adds an event response to a standard browser event to a child element of the Pane element.
+    //@param {Element} element The child element of the root pane element to attach an event handler to.
+    //@param {EVUI.Modules.Dom.Constants.Fn_BrowserEventHandler} handler An event handler to be called when the specified events are triggered.
+    //@param {String|String[]} event Either a single event name, or an array of event names, or a space delineated string of event names to add.*/
+    //this.addEventBinding = function (element, event, handler)
+    //{
+    //    var ele = EVUI.Modules.Core.Utils.getValidElement(element);
+    //    if (ele == null) throw Error("Invalid input. Target element must be an object derived from an Element.");
+    //    if (EVUI.Modules.Core.Utils.containsElement(ele, _options.link.pane.element) === false) throw Error("element is not present or the provided element is not a child of the root element.");
+    //    if (typeof handler !== "function") throw Error("Invalid input. Handler must be a function.");
+    //    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(event) === true) throw Error("Invalid input. Event must be a non-whitespace string.");
+        
+    //    var binding = new EVUI.Modules.Panes.PaneEventBinding(null, event, ele, handler);
+    //    binding.attach();
+
+    //    options.link.eventBindings.push(binding);
+    //};
+
+
+    /**Shows the pane according to the PaneShowArgs argument.
+    @param {EVUI.Modules.Panes.PaneShowArgs} showArgs Arguments for showing the Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback A callback function that fires once the Pane has been displayed.*/
+    this.show = function (showArgs, callback)
     {
-        return Object.freeze(_options.link.eventBindings.slice());
+        return options.link.manager.showPane(_id, showArgs, callback);
     };
 
-    /**Adds an event response to a standard browser event to a child element of the Pane element.
-    @param {Element} element The child element of the root pane element to attach an event handler to.
-    @param {EVUI.Modules.Dom.Constants.Fn_BrowserEventHandler} handler An event handler to be called when the specified events are triggered.
-    @param {String|String[]} event Either a single event name, or an array of event names, or a space delineated string of event names to add.*/
-    this.addEventBinding = function (element, event, handler)
+    /**Shows the pane according to the PaneShowArgs argument.
+    @param {EVUI.Modules.Panes.PaneShowArgs} showArgs Arguments for showing the Pane.
+    @returns {Promise<Boolean>}*/
+    this.showAsync = function (showArgs)
     {
-        var ele = EVUI.Modules.Core.Utils.getValidElement(element);
-        if (ele == null) throw Error("Invalid input. Target element must be an object derived from an Element.");
-        if (EVUI.Modules.Core.Utils.containsElement(ele, _options.link.pane.element) === false) throw Error("element is not present or the provided element is not a child of the root element.");
-        if (typeof handler !== "function") throw Error("Invalid input. Handler must be a function.");
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(event) === true) throw Error("Invalid input. Event must be a non-whitespace string.");
-        
-        var binding = new EVUI.Modules.Panes.PaneEventBinding(null, event, ele, handler);
-        binding.attach();
+        return options.link.manager.showPaneAsync(_id, showArgs);
+    };
 
-        options.link.eventBindings.push(binding);
+    this.hide = function (hideArgs, callback)
+    {
+        return options.link.manager.hidePane(_id, hideArgs, callback);
+    };
+
+    this.hideAsync = function (hideArgs)
+    {
+        return options.link.manager.hidePaneAsync(_id, hideArgs);
+    };
+
+    this.load = function (loadArgs, callback)
+    {
+        return options.link.manager.loadPane(_id, loadArgs, callback);
+    };
+
+    this.loadAsync = function (loadArgs)
+    {
+        return options.link.manager.loadPaneAsync(_id, loadArgs);
+    }
+
+    this.unload = function (unloadArgs, callback)
+    {
+        return options.link.manager.unloadPane(_id, unloadArgs, callback);
+    };
+
+    this.unloadAsync = function (unloadArgs)
+    {
+        return options.link.manager.unloadPaneAsync(_id, unloadArgs);
+    };
+
+    /**Calculates and gets the absolute position of the Pane.
+    @returns {EVUI.Modules.Dom.ElementBounds}*/
+    this.getCurrentPosition = function ()
+    {
+        return (_helper != null) ? _helper.offset() : null;
+    };
+
+    this.getCurrentZIndex = function ()
+    {
+        if (_element == null)
+        {
+            return -1
+        }
+        else
+        {
+            var zIndex = parseInt(getComputedStyle(_element).zIndex);
+            if (isNaN(zIndex) === true) return -1;
+            return zIndex;
+        }
     };
 };
 
@@ -6525,6 +6631,14 @@ EVUI.Modules.Panes.PaneAutoCloseSettings = function ()
     /**String. The trigger for what should close the Pane.
     @type {String}*/
     this.closeMode = EVUI.Modules.Panes.PaneCloseMode.Explicit;
+
+    /**Boolean. Whether or not the closing of this Pane should cause a cascade of other Panes (identified by their cascadeCloseGroupKey) to hide themselves.
+    @type {Boolean} */
+    this.cascadeClose = false;
+
+    /**String. The arbitrary group key used to determine which 'cascade close' this pane is a part of.
+    @type {String|String[]}*/
+    this.cascadeCloseGroupKey = null;
 
     /**Array. An array of characters/key names ("a", "b", "Escape", "Enter" etc) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
     @type {String[]}*/
@@ -6544,9 +6658,9 @@ EVUI.Modules.Panes.PaneAutoCloseSettings = function ()
 EVUI.Modules.Panes.PaneCloseMode =
 {
     /**The Pane should close on the next click.*/
-    Click: "globalClick",
+    GlobalClick: "globalclick",
     /**The Pane should close on any click outside its bounds.*/
-    ExteriorClick: "exteriorClick",
+    ExteriorClick: "exteriorclick",
     /**The pane should only close when explicitly closed.*/
     Explicit: "explicit"
 };
@@ -6705,6 +6819,9 @@ EVUI.Modules.Panes.PaneShowSettings = function ()
     /**Object. The settings for a backdrop to appear when the Pane is being displayed.
     @type {EVUI.Modules.Panes.PaneBackdropSettings}*/
     this.backdropSettings = null;
+
+    /**Boolean. Whether or not to increment the z-index of the pane to be the highest visible pane when the Pane's element gets a mousedown event.*/
+    this.alwaysOnTop = false;
 };
 
 /**Object for describing how the Pane should be inserted into the document flow relative to another element.
@@ -7525,6 +7642,21 @@ EVUI.Modules.Panes.PaneBackdropSettings = function ()
     this.backdropColor = "#000000";
 };
 
+/**Enum for describing the initial default behavior of a Pane.
+@enum */
+EVUI.Modules.Panes.PaneTemplateType =
+{
+    /**Default. No template.*/
+    None: "none",
+    /**Defaults to dropdown-like behavior (relative positioning, closes on exterior click, cascade closes other Panes with the same casecadeCloseGroupKey.)*/
+    Dropdown: "dropdown",
+    /**Defaults to modal-like behavior (centered on screen with a backdrop).*/
+    Modal: "modal",
+    /**Defaults to dialog-like behavior (arbitrary position, can be moved or resized, focus brings the dialog's z-index to be above all other panes).*/
+    Dialog: "dialog"
+};
+Object.freeze(EVUI.Modules.Panes.PaneTemplateType);
+
 /**Event arguments for all of the Pane events.
 @class */
 EVUI.Modules.Panes.PaneEventArgs = function (entry, currentArgs)
@@ -7783,6 +7915,14 @@ EVUI.Modules.Panes.PaneHideArgs = function ()
     @type {Any}*/
     this.context = null;
 
+    /**Boolean. Whether or not the closing of this Pane should cause a cascade of other Panes (identified by their cascadeCloseGroupKey) to hide themselves.
+    @type {Boolean} */
+    this.cascadeClose = false;
+
+    /**String. The arbitrary group key used to determine which 'cascade close' group should be hidden.
+    @type {String|String[]}*/
+    this.cascadeCloseGroupKey = null;
+
     /**Object. The hide transition to use to hide the Pane.
     @type {EVUI.Modules.Panes.PaneTransition}*/
     this.paneHideTransition = null;
@@ -7941,6 +8081,15 @@ Object.freeze(EVUI.Modules.Panes);
 
 /**Constructor reference for the PaneManager.*/
 EVUI.Constructors.Panes = EVUI.Modules.Panes.PaneManager;
+
+ /**Gets a Pane object based on its ID or a selector function.
+@param {EVUI.Modules.Panes.Constants.Fn_PaneSelector|String} paneIDOrSelector A selector function to select a PaneEntry object (or multiple PaneEntry objects) or the ID of the Pane to get the PaneEntry for.
+@param {Boolean} getAllMatches If a selector function is provided, all the PaneEntries that satisfy the selector are included. Otherwise a single PaneEntry object is returned. False by default.
+@returns {EVUI.Modules.Panes.Pane|EVUI.Modules.Panes.Pane[]} */
+$evui.getPane = function (paneIDOrSelector, getAllMatches)
+{
+    return $evui.panes.getPane(paneIDOrSelector, getAllMatches);
+};
 
 /**Adds a Pane to the PaneManager.
 @param {EVUI.Modules.Panes.Pane} yoloPane A YOLO object representing a Pane object. This object is copied onto a real Pane object is then discarded.

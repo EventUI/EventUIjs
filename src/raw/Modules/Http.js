@@ -286,7 +286,7 @@ EVUI.Modules.Http.HttpManager = function ()
             {
                 if (typeof _self.onBeforeSend === "function")
                 {
-                    return _self.onBeforeSend(httpEventArgs);
+                    return _self.onBeforeSend.call(_self, httpEventArgs);
                 }
             }
         });
@@ -479,7 +479,7 @@ EVUI.Modules.Http.HttpManager = function ()
             {
                 if (_self.onSuccess === "function")
                 {
-                    return _self.onSuccess(httpEventArgs);
+                    return _self.onSuccess.call(_self, httpEventArgs);
                 }
             }
         });
@@ -519,7 +519,7 @@ EVUI.Modules.Http.HttpManager = function ()
             {
                 if (typeof _self.onError === "function")
                 {
-                    return _self.onError(httpEventArgs);
+                    return _self.onError.call(_self, httpEventArgs);
                 }
             }
         });
@@ -547,7 +547,7 @@ EVUI.Modules.Http.HttpManager = function ()
             {
                 if (typeof _self.onComplete === "function")
                 {
-                    return _self.onComplete(httpEventArgs);
+                    return _self.onComplete.call(_self, httpEventArgs);
                 }
             }
         });
@@ -603,7 +603,7 @@ EVUI.Modules.Http.HttpManager = function ()
 
             if (typeof _self.onAllComplete === "function")
             {
-                return _self.onAllComplete(completedRequests);
+                return _self.onAllComplete.call(_self, completedRequests);
             }
         }
     };

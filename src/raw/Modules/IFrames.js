@@ -850,7 +850,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
                 {
                     if (typeof _self.onMessage === "function")
                     {
-                        return _self.onMessage(eventArgs);
+                        return _self.onMessage.call(_self, eventArgs);
                     }
                 }
             });
@@ -903,7 +903,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             {
                 if (typeof _self.onSend === "function")
                 {
-                    return _self.onSend(eventArgs);
+                    return _self.onSend.call(_self, eventArgs);
                 }
             }
         });
