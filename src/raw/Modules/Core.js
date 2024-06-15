@@ -1292,6 +1292,23 @@ $evui.set = function (path, target, value, fill)
     return EVUI.Modules.Core.Utils.setValue(path, target, value, fill);
 };
 
+/**Determines whether or not an value is a valid non-null object.
+@param {Object} o The object to test.
+@returns {Boolean}*/
+EVUI.Modules.Core.Utils.isObject = function (o)
+{
+    return typeof o === "object" && o != null;
+};
+
+
+/**Determines whether or not an value is a valid non-null object.
+@param {Object} o The object to test.
+@returns {Boolean}*/
+$evui.isObject = function (o)
+{
+    return EVUI.Modules.Core.Utils.isObject(o);
+}
+
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
 @param {Array} arr The object to test.
 @returns {Boolean}*/
