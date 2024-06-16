@@ -828,7 +828,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
 /**Options for configuring the DeepExtender.*/
 EVUI.Modules.Core.DeepExtenderOptions = function ()
 {
-    /**filter An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
+    /**An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
     @type {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]}*/
     this.filter = null;
 };
