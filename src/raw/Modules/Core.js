@@ -81,12 +81,17 @@ EVUI.Modules.Core.Constants.Fn_ExecutorCallback = function (error)
 
 };
 
-/**A function used to filter the members extended onto a another object.
+/**A function used to filter the members extended onto a another object. Return false to not extend the property.
 @param {String} propName The name of the property to extend.
 @param {Object} sourceObj The source object being extended onto the target.
 @param {Object} testObj The target object or receive properties.
 @returns {Boolean}*/
 EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter = function (propName, sourceObj, targetObj) { };
+
+/**A function used to filter the members extended onto a another object. Return false to not extend the property.
+@param {EVUI.Modules.Core.DeepExtendFilterArgs} deepExtendArgs
+@returns {Boolean} */
+EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter = function (deepExtendArgs) {};
 
 /**If the browser supports Symbols, this is a special Symbol that is used to cache a list of an Object's properties and attach it to that object's prototype so that the property list does not need to be recalculated over and over for objects implementing the same prototype who will always have the same property list.
 @type {Symbol}*/
@@ -518,6 +523,8 @@ EVUI.Modules.Core.CaseInsensitiveObject.prototype.setValue = function (valueName
     return true;
 };
 
+
+
 /**Utility for doing a simple deep extend on an object hierarchy. All objects created are either plain objects or plain arrays, but will have the same properties as their source object hierarchy.
 @class*/
 EVUI.Modules.Core.DeepExtender = (function ()
@@ -646,6 +653,19 @@ EVUI.Modules.Core.DeepExtender = (function ()
         return extended;
     };
 
+    var makeDeepExtendFilterArgs = function (target, source, path, propName, value, session)
+    {
+        var args = new EVUI.Modules.Core.DeepExtendFilterArgs();
+        args.propertyName = propName;
+        args.propertyPath = path + "." + propName;
+        args.root = session.rootObj;
+        args.source = source;
+        args.target = target;
+        args.value = value;
+
+        return args;
+    };
+
     /**Extends one object's hierarchy onto another object recursively.
     @param {DeepExtendSession} session
     @returns {Object}*/
@@ -665,7 +685,7 @@ EVUI.Modules.Core.DeepExtender = (function ()
 
             if (session.filterViaFn === true)
             {
-                if (session.options.filter(prop, source, target) === false) continue; //false means don't include
+                if (session.options.filter(makeDeepExtendFilterArgs(target, source, path, prop, val, session)) === false) continue; //false means don't include
             }
             else if (session.filterViaArray === true)
             {
@@ -825,11 +845,39 @@ EVUI.Modules.Core.DeepExtender = (function ()
     return new DeepExtender();
 })();
 
+/**Arguments to feed into the filter functions for deep or shallow extend operations.
+@class*/
+EVUI.Modules.Core.DeepExtendFilterArgs = function ()
+{
+    /**String. The name of the current property.
+    @type {String}*/
+    this.propertyName = null;
+
+    /**String. The "path" of the property from the root object to the current value.
+    @type {String}*/
+    this.propertyPath = null;
+
+    /**Object. The source object properties are being pulled from.
+    @type {Object}*/
+    this.source = null;
+
+    /**Object. The target object receiving properties from the source.*/
+    this.target = null;
+
+    /**Any. The value to be copied from the source to the target.
+    @type {Any}*/
+    this.value = undefined;
+
+    /**Object. The root object in the graph.
+    @type {Object}*/
+    this.root = null;
+};
+
 /**Options for configuring the DeepExtender.*/
 EVUI.Modules.Core.DeepExtenderOptions = function ()
 {
     /**An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
-    @type {EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter|String[]}*/
+    @type {EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter|String[]}*/
     this.filter = null;
 };
 

@@ -686,55 +686,17 @@ EVUI.Modules.Http.HttpManager = function ()
 @class*/
 EVUI.Modules.Http.HttpRequestArgs = function ()
 {
-    var _url = null;
-    var _method = null
-    var _headers = [];
-    var _contentType = null;
-    var _withCredentials = false;
-    var _responseType = null;
-    var _timeout = null;
-
     /**String. The URL to make the request to.
      @type {String}*/
     this.url = null;
-    Object.defineProperty(this, "url", {
-        get: function () { return _url; },
-        set: function (value)
-        {
-            if (value != null && typeof value !== "string") throw new Error("url must be a string.");
-            _url = value;
-        },
-        configurable: false,
-        enumerable: true
-    });
 
     /**String. The HTTP verb to make with the request.
     @type {String}*/
     this.method = null;
-    Object.defineProperty(this, "method", {
-        get: function () { return _method; },
-        set: function (value)
-        {
-            if (value != null && typeof value !== "string") throw new Error("method must be a string.");
-            _method = value;
-        },
-        configurable: false,
-        enumerable: true
-    });
 
     /**Array. An array of EVUI.Modules.Http.HttpRequestHeader representing the headers to send along with the request.
     @type {EVUI.Modules.Http.HttpRequestHeader[]}*/
     this.headers = null;
-    Object.defineProperty(this, "headers", {
-        get: function () { return _headers; },
-        set: function (value)
-        {
-            if (value != null && EVUI.Modules.Core.Utils.isArray(value) === false) throw new Error("headers must be an array.");
-            _headers = value;
-        },
-        enumerable: true,
-        configurable: false
-    });
 
     /**Any. The body of the request to send to the server. This value is used as-is and must be compatible with the XMLHTTPReqeust's rules for valid message bodies.
     @type {Any}*/
@@ -743,56 +705,18 @@ EVUI.Modules.Http.HttpRequestArgs = function ()
     /**The mime type of the message body.
     @type {String}*/
     this.contentType = null;
-    Object.defineProperty(this, "contentType", {
-        get: function () { return _contentType },
-        set: function (value)
-        {
-            if (value != null && typeof value !== "string") throw new Error("contentType must be a string.")
-        },
-        enumerable: true,
-        configurable: false
-    });
 
     /**Boolean. Whether or not cookies should be sent along for cross-domain requests.
     @type {Boolean}*/
     this.withCredentials = false;
-    Object.defineProperty(this, "withCredentials", {
-        get: function () { return _withCredentials; },
-        set: function (value)
-        {
-            if (typeof value !== "boolean") throw new Error("withCredentials must be a boolean.");
-            _withCredentials = value;
-        },
-        enumerable: true,
-        configurable: false
-    });
 
     /**String. The expected response type from the server. Must be a value from EVUI.Modules.Http.HttpResponseType.
     @type {String}*/
     this.responseType = null;
-    Object.defineProperty(this, "responseType", {
-            get: function () { return _responseType; },
-            set: function (value)
-            {
-                if (value != null && typeof value !== "string") throw new Error("responseType must be a string.")
-                _responseType = value;
-            },
-            enumerable: true,
-            configurable: false
-    });
 
     /**Number. The maximum amount of time the request can take before automatically failing.
     @type {Number}*/
     this.timeout = null;
-    Object.defineProperty(this, "timeout", {
-        get: function () { return _timeout; },
-        set: function (value)
-        {
-            if (value != null && typeof value !== "number") throw new Error("timeout must be a number.");
-            _timeout = value;
-        },
-        configurable: false
-    });
 
     /**Any. Any additional information to carry along between steps in the HttpManager.
     @type {Any}*/
@@ -833,39 +757,13 @@ EVUI.Modules.Http.HttpRequestArgs = function ()
 @class*/
 EVUI.Modules.Http.HttpRequestHeader = function (key, value)
 {
-    if (key != null && typeof key !== "string" && typeof key !== "number") throw new Error("HttpRequestHeader key must be a string or a number.");
-    if (value != null && typeof value !== "string" && typeof value !== "number" && typeof key !== "boolean") throw new Error("HttpRequestHeader value must be a string, boolean, or a number.");
-
-    var _key = key;
-    var _value = value;
-
     /**String or Number. The name of the header. 
     @type {String|Number}*/
-    this.key = null;
-    Object.defineProperty(this, "key", {
-        get: function () { return _key; },
-        set: function (value)
-        {
-            if (value == null || (typeof key !== "string" && typeof key !== "number")) throw new Error("HttpRequestHeader key must be a string or a number.");
-            _key = value;
-        },
-        enumerable: true,
-        configurable: false
-    });
+    this.key = key;
 
     /**String, Boolean, or Number. The value of the header.
     @type {String|Number|Boolean}*/
-    this.value = null;
-    Object.defineProperty(this, "value", {
-        get: function () { return _value; },
-        set: function (value)
-        {
-            if (value == null || (typeof value !== "string" && typeof value !== "number" && typeof key !== "boolean")) throw new Error("HttpRequestHeader value must be a string, boolean, or a number.");
-            _value = value;
-        },
-        enumerable: true,
-        configurable: false
-    });
+    this.value = value;
 };
 
 /**Event arguments used by the HttpManager to coordinate the sending of HTTP requests.

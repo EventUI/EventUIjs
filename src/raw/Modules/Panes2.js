@@ -234,7 +234,19 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
     /**Array. The order in which position arguments are chosen to be used to set the position of a Pane when it is being shown.
     @type {String[]}*/
-    var _positionArgumentPriority = ["positionClass", "abosolutePosition", "relativePosition", "anchors", "documentFlow", "fullscreen", "centered"]
+    var _showArgsFilter = ["positionClass", "abosolutePosition", "relativePosition", "anchors", "documentFlow", "fullscreen", "centered", "context", "hideTransition", "showTransition", "clipSettings", "backdropSettings"]
+
+    /**Array. The order in which load arguments are chosen to load the Pane that is being shown.
+    @type {String[]}*/
+    var _loadArgsFilter = ["element", "selector", "contextElement", "httpArgs", "placeholderArgs", "context"];
+
+    /**Array. The order in which hide arguments are chosen to load the Pane that is being shown.
+    @type {String[]}*/
+    var _hideArgumentFilter = ["context"];
+
+    /**Array. The order in which unload arguments are chosen to load the Pane that is being shown.
+    @type {String[]}*/
+    var _unloadArgumentFilter = ["context"];
 
     /**Settings object for dependencies used by this Pane manager.
     @class*/
@@ -264,10 +276,6 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         /**Object. The Pane being managed.
         @type {EVUI.Modules.NewPanes.Pane}*/
         this.pane = null;
-
-        /**Object. An observer watching for changes in the Pane.
-        @type {EVUI.Modules.Observers.ObjectObserver}*/
-        this.paneObserver = null;
 
         /**String. A unique identifier for the pane instance used for the positioning CSS class name.
         @type {String}*/
@@ -375,10 +383,6 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         /**Object. The InternalPaneEntry of the pane.
         @type {InternalPaneEntry}*/
         this.entry = null;
-
-        /**Object. An observer watching the PaneEventArgs for changes.
-        @type {EVUI.Modules.Observers.ObjectObserver}*/
-        this.eventArgsObserver = null;
 
         /**String. The original action that was being performed.
         @type {String}*/
@@ -972,16 +976,13 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             paneShowArgs = null;
         }
 
-        var resolvedArgs = makePaneShowArgs(paneEntry, paneShowArgs);
-
-
         var opSession = new PaneOperationSession();
         opSession.entry = paneEntry;
         opSession.action = EVUI.Modules.NewPanes.PaneAction.Show;
         opSession.currentAction = EVUI.Modules.NewPanes.PaneAction.Show;
         opSession.callback = (typeof callback === "function") ? callback : function (success) { };
-        opSession.resolvedShowArgs = paneShowArgs;
-        opSession.resolvedLoadArgs = paneShowArgs.loadArgs;
+        opSession.userShowArgs = paneShowArgs;
+        opSession.userLoadArgs = paneShowArgs == null ? null : paneShowArgs.loadArgs;
 
         performOperation(opSession);
     };
@@ -989,99 +990,296 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     /**
      * 
      * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.NewPanes.PaneShowArgs} showArgs
+     * @param {EVUI.Modules.NewPanes.PaneShowArgs} userShowArgs
      */
-    var makePaneShowArgs = function (paneEntry, showArgs)
+    var resolvePaneShowArgs = function (paneEntry, userShowArgs)
     {
-        //extend everything BUT 
-        var finalArgs = EVUI.Modules.Core.Utils.deepExtend({}, paneEntry.link.pane.showSettings, { filter: _positionArgumentPriority });
-        if (EVUI.Modules.Core.Utils.isObject(showArgs.loadArgs) === true)
+        var finalArgs = new EVUI.Modules.NewPanes.PaneShowArgs(); 
+
+        //extend everything BUT the load order properties
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userShowArgs, _showArgsFilter)
+
+        //use the user's context if one was provided
+        if (EVUI.Modules.Core.Utils.isObject(userShowArgs.context) === true)
         {
-            finalArgs.loadArgs = EVUI.Modules.Core.Utils.deepExtend({}, paneEntry.link.pane.loadSettings);
+            finalArgs.context = userShowArgs.context;
         }
 
-        if (showArgs.loadArgs != null && showArgs.loadArgs.hasOwnProperty("context") === true)
+        //make the load args if any were provided
+        if (EVUI.Modules.Core.Utils.isObject(userShowArgs.loadArgs) === true)
         {
-            finalArgs.loadArgs.context = loadContext;
-        }
-        else if (showArgs.loadArgs != null)
-        {
-            showArgs.loadArgs.context = showArgs.context;
+            finalArgs.loadArgs = resolvePaneLoadArgs(paneEntry, userShowArgs.loadArgs);
+
+            //use the show args context if it was omitted from the load args graph
+            if (userShowArgs.loadArgs.hasOwnProperty("context") === false)
+            {
+                finalArgs.loadArgs.context = userShowArgs.context;
+            }
         }
 
-        var argsMode = getPositionMode(showArgs);
+        var defaultShowSettings = paneEntry.link.pane.showSettings == null ? {} : paneEntry.link.pane.showSettings;
+
+
+        finalArgs.showTransition = resolvePaneTransition(defaultShowSettings.showTransition, userShowArgs.showTransition);
+        finalArgs.clipSettings = resolvePaneClipSettings(defaultShowSettings.clipSettings, userShowArgs.clipSettings);
+        finalArgs.backdropSettings = resolveBackdropSettings(defaultShowSettings.backdropSettings, userShowArgs.backdropSettings)
+
+
+        //figure out what the default position mode is and what the user's position mode is
+        var argsMode = getPositionMode(userShowArgs);
         var defaultMode = getPositionMode(paneEntry.link.pane.showSettings);
 
-        var source = null;
         var mode = null;
 
         if (argsMode === EVUI.Modules.NewPanes.PaneShowMode.None && defaultMode !== EVUI.Modules.NewPanes.PaneShowMode.None) //args had no show args, but the default does. Use the default over the arguments.
         {
-            source = paneEntry.link.pane.showSettings;
             mode = defaultMode;
         }
         else if (argsMode !== EVUI.Modules.NewPanes.PaneShowMode.None) //use the arguments to show the pane
         {
-            source = showArgs;
             mode = argsMode;
         }
-        else //we couldn't calculate the show mode. Do nothing.
+        else //neither was valid
         {
-            return;
+            return finalArgs;
         }
-
-        var argsToCopy = null;
-        var argsToCopyPropertyName = null;
 
         //figure out which value to set to set the display mode appropriately
         switch (mode)
         {
             case EVUI.Modules.NewPanes.PaneShowMode.AbsolutePosition:
-                argsToCopy = source.absolutePosition;
-                argsToCopyPropertyName = "absolutePosition";
+                finalArgs.absolutePosition = resolveAbsolutePosition(defaultShowSettings.absolutePosition, userShowArgs.absolutePosition);
                 break;
 
             case EVUI.Modules.NewPanes.PaneShowMode.Anchored:
-                argsToCopy = source.anchors;
-                argsToCopyPropertyName = "anchors";
+                finalArgs.anchors = resolveAnchors(defaultShowSettings.anchors, userShowArgs.anchors);
                 break;
 
             case EVUI.Modules.NewPanes.PaneShowMode.Centered:
-                finalArgs.center = source.center;
+
+                var center = defaultShowSettings.center;
+                if (userShowArgs.center === "boolean") center = userShowArgs.center;
+
+                finalArgs.center = center;
                 break;
 
             case EVUI.Modules.NewPanes.PaneShowMode.DocumentFlow:
-                argsToCopy = source.documentFlow;
-                argsToCopyPropertyName = "documentFlow";
+                finalArgs.documentFlow = resolveDocumentFlow(defaultShowSettings.documentFlow, userShowArgs.documentFlow);
                 break;
 
             case EVUI.Modules.NewPanes.PaneShowMode.Fullscreen:
-                finalArgs.fullscreen = source.fullscreen;
+                var fullscreen = defaultShowSettings.fullscreen;
+                if (typeof userShowArgs.fullscreen === "boolean") fullscreen = userShowArgs.fullscreen;
+
+                finalArgs.fullscreen = fullscreen;
                 break;
 
             case EVUI.Modules.NewPanes.PaneShowMode.PositionClass:
-                if (EVUI.Modules.Core.Utils.isArray(source.positionClass) === true)
+                var positionClasses = {};
+
+                if (EVUI.Modules.Core.Utils.isArray(defaultShowSettings.positionClass) === true)
                 {
-                    finalArgs.positionClass = source.positionClass.slice();
+                    var numClasses = defaultShowSettings.positionClass.length;
+                    for (var x = 0; x < numClasses; x++)
+                    {
+                        positionClasses[defaultShowSettings.positionClass[x]] = true;
+                    }
                 }
-                else
+                else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(defaultShowSettings.positionClass) === false)
                 {
-                    finalArgs.positionClass = source.positionClass;
+                    positionClasses[defaultShowSettings.positionClass] = true;
                 }
+
+                if (EVUI.Modules.Core.Utils.isArray(userShowArgs.positionClass) === true)
+                {
+                    var numClasses = userShowArgs.positionClass.length;
+                    for (var x = 0; x < numClasses; x++)
+                    {
+                        positionClasses[userShowArgs.positionClass[x]] = true;
+                    }
+                }
+                else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(userShowArgs.positionClass) === false)
+                {
+                    positionClasses[userShowArgs.positionClass] = true;
+                }
+
+                finalArgs.positionClass = Object.keys(positionClasses);
 
                 break;
 
             case EVUI.Modules.NewPanes.PaneShowMode.RelativePosition:
-                argsToCopy = source.relativePosition;
-                argsToCopyPropertyName = "relativePosition";
+                finalArgs.relativePosition = resolveRelativePosition(defaultShowSettings.relativePosition, userShowArgs.relativePosition);
                 break;
         }
 
-        //if the property was an object, do a deep extend on it to set the display args for the final arguments.
-        if (argsToCopy != null && argsToCopyPropertyName != null)
+        return finalArgs;
+    };
+
+    var resolveAbsolutePosition = function (defaultAbsolutePosition, userAbsolutePosition)
+    {
+        var finalAbsolutePosition = new EVUI.Modules.NewPanes.PaneAbsolutePosition();
+        var extendFilter = function (propName, sourceObj, targetObj)
         {
-            finalArgs[argsToCopyPropertyName] = EVUI.Modules.Core.Utils.deepExtend({}, argsToCopy);
+            if ((propName === "top" || propName === "left") && (targetObj === finalAbsolutePosition))
+            {
+                if (typeof sourceObj[propName] !== "number") return false;
+            }
+
+            return true;
         }
+
+        EVUI.Modules.Core.Utils.shallowExtend(finalAbsolutePosition, defaultAbsolutePosition, extendFilter);
+        EVUI.Modules.Core.Utils.shallowExtend(finalAbsolutePosition, userAbsolutePosition, extendFilter);
+
+        return finalAbsolutePosition;
+    };
+
+    var resolveAnchors = function (defaultAnchors, userAnchors)
+    {
+        var finalAnchors = new EVUI.Modules.NewPanes.PaneAnchors();
+        EVUI.Modules.Core.Utils.shallowExtend(finalAnchors, defaultAnchors);
+        EVUI.Modules.Core.Utils.shallowExtend(finalAnchors, userAnchors);
+
+        finalAnchors.top = resolveElement(finalAnchors.top);
+        finalAnchors.left = resolveElement(finalAnchors.left);
+        finalAnchors.bottom = resolveElement(finalAnchors.bottom);
+        finalAnchors.right = resolveElement(finalAnchors.right);
+
+        return finalAnchors;
+    };
+
+    var resolveDocumentFlow = function (defaultDocFlow, userDocFlow)
+    {
+        var finalFlow = new EVUI.Modules.NewPanes.PaneDocumentFlow();
+        EVUI.Modules.Core.Utils.shallowExtend(finalFlow, defaultDocFlow);
+        EVUI.Modules.Core.Utils.shallowExtend(finalFlow, userDocFlow);
+
+        finalFlow.relativeElement = resolveElement(finalFlow.relativeElement);
+
+        return finalFlow;
+    };
+
+    var resolveRelativePosition = function (defaultPosistion, userPosition)
+    {
+        var finalPosition = new EVUI.Modules.NewPanes.PaneRelativePosition();
+        EVUI.Modules.Core.Utils.shallowExtend(finalPosition, defaultPosistion);
+        EVUI.Modules.Core.Utils.shallowExtend(finalPosition, userPosition);
+
+        finalPosition.relativeElement = resolveElement(finalPosition.relativeElement);
+    };
+
+    /**
+     * 
+     * @param {EVUI.Modules.NewPanes.PaneLoadSettings} defaultLoadSettings
+     * @param {EVUI.Modules.NewPanes.PaneLoadArgs} userLoadArgs
+     */
+    var resolvePaneLoadArgs = function (defaultLoadSettings, userLoadArgs)
+    {
+        var finalArgs = new EVUI.Modules.NewPanes.PaneLoadArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, defaultLoadSettings, _loadArgsFilter);
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userLoadArgs, _loadArgsFilter);
+
+        var existingLoadMode = getLoadMode(defaultLoadSettings);
+        var argsLoadMode = getLoadMode(userLoadArgs);
+
+        var mode = null;
+
+        if (argsLoadMode === EVUI.Modules.NewPanes.PaneLoadMode.None && existingLoadMode !== EVUI.Modules.NewPanes.PaneLoadMode.None)
+        {
+            mode = existingLoadMode;
+        }
+        else if (argsLoadMode !== EVUI.Modules.NewPanes.PaneLoadMode.None)
+        {
+            mode = argsLoadMode;
+        }
+        else
+        {
+            return finalArgs;
+        }
+
+        switch (mode)
+        {
+            case EVUI.Modules.NewPanes.PaneLoadMode.ExistingElement:
+                finalArgs.element = resolveElement(finalArgs.element);
+                break;
+
+            case EVUI.Modules.NewPanes.PaneLoadMode.CSSSelector:
+                finalArgs.contextElement = resolveElement(finalArgs.contextElement);
+                finalArgs.selector = source.selector;
+                break;
+
+            case EVUI.Modules.NewPanes.PaneLoadMode.HTTP:
+                var defaultHttp = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.httpLoadArgs : null;
+                var userHttp = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.httpLoadArgs : null;
+
+                finalArgs.httpLoadArgs = resolveHttpArgs(defaultHttp, userHttp);
+                break;
+
+            case EVUI.Modules.NewPanes.PaneLoadMode.Placeholder:
+                var defaultPlaceholder = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.placeholderLoadArgs : null;
+                var userPlaceholder = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.placeholderLoadArgs : null;
+
+                finalArgs.placeholderLoadArgs = EVUI.Modules.Core.Utils.deepExtend(defaultPlaceholder, userPlaceholder);
+                break;
+        }
+
+        return finalArgs;
+    };
+
+    var resolveHttpArgs = function (defaultHttpArgs, userHttpArgs)
+    {
+        var finalArgs = new EVUI.Modules.Http.HttpRequestArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, defaultHttpArgs, ["headers"]);
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userHttpArgs, ["headers"]);
+
+        var finalHeaders = [];
+        var headerDic = {};
+
+        //make a union of all headers in both the default settings and user args
+        if (EVUI.Modules.Core.Utils.isObject(defaultHttpArgs) === true)
+        {
+            if (EVUI.Modules.Core.Utils.isArray(defaultHttpArgs.headers) === true)
+            {
+                var numHeaders = defaultHttpArgs.headers.length;
+                for (var x = 0; x < numHeaders; x++)
+                {
+                    headerDic[defaultHttpArgs.headers[x].key] = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Http.HttpRequestHeader(), defaultHttpArgs.headers[x]);
+                }
+            }
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(userHttpArgs) === true)
+        {
+            if (EVUI.Modules.Core.Utils.isArray(userHttpArgs.headers) === true)
+            {
+                var numHeaders = userHttpArgs.headers.length;
+                for (var x = 0; x < numHeaders; x++)
+                {
+                    headerDic[userHttpArgs.headers[x].key] = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.Http.HttpRequestHeader(), userHttpArgs.headers[x]);
+                }
+            }
+        }
+
+        for (var header in headerDic)
+        {
+            finalHeaders.push(headerDic[header]);
+        }
+
+        finalArgs.headers = finalHeaders;            
+        return finalArgs;
+    };
+
+    var resolvePlaceholderArgs = function (defaultPlaceholderArgs, userPlaceholderArgs)
+    {
+        var finalArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, defaultPlaceholderArgs);
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userPlaceholderArgs);
+
+        var defaultHttp = EVUI.Modules.Core.Utils.isObject(defaultPlaceholderArgs) ? defaultPlaceholderArgs.httpArgs : null;
+        var userHttp = EVUI.Modules.Core.Utils.isObject(userPlaceholderArgs) ? userPlaceholderArgs.httpArgs : null;
+
+        finalArgs.httpArgs = resolveHttpArgs(defaultHttp, userHttp);
+        finalArgs.contextElement = resolveElement(finalArgs.contextElement);
 
         return finalArgs;
     };
@@ -1089,88 +1287,136 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     /**
      * 
      * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.NewPanes.PaneShowArgs} showArgs
-     * @param {EVUI.Modules.NewPanes.PaneShowArgs} finalArgs
+     * @param {EVUI.Modules.NewPanes.PaneHideArgs} userHideArgs
      */
-    var setShowModeArgs = function (paneEntry, showArgs, finalArgs)
+    var resolvePaneHideArgs = function (paneEntry, userHideArgs)
     {
+        var finalArgs = new EVUI.Modules.NewPanes.PaneHideArgs();
+        finalArgs.unload = paneEntry.link.pane.unloadOnHide;
 
+        EVUI.Modules.Core.Utils.deepExtend(finalArgs, userLoadArgs, { filter: _hideArgumentFilter });
+
+        finalArgs.context = userHideArgs.context;
+        finalArgs.hideTransition = resolvePaneTransition(paneEntry.link.pane.showSettings != null ? paneEntry.link.pane.showSettings.hideTransition : {}, userHideArgs.hideTransition);
+
+        return finalArgs;
+    };
+
+    /**
+     * 
+     * @param {InternalPaneEntry} paneEntry
+     * @param {EVUI.Modules.NewPanes.PaneUnloadArgs} userUnloadArgs
+     */
+    var resolvePaneUnloadArgs = function (paneEntry, userUnloadArgs)
+    {
+        var finalArgs = EVUI.Modules.Core.Utils.deepExtent(new EVUI.Modules.NewPanes.PaneUnloadArgs(), userUnloadArgs);
+        
     }
 
     /**
      * 
-     * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.NewPanes.PaneShowSettings} showSettings
+     * @param {EVUI.Modules.NewPanes.PaneTransition} defaultTransition
+     * @param {EVUI.Modules.NewPanes.PaneTransition} userArgsTransition
+     * @returns {EVUI.Modules.NewPanes.PaneTransition}
      */
-    var getShowSettingsAmbiguously = function (paneEntry, showSettings)
+    var resolvePaneTransition = function (defaultTransition, userArgsTransition)
     {
-        var finalSettings = new EVUI.Modules.NewPanes.PaneShowSettings();
-        var defaultSettings = paneEntry.link.pane.showSettings;
-
-        EVUI.Modules.Core.Utils.deepExtend(finalSettings, showSettings);
-        var positionMode = getPositionMode(finalSettings);
-
-        if (positionMode === EVUI.Modules.NewPanes.PaneShowMode.None)
-        {
-            var presetPositionMode = getPositionMode(defaultSettings);
-            if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.AbsolutePosition)
-            {
-                finalSettings.absolutePosition = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.NewPanes.PaneAbsolutePosition(), defaultSettings.absolutePosition);
-            }
-            else if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.Anchored)
-            {
-                finalSettings.anchors = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.NewPanes.PaneAnchors(), defaultSettings.anchors);
-            }
-            else if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.Centered)
-            {
-                finalSettings.center = defaultSettings.center;
-            }
-            else if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.DocumentFlow)
-            {
-                finalSettings.documentFlow = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.NewPanes.PaneDocumentFlow(), defaultSettings.anchors);
-            }
-            else if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.Fullscreen)
-            {
-                finalSettings.fullscreen = defaultSettings.fullscreen;
-            }
-            else if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.PositionClass)
-            {
-                finalSettings.positionClass = (typeof defaultSettings.positionClass === "string") ? defaultSettings.positionClass : defaultSettings.positionClass.slice();
-            }
-            else if (presetPositionMode === EVUI.Modules.NewPanes.PaneShowMode.RelativePosition)
-            {
-                finalSettings.relativePosition = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.NewPanes.PaneRelativePosition(), defaultSettings.relativePosition);
-            }
-        }
-
-        if (defaultSettings != null)
-        {
-            if (typeof showSettings.alwaysOnTop !== "boolean" && typeof defaultSettings.alwaysOnTop === "boolean") showSettings.alwaysOnTop = defaultSettings.alwaysOnTop;
-
-            if (EVUI.Modules.Core.Utils.isObject(showSettings.backdropSettings) === true)
-            {
-                finalSettings.backdropSettings = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.NewPanes.PaneBackdropSettings(), showSettings.backdropSettings);
-            }
-        }
-
-    };
-
-    /**
-     * 
-     * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.NewPanes.PaneBackdropSettings} showSettings
-     */
-    var getBackdropOptionsAmbiguously = function (paneEntry, backdropSettings)
-    {
-
-    };
-
-    var getTransitionAmbiguously = function (existingTransition, newTransition)
-    {
-        if (EVUI.Modules.Core.Utils.isObject(existingTransition) === false && EVUI.Modules.Core.Utils.isObject(newTransition) === false) return null;
-
         var finalTransition = new EVUI.Modules.NewPanes.PaneTransition();
-        if ()
+
+        if (EVUI.Modules.Core.Utils.isObject(defaultTransition) === true)
+        {
+            EVUI.Modules.Core.Utils.shallowExtend(finalTransition, defaultTransition);
+            if (EVUI.Modules.Core.Utils.isObject(defaultTransition.css) === true)
+            {
+                finalTransition.css = EVUI.Modules.Core.Utils.deepExtend({}, defaultTransition.css);
+            }
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(userArgsTransition) === true)
+        {
+            EVUI.Modules.Utils.shallowExtend(finalTransition, userArgsTransition);
+            if (EVUI.Modules.Core.Utils.isObject(userArgsTransition.css) === true)
+            {
+                finalTransition.css = EVUI.Modules.Core.Utils.deepExtend(EVUI.Modules.Core.Utils.isObject(finalTransition.css) ? finalTransition.css : {}, userArgsTransition.css);
+            }
+        }
+
+        return finalTransition;
+    };
+
+    var resolvePaneClipSettings = function (defaultClipSettings, userClipSettings)
+    {
+        var finalClipSettings = new EVUI.Modules.NewPanes.PaneClipSettings();
+        if (EVUI.Modules.Core.Utils.isObject(defaultClipSettings) === true)
+        {
+            EVUI.Modules.Core.Utils.shallowExtend(finalClipSettings, defaultClipSettings);
+            if (EVUI.Modules.Core.Utils.isObject(defaultClipSettings.clipBounds) === true)
+            {
+                var resolved = resolveElement(defaultClipSettings.clipBounds);
+                if (resolved == null)
+                {
+                    finalClipSettings.clipBounds = EVUI.Modules.Core.Utils.shallowExtend({}, defaultClipSettings.clipBounds);
+                }
+                else
+                {
+                    finalClipSettings.clipBounds = resolved;
+                }
+            }
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(userClipSettings) === true)
+        {
+            EVUI.Modules.Core.Utils.shallowExtend(finalClipSettings, userClipSettings);
+            if (EVUI.Modules.Core.Utils.isObject(userClipSettings.clipBounds) === true)
+            {
+                var resolved = resolveElement(userClipSettings.clipBounds);
+                if (resolved == null)
+                {
+                    finalClipSettings.clipBounds = EVUI.Modules.Core.Utils.shallowExtend({}, userClipSettings.clipBounds);
+                }
+                else
+                {
+                    finalClipSettings.clipBounds = resolved;
+                }
+            }
+        }
+    };
+
+    var resolveBackdropSettings = function (defaultBackdrop, userBackdrop)
+    {
+        var finalBackdrop = new EVUI.Modules.NewPanes.PaneBackdropSettings();
+        EVUI.Modules.Core.Utils.shallowExtend(finalBackdrop, defaultBackdrop);
+        EVUI.Modules.Core.Utils.shallowExtend(finalBackdrop, userBackdrop);
+
+        finalBackdrop.backdropShowTransition = resolvePaneTransition(defaultBackdrop.backdropShowTransition, userBackdrop.backdropShowTransition);
+        finalBackdrop.backdropHideTransition = resolvePaneTransition(defaultBackdrop.backdropHideTransition, userBackdrop.backdropHideTransition);
+
+        if (EVUI.Modules.Core.Utils.isObject(finalTransition.css) === true)
+        {
+            finalTransition.css = EVUI.Modules.Core.Utils.deepExtend({}, finalTransition.css);
+        }
+
+        return finalBackdrop;
+    };
+
+    var resolveElement = function (userElementValue, allowFragments)
+    {
+        if (typeof userElementValue === "string")
+        {
+            return document.querySelector(userElementValue);
+        }
+        else
+        {
+            var ele = EVUI.Modules.Core.Utils.getValidElement(userElementValue);
+            if (ele != null) return ele;
+
+            if (allowFragments === true && EVUI.Modules.Core.Utils.isObject(userElementValue) && userElementValue.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
+            {
+                return userElementValue;
+            }
+        }
+
+        return null;
     };
 
     /**Awaitable. (and loads, if necessary or if a reload is requested) a Pane asynchronously.
@@ -2904,7 +3150,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                     jobArgs.resolve();
                 }
 
-                hideRootElement(opSession.entry, opSession.entry.link.lastShowSettings, opSession.resolvedHideArgs.paneHideTransition, function ()
+                hideRootElement(opSession.entry, opSession.entry.link.lastShowSettings, opSession.resolvedHideArgs.hideTransition, function ()
                 {
                     rootHidden = true;
                     commonCallback();
@@ -6189,6 +6435,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     @returns {String}*/
     var getLoadMode = function (loadSettings)
     {
+        if (EVUI.Modules.Core.Utils.isObject(loadSettings) === false) return EVUI.Modules.NewPanes.PaneLoadMode.None;
+
         if (loadSettings.element != null) return EVUI.Modules.NewPanes.PaneLoadMode.ExistingElement;
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(loadSettings.selector) === false) return EVUI.Modules.NewPanes.PaneLoadMode.CSSSelector;
@@ -6981,8 +7229,6 @@ EVUI.Modules.NewPanes.PaneDocumentFlow = function ()
 @class*/
 EVUI.Modules.NewPanes.PaneClipSettings = function ()
 {
-    var _clipBounds = null;
-
     /**String. A value from the EVUI.Modules.Pane.PaneClipMode enum indicating the behavior when the Pane spills outside of the clipBounds. Defaults to "overflow".
     @type {String}*/
     this.mode = EVUI.Modules.NewPanes.PaneClipMode.Overflow;
@@ -7614,15 +7860,15 @@ EVUI.Modules.NewPanes.PaneHideArgs = function ()
 
     /**Object. The hide transition to use to hide the Pane.
     @type {EVUI.Modules.NewPanes.PaneTransition}*/
-    this.paneHideTransition = null;
+    this.hideTransition = null;
 
     /**Boolean. Whether or not to remove the Pane from the DOM once it has been unloaded.
     @type {Boolean}*/
     this.unload = false;
 
-    /**Boolean. Whether or not to remove the Pane from the PaneManager once it has been unloaded.
-    @type {Boolean}*/
-    this.remove = false;
+    /**Object. The PaneUnloadArgs to use if unloading this Pane upon being hidden.
+    @type {EVUI.Modues.NewPanes.PaneUnloadArgs}*/
+    this.unloadArgs = null;
 };
 
 /**Arguments for unloading a Pane.
