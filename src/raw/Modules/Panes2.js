@@ -336,6 +336,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         /**Function. The callback that will be called when the timeout completes or is canceled.
         @type {Function}*/
         this.transitionCallback = null;
+
+        this.resolvedElement = null;
     };
 
 
@@ -451,6 +453,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         /**Number. The sort order in which this operation's callback will be called.
         @type {Number}*/
         this.callbackOrdinal = _callbackCounter++;
+
+        this.context = null;
     };
 
     /**Values for determining the sequence of actions the Pane should take. Each step maps to the addition EventStream steps or to behavioral changes when starting, stopping, or continuing the execution of a Pane.
@@ -2136,38 +2140,57 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         internalEntry.link.pane = paneToExtend;        
 
         //add the pane to the internal list of panes so it can be used later
-        _entries.push(internalEntry);        
+        _entries.push(internalEntry); 
+
+        var deepExtendOptions = new EVUI.Modules.Core.DeepExtenderOptions();
+        deepExtendOptions.recursionFilter = function (context)
+        {
+            //don't recursively extend things that aren't part of the main graph
+            var parentTarget = context.getTargetParent();
+            if (parentTarget != null && parentTarget.hasOwnProperty(context.propertyName) === false)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        };
+
+        deepExtendOptions.filter = function (context)
+        {
+            //filter out all the read-only properties or any of the properties that rely on a closure to work
+            if (context.target === paneToExtend)
+            {
+                if (context.propertyName === "id" ||
+                    context.propertyName === "isVisible" ||
+                    context.propertyName === "isLoaded" ||
+                    context.propertyName === "isInitialized" ||
+                    context.propertyName === "template" ||
+                    context.propertyName === "show" ||
+                    context.propertyName === "showAsync" ||
+                    context.propertyName === "hide" ||
+                    context.propertyName === "hideAsync" ||
+                    context.propertyName === "load" ||
+                    context.propertyName === "loadAsync" ||
+                    context.propertyName === "unload" ||
+                    context.propertyName === "unloadAsync" ||
+                    context.propertyName === "getCurrentPosition" ||
+                    context.propertyName === "getCurrentZIndex")
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        };
 
         //get the graph of the default settings for a Pane based on the "template" property of the yolo
-        var defaultPane = getDefaultPane(yoloPane.template);
+        var defaultPane = getDefaultPane(yoloPane.template, internalEntry);
+        EVUI.Modules.Core.Utils.deepExtend(paneToExtend, defaultPane);
         
-        //make a copy of the yolo graph that we can manipulate without disturbing the real yolo
-        var safeCopy = EVUI.Modules.Core.Utils.deepExtend(defaultPane, yoloPane);
-
-        //delete the read only properties from the safe copy that we'll be extending onto the real pane.
-        delete safeCopy.id;       
-        delete safeCopy.isVisible;
-        delete safeCopy.isLoaded;
-        delete safeCopy.isInitialized;
-        delete safeCopy.template;
-
-        //delete the other methods from the safe copy that rely on dependency injection to work
-        delete safeCopy.show;
-        delete safeCopy.showAsync;
-        delete safeCopy.hide;
-        delete safeCopy.hideAsync;
-        delete safeCopy.load;
-        delete safeCopy.loadAsync;
-        delete safeCopy.unload;
-        delete safeCopy.unloadAsync;
-        delete safeCopy.getCurrentPosition;
-        delete safeCopy.getCurrentZIndex;
-
         //copy the properties of the safe copy of the yolo onto the real Pane
-        EVUI.Modules.Core.Utils.deepExtend(internalEntry.link.pane, safeCopy);
-
-        //set up the observer to watch for changes to the exterior pane facade
-        internalEntry.link.paneObserver = new EVUI.Modules.Observers.ObjectObserver(internalEntry.link.pane);
+        EVUI.Modules.Core.Utils.deepExtend(paneToExtend, yoloPane, deepExtendOptions);
         
         return internalEntry;
     };
@@ -2216,8 +2239,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 {
                     relativePosition:
                     {
-                        orientation: EVUI.Modules.Dropdowns.DropdownOrientation.Bottom + " " + EVUI.Modules.Dropdowns.DropdownOrientation.Right,
-                        alignment: EVUI.Modules.Dropdowns.DropdownAlignment.None,
+                        orientation: EVUI.Modules.NewPanes.RelativePositionOrientation.Bottom + " " + EVUI.Modules.NewPanes.RelativePositionOrientation.Right,
+                        alignment: EVUI.Modules.NewPanes.RelativePositionAlignment.None,
                     },
                     clipSettings:
                     {
@@ -2780,26 +2803,30 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
         eventStream.processInjectedEventArgs = function (eventStreamArgs)
         {
-            curArgs = getArgsAndContext(opSession);
-
             var paneArgs = new EVUI.Modules.NewPanes.PaneEventArgs(opSession.entry);
             paneArgs.cancel = eventStreamArgs.cancel;
             paneArgs.eventType = eventStreamArgs.key;
             paneArgs.eventName = eventStreamArgs.name;
             paneArgs.pause = eventStreamArgs.pause;
             paneArgs.resume = eventStreamArgs.resume;
+            paneArgs.cancel = eventStreamArgs.cancel;
             paneArgs.stopPropagation = eventStreamArgs.stopPropagation;
-            paneArgs.context = curArgs.context;
+
+            paneArgs.context = opSession.context;
             paneArgs.hideArgs = opSession.userHideArgs;
             paneArgs.loadArgs = opSession.userLoadArgs;
-            paneArgs.
+            paneArgs.showArgs = opSession.userShowArgs;
+            paneArgs.resizeMoveArgs = opSession.userResizeMoveArgs;
+            paneArgs.currentAction = opSession.currentAction;
+            paneArgs.paneShowMode = opSession.showMode;
+            paneArgs.calculatedPosition = EVUI.Modules.Core.Utils.deepExtend({}, opSession.entry.link.lastCalculatedPosition);
 
             return paneArgs;
         };
 
         eventStream.processReturnedEventArgs = function (eventStreamArgs)
         {
-            curArgs.context = eventStreamArgs.context;
+            opSession.context = eventStreamArgs.context;
 
             //_settings.processReturnedEventArgs(opSession.makeArgsPackage(curArgs.context), eventStreamArgs);
         };
@@ -2813,41 +2840,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         {
             eventStream.seek(EVUI.Modules.NewPanes.Constants.Job_Complete);
         }
-    };
-
-    /**Gets the correct args parameter and context value for the current operation.
-    @param {PaneOperationSession} opSession The operation session to get the current arguments for.
-    @returns {EVUI.Modules.NewPanes.PaneShowArgs|EVUI.Modules.NewPanes.PaneHideArgs|EVUI.Modules.NewPanes.PaneLoadArgs|EVUI.Modules.NewPanes.PaneUnloadArgs} */
-    var getArgsAndContext = function (opSession)
-    {
-        var curArgs = null;
-        if (opSession.currentAction === EVUI.Modules.NewPanes.PaneAction.Show)
-        {
-            curArgs = opSession.resolvedShowArgs;
-        }
-        else if (opSession.currentAction === EVUI.Modules.NewPanes.PaneAction.Hide)
-        {
-            curArgs = opSession.resolvedHideArgs;
-        }
-        else if (opSession.currentAction === EVUI.Modules.NewPanes.PaneAction.Load)
-        {
-            curArgs = opSession.resolvedLoadArgs;
-            if (opSession.resolvedLoadArgs.context == null)
-            {
-                if (opSession.resolvedShowArgs != null) opSession.resolvedLoadArgs.context = opSession.resolvedShowArgs.context;
-            }
-        }
-        if (opSession.currentAction === EVUI.Modules.NewPanes.PaneAction.Unload)
-        {
-            curArgs = opSession.resolvedUnloadArgs;
-            if (opSession.resolvedUnloadArgs.context == null)
-            {
-                if (opSession.resolvedHideArgs != null) opSession.resolvedUnloadArgs.context = opSession.resolvedHideArgs.context;
-            }
-        }
-
-        return curArgs;
-    }
+    };    
 
     /**Adds the load sequence steps to the EventStream.
     @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.

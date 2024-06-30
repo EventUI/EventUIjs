@@ -89,9 +89,14 @@ EVUI.Modules.Core.Constants.Fn_ExecutorCallback = function (error)
 EVUI.Modules.Core.Constants.Fn_ExtendPropertyFilter = function (propName, sourceObj, targetObj) { };
 
 /**A function used to filter the members extended onto a another object. Return false to not extend the property.
-@param {EVUI.Modules.Core.DeepExtendFilterArgs} deepExtendArgs
+@param {EVUI.Modules.Core.DeepExtendContext} deepExtendContext
 @returns {Boolean} */
-EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter = function (deepExtendArgs) {};
+EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter = function (deepExtendContext) { };
+
+/**A function used to filter the members extended onto a another object. Return false to not recurse into a child object.
+@param {EVUI.Modules.Core.DeepExtendContext} deepExtendContext
+@returns {Boolean} */
+EVUI.Modules.Core.Constants.Fn_DeepExtendRecursionFilter = function (deepExtendContext) { };
 
 /**If the browser supports Symbols, this is a special Symbol that is used to cache a list of an Object's properties and attach it to that object's prototype so that the property list does not need to be recalculated over and over for objects implementing the same prototype who will always have the same property list.
 @type {Symbol}*/
@@ -576,9 +581,17 @@ EVUI.Modules.Core.DeepExtender = (function ()
         @type {Boolean} */
         this.filterViaArray = false;
 
+        /**Whether or not there is a predicate determining if an object should be recursed into.
+        @type {Boolean}*/
+        this.filterRecursion = false;
+
         /**If there was an array of property names, this is a quick-lookup table of them.
         @type {{}} */      
         this.filterLookup = null;
+
+        /**The internal context object that has been injected into a public DeepExtendContext object.
+        @type {DeepExtendContext}*/
+        this.context = null;
     };
 
     /**Container for a previously extended object.
@@ -597,6 +610,41 @@ EVUI.Modules.Core.DeepExtender = (function ()
         /**Boolean. Whether or not both the source and the clone are the same object.
         @type {Boolean}*/
         this.sameReference = false;
+    };
+
+    /**Internal state representation that is injected into the public read-only version of a DeepExtendContext.*/
+    var DeepExtendContext = function ()
+    {
+        /**String. The name of the current property.
+        @type {String}*/
+        this.propertyName = null;
+
+        /**String. The "path" of the property from the root object to the current value.
+        @type {String}*/
+        this.propertyPath = null;
+
+        /**Object. The source object properties are being pulled from.
+        @type {Object}*/
+        this.source = null;
+
+        /**Object. The target object receiving properties from the source.*/
+        this.target = null;
+
+        /**Any. The value to be copied from the source to the target.
+        @type {Any}*/
+        this.value = undefined;
+
+        /**Object. The root object in the graph.
+        @type {Object}*/
+        this.rootSource = null;
+
+        /**Object. The root object in the graph.
+        @type {Object}*/
+        this.rootTarget = null;
+
+        /**Object. The public context object with read-only getters to this object's properties.
+        @type {EVUI.Modules.Core.DeepExtendContext}*/
+        this.publicContext = null;
     };
 
     /**Extends one object's hierarchy onto another object recursively.
@@ -626,9 +674,15 @@ EVUI.Modules.Core.DeepExtender = (function ()
     {
         if (session.options.filter != null)
         {
-            if (typeof session.options.filter === "function")
+            session.filterViaFn = typeof session.options.filter === "function";
+            session.filterRecursion = typeof session.options.recursionFilter === "function"
+
+            if (session.filterViaFn || session.filterRecursion)
             {
-                session.filterViaFn = true;
+                session.context = new DeepExtendContext();
+                session.context.rootSource = session.source;
+                session.context.rootTarget = session.target;
+                session.context.publicContext = new EVUI.Modules.Core.DeepExtendContext(session.context);
             }
             else if (EVUI.Modules.Core.Utils.isArray(session.options.filter) === true)
             {
@@ -653,17 +707,23 @@ EVUI.Modules.Core.DeepExtender = (function ()
         return extended;
     };
 
-    var makeDeepExtendFilterArgs = function (target, source, path, propName, value, session)
+    /**
+     * 
+     * @param {any} target
+     * @param {any} source
+     * @param {any} path
+     * @param {any} propName
+     * @param {any} value
+     * @param {DeepExtendSession} session
+     * @returns
+     */
+    var populateDeepExtendContext = function (target, source, path, propName, value, session)
     {
-        var args = new EVUI.Modules.Core.DeepExtendFilterArgs();
-        args.propertyName = propName;
-        args.propertyPath = path + "." + propName;
-        args.root = session.rootObj;
-        args.source = source;
-        args.target = target;
-        args.value = value;
-
-        return args;
+        session.context.propertyName = propName;
+        session.context.propertyPath = path + "." + propName;
+        session.context.source = source;
+        session.context.target = target;
+        session.context.value = value;
     };
 
     /**Extends one object's hierarchy onto another object recursively.
@@ -681,19 +741,22 @@ EVUI.Modules.Core.DeepExtender = (function ()
         for (var x = 0; x < numKeys; x++)
         {
             var prop = keys[x];
-            var val = undefined;
+            var val = source[prop];
+            var valType = typeof val;
+
+            if (session.filterViaFn === true || session.filterRecursion === true)
+            {
+                populateDeepExtendContext(target, source, path, prop, val, session)
+            }
 
             if (session.filterViaFn === true)
             {
-                if (session.options.filter(makeDeepExtendFilterArgs(target, source, path, prop, val, session)) === false) continue; //false means don't include
+                if (session.options.filter(session.context.publicContext) === false) continue; //false means don't include
             }
             else if (session.filterViaArray === true)
             {
                 if (session.filterLookup[prop] === true) continue; //was in the filter array, do not include
             }
-
-            val = source[prop];
-            var valType = typeof val;
 
             if (val != null && valType === "object") //we have a non-null object, trigger recursive extend
             {
@@ -737,13 +800,26 @@ EVUI.Modules.Core.DeepExtender = (function ()
                 }
                 else //haven't done it yet
                 {
+                    if (session.filterRecursion === true)
+                    {
+                        if (session.options.recursionFilter(session.context.publicContext) === false)
+                        {
+                            if (EVUI.Modules.Core.Utils.isObject(targetObj) === true)
+                            {
+                                addExistingObject(session, val, targetObj, curPath);
+                            }
+
+                            target[prop] = val; //just extend onto the object as if it were not an actual object.
+                            continue;
+                        }
+                    }
+
                     if (typeof targetObj !== "object" || targetObj == null)
                     {
                         targetObj = EVUI.Modules.Core.Utils.isArray(val) ? [] : {}; //add it to the list of ones we've done BEFORE processing it (lest it itself be one of its own properties or part of a greater circular reference loop)
                     }
 
                     addExistingObject(session, val, targetObj, curPath);
-
                         
                     target[prop] = extend(targetObj, val, curPath, session); //populate our new child recursively
                 }
@@ -847,38 +923,149 @@ EVUI.Modules.Core.DeepExtender = (function ()
 
 /**Arguments to feed into the filter functions for deep or shallow extend operations.
 @class*/
-EVUI.Modules.Core.DeepExtendFilterArgs = function ()
+EVUI.Modules.Core.DeepExtendContext = function (context)
 {
+    if (EVUI.Modules.Core.Utils.isObject(context) === false) throw Error("Object expected.");
+    var _context = context;
+
     /**String. The name of the current property.
     @type {String}*/
     this.propertyName = null;
+    Object.defineProperty(this, "propertyName", {
+        get: function ()
+        {
+            return _context.propertyName;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**String. The "path" of the property from the root object to the current value.
     @type {String}*/
     this.propertyPath = null;
+    Object.defineProperty(this, "propertyPath", {
+        get: function ()
+        {
+            return _context.propertyPath;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**Object. The source object properties are being pulled from.
     @type {Object}*/
     this.source = null;
+    Object.defineProperty(this, "source", {
+        get: function ()
+        {
+            return _context.source;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**Object. The target object receiving properties from the source.*/
     this.target = null;
+    Object.defineProperty(this, "target", {
+        get: function ()
+        {
+            return _context.target;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
     /**Any. The value to be copied from the source to the target.
     @type {Any}*/
     this.value = undefined;
+    Object.defineProperty(this, "value", {
+        get: function ()
+        {
+            return _context.value;
+        },
+        configurable: false,
+        enumerable: true
+    });
 
-    /**Object. The root object in the graph.
+    /**Object. The root source object in the graph.
     @type {Object}*/
-    this.root = null;
+    this.rootSource = null;
+    Object.defineProperty(this, "rootSource", {
+        get: function ()
+        {
+            return _context.rootSource;
+        },
+        configurable: false,
+        enumerable: true
+    });
+
+    /**Object. The root target object in the graph.
+    @type {Object}*/
+    this.rootTarget = null;
+    Object.defineProperty(this, "rootTarget", {
+        get: function ()
+        {
+            return _context.rootTarget;
+        },
+        configurable: false,
+        enumerable: true
+    });
+};
+
+EVUI.Modules.Core.DeepExtendContext.prototype.getSourceValue = function ()
+{
+    return this.value;
+};
+
+EVUI.Modules.Core.DeepExtendContext.prototype.getTargetValue = function ()
+{
+    return EVUI.Modules.Core.Utils.getValue(this.propertyName, this.target);
+};
+
+EVUI.Modules.Core.DeepExtendContext.prototype.getSourceParent = function ()
+{
+    var pathSegments = EVUI.Modules.Core.Utils.getValuePathSegments(this.propertyPath);
+    var numSegs = pathSegments.length;
+
+    var parent = this.rootSource;
+    for (var x = 0; x < numSegs - 1; x++)
+    {        
+        var newParent = parent[pathSegments[x]];
+        if (newParent == null) break;
+
+        parent = newParent;
+    }
+
+    return parent;
+};
+
+EVUI.Modules.Core.DeepExtendContext.prototype.getTargetParent = function ()
+{
+    var pathSegments = EVUI.Modules.Core.Utils.getValuePathSegments(this.propertyPath);
+    var numSegs = pathSegments.length;
+
+    var parent = this.rootTarget;
+    for (var x = 0; x < numSegs - 1; x++)
+    {
+        var newParent = parent[pathSegments[x]];
+        if (newParent == null) break;
+
+        parent = newParent;
+    }
+
+    return parent;
 };
 
 /**Options for configuring the DeepExtender.*/
 EVUI.Modules.Core.DeepExtenderOptions = function ()
 {
-    /**An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
+    /**An optional filter function used to filter out properties from the source to extend onto the target, return false to not extend the property onto the target object. Or an array of property names to not extend onto the target object.
     @type {EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter|String[]}*/
     this.filter = null;
+
+    /**An optional filter function used to filter out properties from the source to extend onto the target, return false to not extend the property onto the target object. Or an array of property names to not extend onto the target object.
+    @type {EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter}*/
+    this.recursionFilter = null;
 };
 
 /**Object for wrapping properties in one object so that manipulating them changes a different object.
