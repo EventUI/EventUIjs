@@ -67,12 +67,12 @@
 
     await $evui.showPaneAsync("test");
 
-    await $evui.showPaneAsync("test2", {     
+    await $evui.showPaneAsync("test2", {
         absolutePosition:
         {
             top: 500,
             left: 500
-        }      
+        }
     });
 
     await $evui.waitAsync(2000);

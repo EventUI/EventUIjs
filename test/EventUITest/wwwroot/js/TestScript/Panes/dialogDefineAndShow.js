@@ -15,9 +15,10 @@
 
     d.setAttribute("evui-dlg-drag-handle", "");
 
-    var dialog = $evui.addDialog({
+    var dialog = $evui.addPane({
         id: "test",
         myProp: 1,
+        template: "dialog",
         loadSettings:
         {
             element: d
@@ -42,4 +43,6 @@
     {
         console.log(this);
     }
+
+    dialog.show();
 });

@@ -1,57 +1,48 @@
 ﻿$evui.init(function ()
 {
-    var test = document.createElement("div");
-    test.setAttribute("id", "testDialog");
-    document.body.appendChild(test);
+    var d = document.createElement("div");
+    d.classList.add("testDialog");
 
     $evui.css({
-        selector: ".testSize",
+        selector: ".testDialog",
         rules:
         {
-            width: "100%",
-            height: "100%"
+            height: "400px",
+            width: "500px",
+            background: "red"
         }
     });
 
-    $evui.css({
-        selector: "#testDialog",
-        rules:
-        {
-            minHeight: "250px",
-            minWidth: "250px",
-            backgroundColor: "blue"
-        }
-    });
+    d.setAttribute("evui-pane-drag-handle", "");
 
-    $evui.addPane({
-        id: "testDialog",
+    var dialog = $evui.addPane({
+        id: "test",
+        myProp: 1,
+        template: "dialog",
         loadSettings:
         {
-            selector: "#testDialog"
+            element: d
         },
-        showSettings:
-        {
-            center: true,
-            clipSettings:
-            {
-                mode: "shift"
-            }
-        },
-
         resizeMoveSettings:
         {
-            canDragMove: true,
-            canResizeBottom: true,
-            canResizeLeft: true,
-            canResizeRight: true,
-            canResizeTop: true,
-            dragHanldeMargin: 20
+            canResizeBottom: false,
+            canResizeTop: false,
+            canDragMove: true
         },
-        onLoaded: function (paneArgs)
+        autoCloseSettings:
         {
-            this.element.setAttribute(EVUI.Modules.Panes.Constants.Attribute_Drag, "");
+            autoCloseKeys: ["Ctrl"]
+        },
+        onShow: function ()
+        {
+            console.log(this.myProp);
         }
     });
 
-    $evui.showPane("testDialog");
+    $evui.panes.onInitialize = function ()
+    {
+        console.log(this);
+    }
+
+    dialog.show();
 });

@@ -775,6 +775,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             if (typeof callback !== "function") callback = function (success) { };
             if (transition == null) return callback(false);
 
+            if (_backdropHelper == null) ensureBackdropDiv();
+
             //the selector that will apply the transition to the backdrop
             var defaultSelector = getDefaultCssSelector(_backdropPaneCssName) + "." + selector;
 
@@ -1235,14 +1237,16 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         var argsLoadMode = getLoadMode(userLoadArgs);
 
         var mode = null;
-
+        var source = null;
         if (argsLoadMode === EVUI.Modules.NewPanes.PaneLoadMode.None && existingLoadMode !== EVUI.Modules.NewPanes.PaneLoadMode.None)
         {
             mode = existingLoadMode;
+            source = defaultLoadSettings;
         }
         else if (argsLoadMode !== EVUI.Modules.NewPanes.PaneLoadMode.None)
         {
             mode = argsLoadMode;
+            source = userLoadArgs;
         }
         else
         {
@@ -1252,11 +1256,11 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         switch (mode)
         {
             case EVUI.Modules.NewPanes.PaneLoadMode.ExistingElement:
-                finalArgs.element = resolveElement(finalArgs.element);
+                finalArgs.element = resolveElement(source.element);
                 break;
 
             case EVUI.Modules.NewPanes.PaneLoadMode.CSSSelector:
-                finalArgs.contextElement = resolveElement(finalArgs.contextElement);
+                finalArgs.contextElement = resolveElement(source.contextElement);
                 finalArgs.selector = source.selector;
                 break;
 
@@ -1442,6 +1446,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         EVUI.Modules.Core.Utils.shallowExtend(finalBackdrop, userBackdrop);
 
         if (EVUI.Modules.Core.Utils.isObject(userBackdrop) === false) userBackdrop = {};
+        if (EVUI.Modules.Core.Utils.isObject(defaultBackdrop) === false) defaultBackdrop = {};
 
         finalBackdrop.backdropShowTransition = resolvePaneTransition(defaultBackdrop.backdropShowTransition, userBackdrop.backdropShowTransition);
         finalBackdrop.backdropHideTransition = resolvePaneTransition(defaultBackdrop.backdropHideTransition, userBackdrop.backdropHideTransition);
@@ -3775,6 +3780,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
         if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded) === true) //if we're already loaded
         {
+            if (opSession.resolvedLoadArgs == null) opSession.resolvedLoadArgs = resolvePaneLoadArgs(opSession.entry.link.pane.loadSettings, opSession.userLoadArgs);
             if (opSession.resolvedLoadArgs.reload === true) //forcing a reload
             {
                 if (opSession.entry.link.paneAction !== EVUI.Modules.NewPanes.PaneAction.None) //if we were doing anything, we need to cancel it and begin the load again (even another load operation)
