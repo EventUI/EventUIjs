@@ -13,7 +13,7 @@
         }
     });
 
-    d.setAttribute("evui-dlg-drag-handle", "");
+    d.setAttribute("evui-pane-drag-handle", "");
 
     var dialog = $evui.addPane({
         id: "test",
@@ -39,7 +39,7 @@
         }
     });
 
-    $evui.dialogs.onInitialize = function ()
+    $evui.panes.onInitialize = function ()
     {
         console.log(this);
     }

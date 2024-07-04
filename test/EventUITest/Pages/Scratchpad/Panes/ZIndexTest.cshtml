@@ -1,0 +1,12 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Panes.ZIndexTestModel
+@{
+}
+
+@section Scripts
+{
+    <script src="~/js/TestScript/Panes/dialogZIndexTest.js"></script>
+}
+
+<button evui-pane-selector=".testDialog" evui-pane-template="dialog" onclick="$evui.showPane(event)">Show 1</button>
+<button evui-pane-selector=".testDialog2" evui-pane-template="dialog" onclick="$evui.showPane(event)">Show 2</button>

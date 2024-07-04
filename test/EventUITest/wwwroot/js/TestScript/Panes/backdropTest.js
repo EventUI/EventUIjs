@@ -4,13 +4,13 @@
     div.style.height = "200px";
     div.style.width = "200px";
     div.style.backgroundColor = "blue";
-    div.setAttribute(EVUI.Modules.Panes.Constants.Attribute_Drag, "");
+    div.setAttribute(EVUI.Modules.NewPanes.Constants.Attribute_Drag, "");
 
     var div2 = document.createElement("div");
     div2.style.height = "300px";
     div2.style.width = "300px";
     div2.style.background = "orange";
-    div2.setAttribute(EVUI.Modules.Panes.Constants.Attribute_Drag, "");
+    div2.setAttribute(EVUI.Modules.NewPanes.Constants.Attribute_Drag, "");
     div2.id = "div2";
 
     document.body.append(div2);

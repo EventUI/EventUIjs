@@ -15,8 +15,9 @@
 
     //document.body.appendChild(dd);
 
-    $evui.showDropdown("anotherTest", {
+    $evui.showPane("anotherTest", {
         context: "123",
+        template: "dropdown",
         loadArgs:
         {
             loadSettings:
