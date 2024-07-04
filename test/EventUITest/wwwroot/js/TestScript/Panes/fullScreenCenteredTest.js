@@ -9,7 +9,6 @@
         element: win
     });
 
-
     var showFullscreen = function (clip)
     {
         if (clip === true)

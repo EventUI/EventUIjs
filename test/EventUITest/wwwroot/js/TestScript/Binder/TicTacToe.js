@@ -35,7 +35,7 @@
             @param targetElement The element to append the game board under.*/
             this.initialize = async function (targetElement)
             {
-                if ($evui.isElement(targetElement) === false) throw Error("Element expected.");
+                if (targetElement instanceof Element === false) throw Error("Element expected.");
 
                 if (_initialized === true) return;
                 _initialized = true;

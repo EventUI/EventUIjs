@@ -36,14 +36,14 @@
                 backdropShowTransition:
                 {
                     css: "animation: color-me-in 2s",
-                    keyframes: "@keyframes color-me-in { 0% { background: black; opacity:0% } 50% { background: red; opacity: 37.5%} 100% { background: blue; opacity: 75%% }}",
+                    keyframes: "@keyframes color-me-in { 0% { background: black; opacity:0% } 50% { background: red; opacity: 37.5%} 100% { background: blue; opacity: 75% }}",
                     duration: 2000
                 }
             }
         }
     });
 
-    $evui.addPane("test2", {
+    $evui.addPane({
         id: "test2",
         element: "#div2",
         showSettings:
