@@ -2861,6 +2861,18 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         var inMidShow = _entries.filter(function (entry) { return entry.link.paneAction === EVUI.Modules.NewPanes.PaneAction.Show; });
         var numInMidShow = inMidShow.length;
 
+        var ancestorPanes = [];
+        var curAncestor = getPaneParentFromRelativeElement(autoCloseArgs.event.target);
+        var numAncestors = 0;
+        while (curAncestor != null)
+        {
+            numAncestors = ancestorPanes.push(curAncestor);
+            if (curAncestor.link.lastResolvedShowArgs == null || curAncestor.link.lastResolvedShowArgs.relativePosition == null) break;
+            var targetEle = curAncestor.link.lastResolvedShowArgs.relativePosition.relativeElement;
+
+            curAncestor = getPaneParentFromRelativeElement(targetEle);
+        }
+
         var numPanes = _entries.length;
         for (var x = 0; x < numVisible; x++)
         {
@@ -2876,24 +2888,38 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 {
                     if (curEntry.link.pane.element.contains(curInMidShow.link.currentOperation.resolvedShowArgs.relativePosition.relativeElement)) return false;
                 }              
-            }
-            
-            if (curEntry.link.pane.autoHideSettings != null && curEntry.link.pane.autoHideSettings.allowChaining === true)
-            {
-                var zIndex = curEntry.link.pane.getCurrentZIndex()
-                if (zIndex >= currentZIndex)
-                {    
-                    if (numInMidShow === 0 && numVisible === 1) return true;
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
-            }  
+            }   
         }
 
+        if (autoCloseEntry.link.pane.autoHideSettings != null && autoCloseEntry.link.pane.autoHideSettings.allowChaining === true)
+        {
+            if (ancestorPanes.indexOf(autoCloseEntry) >= 0)
+            {
+                if (ancestorPanes[0] === autoCloseEntry && numVisible === 1) return true;
+                return false;
+            }
+        }  
+
         return true;
+    };
+
+    /**
+     * 
+     * @param {InternalPaneEntry} entry
+     */
+    var getPaneParentFromRelativeElement = function (targetEle)
+    {
+        if (targetEle == null) return null;
+
+        var numPanes = _entries.length;
+        for (var x = 0; x < numPanes; x++)
+        {
+            var curPane = _entries[x];
+            if (curPane.link.pane.isVisible === false) continue;
+            if (curPane.link.pane.element.contains(targetEle) === true) return curPane;
+        }
+
+        return null;
     };
 
     /**Makes it so Dropdowns close in descending order of Z-Index when the keydown auto-close command is issued. Every dropdown has their own listener, so this function fires once per visible dropdown.
