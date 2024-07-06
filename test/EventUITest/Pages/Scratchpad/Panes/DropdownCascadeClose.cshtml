@@ -1,0 +1,19 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Panes.DropdownCascadeCloseModel
+@{
+}
+
+<div style="height:750px; width: 1000px; background-color:gray;" evui-pane-selector="#first" oncontextmenu="$evui.showPane(event)" evui-pane-template="dropdown" evui-pane-show="relative">
+</div>
+
+<div id="first" style="height: 200px; width:150px; background-color:green; display:none;">
+    <span evui-pane-selector="#second" onclick="$evui.showPane(event)" style="width:100%; display:block;" evui-pane-template="dropdown" evui-pane-show="relative">Click Me</span>
+</div>
+
+<div id="second" style="height: 100px; width:150px; background-color:indianred; display:none;">
+    <span evui-pane-selector="#third" onclick="$evui.showPane(event)" style="width: 100%; display:block;" evui-pane-template="dropdown" evui-pane-show="relative">Click Me</span>
+</div>
+
+<div id="third" style="height: 250px; width:150px; background-color:blue; display:none;">
+    <span>I'm the 3rd!</span>
+</div>

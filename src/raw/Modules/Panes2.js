@@ -85,16 +85,12 @@ EVUI.Modules.NewPanes.Constants.Attribute_Context = "evui-pane-cxt";
 @type {String}*/
 EVUI.Modules.NewPanes.Constants.Attribute_Selector = "evui-pane-selector";
 
-/**String. The name of the attribute on an element that triggers the showing of a Pane that specifies any of the properties contained in the PaneShowSettings object. It is highly advised to define this object in actual code with the Pane definition or show arguments instead of using this attribute.
+/**Determines the algorithm used to display a Pane from markup. Must be one of the values from PaneShowMode, optionally followed by {} with the arguments from the corresponding position object populated via JSON. 
+Any missing data will be inferred from the Event being used to show the Pane.
 
-Properties must be separated with semicolons and the key-value pairs must be separated by a colon. Dot qualifiers are be used to drill into sub-objects of the PaneShowSettings object (or its child objects) and properties which take an Element reference must instead take a CSS selector. Strings must be surrounded in single-quotes. Quotes within quotes must be escaped single quotes (\').
-
-The value that follows the colon will be parsed as JSON, i.e. "showTransition.css:{'someCssKey':'someValue'}" is valid, but "showTransition.css:{someCssKey:'someValue'}" is not.
-
-For example, "absolutePosition.x: 123; absolutePosition.y: 456" would set the absolute position of the Pane at (123, 456) in the document. 
-
-As another example, "relativePosition.element: '#myElement'; clipSettings.clipBounds.top: 123; clipSettings.clipBounds.left: 456; clipSettings.mode:'shift';" would position the Pane around the element that matches the #myElement selector and would be */
-EVUI.Modules.NewPanes.Constants.Attribute_ShowSettings = "evui-pane-show-settings";
+For example, relativePosition {orientation: 'bottom', alignment: 'left'} would position the Pane relative to the calling element.
+@type {String}*/
+EVUI.Modules.NewPanes.Constants.Attribute_ShowArgs = "evui-pane-show";
 
 EVUI.Modules.NewPanes.Constants.Event_OnShow = "show";
 EVUI.Modules.NewPanes.Constants.Event_OnHide = "hide";
@@ -978,7 +974,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         }
         else if (paneID instanceof Event)
         {
-            var interpetResult = getPaneFromEventArgs2(paneID);
+            var interpetResult = getPaneFromEventArgs(paneID);
             paneEntry = interpetResult.entry;
 
             var hadShowArgs = false;
@@ -1082,7 +1078,6 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         }
 
         var defaultShowSettings = paneEntry.link.pane.showSettings == null ? {} : paneEntry.link.pane.showSettings;
-
 
         finalArgs.showTransition = resolvePaneTransition(defaultShowSettings.showTransition, userShowArgs.showTransition);
         finalArgs.clipSettings = resolvePaneClipSettings(defaultShowSettings.clipSettings, userShowArgs.clipSettings);
@@ -1230,6 +1225,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         EVUI.Modules.Core.Utils.shallowExtend(finalPosition, userPosition);
 
         finalPosition.relativeElement = resolveElement(finalPosition.relativeElement);
+
+        return finalPosition;
     };
 
     /**
@@ -1367,29 +1364,36 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         finalArgs.context = userHideArgs.context;
         finalArgs.hideTransition = resolvePaneTransition(paneEntry.link.pane.showSettings != null ? paneEntry.link.pane.showSettings.hideTransition : {}, userHideArgs.hideTransition);
 
-        if (typeof userHideArgs.cascadeClose === "boolean")
+        if (typeof userHideArgs.cascadeHide === "boolean")
         {
-            finalArgs.cascadeClose = userHideArgs.cascadeClose;
+            finalArgs.cascadeHide = userHideArgs.cascadeHide;
         }
-        else if (paneEntry.link.pane.autoCloseSettings != null && typeof paneEntry.link.pane.autoCloseSettings.cascadeClose === "boolean")
+        else if (paneEntry.link.pane.autoHideSettings != null && typeof paneEntry.link.pane.autoHideSettings.cascadeHide === "boolean")
         {
-            finalArgs.cascadeClose = paneEntry.link.pane.autoCloseSettings.cascadeClose;
+            finalArgs.cascadeHide = paneEntry.link.pane.autoHideSettings.cascadeHide;
         }
 
-        if (finalArgs.cascadeClose === true)
+        if (finalArgs.cascadeHide === true)
         {
-            if (typeof userHideArgs.cascadeCloseGroupKey === "string" || EVUI.Modules.Core.Utils.isArray(userHideArgs.cascadeCloseGroupKey) === true)
+            if (typeof userHideArgs.cascadeHideGroupKey === "string" || EVUI.Modules.Core.Utils.isArray(userHideArgs.cascadeHideGroupKey) === true)
             {
-                finalArgs.cascadeCloseGroupKey = userHideArgs.cascadeCloseGroupKey;
+                finalArgs.cascadeHideGroupKey = userHideArgs.cascadeHideGroupKey;
             }
-            else if (aneEntry.link.pane.autoCloseSettings != null && (typeof paneEntry.link.pane.autoCloseSettings.cascadeCloseGroupKey === "string" || EVUI.Modules.Core.Utils.isArray(userHideArgs.cascadeCloseGroupKey) === true))
+            else if (paneEntry.link.pane.autoHideSettings != null)
             {
-                finalArgs.cascadeCloseGroupKey = paneEntry.link.pane.autoCloseSettings.cascadeCloseGroupKey;
+                if (typeof paneEntry.link.pane.autoHideSettings.cascadeHideGroupKey === "string")
+                {
+                    finalArgs.cascadeHideGroupKey = paneEntry.link.pane.autoHideSettings.cascadeHideGroupKey;
+                }
+                else if (EVUI.Modules.Core.Utils.isArray(paneEntry.link.pane.autoHideSettings.cascadeHideGroupKey) === true)
+                {
+                    finalArgs.cascadeHideGroupKey = paneEntry.link.pane.autoHideSettings.cascadeHideGroupKey.slice();
+                }
             }
 
-            if (EVUI.Modules.Core.Utils.isArray(finalArgs.cascadeCloseGroupKey) === true)
+            if (EVUI.Modules.Core.Utils.isArray(finalArgs.cascadeHideGroupKey) === true)
             {
-                finalArgs.cascadeCloseGroupKey = finalArgs.cascadeCloseGroupKey.filter(function (value) { return EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(value) });
+                finalArgs.cascadeHideGroupKey = finalArgs.cascadeHideGroupKey.filter(function (value) { return EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(value) === false });
             }
         }
 
@@ -1429,7 +1433,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
         if (EVUI.Modules.Core.Utils.isObject(userArgsTransition) === true)
         {
-            EVUI.Modules.Utils.shallowExtend(finalTransition, userArgsTransition);
+            EVUI.Modules.Core.Utils.shallowExtend(finalTransition, userArgsTransition);
             if (EVUI.Modules.Core.Utils.isObject(userArgsTransition.css) === true)
             {
                 finalTransition.css = EVUI.Modules.Core.Utils.deepExtend(EVUI.Modules.Core.Utils.isObject(finalTransition.css) ? finalTransition.css : {}, userArgsTransition.css);
@@ -1501,12 +1505,12 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
     /**
      * 
-     * @param {EVUI.Modules.NewPanes.PaneAutoCloseSettings} defaultAutoClose
-     * @param {EVUI.Modules.NewPanes.PaneAutoCloseSettings} userArgs
+     * @param {EVUI.Modules.NewPanes.PaneAutoHideSettings} defaultAutoClose
+     * @param {EVUI.Modules.NewPanes.PaneAutoHideSettings} userArgs
      */
-    var resolveAutoCloseSettings = function (defaultAutoClose, userArgs)
+    var resolveAutoHideSettings = function (defaultAutoClose, userArgs)
     {
-        var finalArgs = new EVUI.Modules.NewPanes.PaneAutoCloseSettings();
+        var finalArgs = new EVUI.Modules.NewPanes.PaneAutoHideSettings();
         EVUI.Modules.Core.Utils.shallowExtend(finalArgs, defaultAutoClose);
         EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userArgs);
 
@@ -1517,9 +1521,9 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 finalArgs.autoCloseKeys = defaultAutoClose.autoCloseKeys.slice();
             }
 
-            if (EVUI.Modules.Core.Utils.isArray(defaultAutoClose.cascadeCloseGroupKey) === true)
+            if (EVUI.Modules.Core.Utils.isArray(defaultAutoClose.cascadeHideGroupKey) === true)
             {
-                finalArgs.cascadeCloseGroupKey = defaultAutoClose.cascadeCloseGroupKey.slice();
+                finalArgs.cascadeHideGroupKey = defaultAutoClose.cascadeHideGroupKey.slice();
             }
         }
 
@@ -1530,9 +1534,9 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 finalArgs.autoCloseKeys = userArgs.autoCloseKeys.slice();
             }
 
-            if (EVUI.Modules.Core.Utils.isArray(userArgs.cascadeCloseGroupKey) === true)
+            if (EVUI.Modules.Core.Utils.isArray(userArgs.cascadeHideGroupKey) === true)
             {
-                finalArgs.cascadeCloseGroupKey = userArgs.cascadeCloseGroupKey.slice();
+                finalArgs.cascadeHideGroupKey = userArgs.cascadeHideGroupKey.slice();
             }
         }
 
@@ -1587,7 +1591,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         }
         else if (paneID instanceof Event)
         {
-            var interpetResult = getPaneFromEventArgs2(paneID, true);
+            var interpetResult = getPaneFromEventArgs(paneID, true);
 
             paneEntry = interpetResult.entry;
             if (EVUI.Modules.Core.Utils.isObject(paneHideArgs) === false)
@@ -1666,7 +1670,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         }
         else if (paneID instanceof Event)
         {
-            var interpetResult = getPaneFromEventArgs2(paneID);
+            var interpetResult = getPaneFromEventArgs(paneID);
             paneEntry = interpetResult.entry;
 
             if (EVUI.Modules.Core.Utils.isObject(paneLoadArgs) === false)
@@ -1741,7 +1745,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         }
         else if (paneID instanceof Event)
         {
-            var interpretResult = getPaneFromEventArgs2(paneID, true);
+            var interpretResult = getPaneFromEventArgs(paneID, true);
             paneEntry = interpretResult.entry;
 
             if (EVUI.Modules.Core.Utils.isObject(paneUnloadArgs) === false)
@@ -1909,71 +1913,12 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         }
 
         return paneEntry;
-    };
-
-    /**Creates a graph of all the properties we can determine about a Pane based on the currentTarget's attributes.
-    @param {Event} event The event arguments used to trigger the action of showing or hiding the pane.
-    @returns {EVUI.Modules.NewPanes.Pane} */
-    var getPaneFromEventArgs = function (event)
-    {
-        var paneSettings = {};
-        var objectAttrs = EVUI.Modules.Core.Utils.getElementAttributes(event.currentTarget);
-
-        var id = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_ID)); //first, make sure we have an ID. If we don't we have to attempt to find all other instances that will involve the same Pane and tag them all with the same ID.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(id) === true) 
-        {
-            id = fixPanesWithNoID(event, objectAttrs); //go find everything that has a load option in common with this pane and tag them all with the same ID.
-        }
-
-        paneSettings.id = id;
-
-        var src = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_SourceURL)); //if we have a src url, we're going to use HTTP to load this pane.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(src) === false)
-        {
-            if (paneSettings.loadSettings == null) paneSettings.loadSettings = {};
-            paneSettings.loadSettings.httpLoadArgs = {}
-            paneSettings.loadSettings.httpLoadArgs.url = src;
-            paneSettings.loadSettings.httpLoadArgs.method = "GET";
-        }
-
-        var placeholderID = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_PlaceholderID)); //if we have a placeholderID, we're going to use the placeholder loading logic to load this pane.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(placeholderID) === false)
-        {
-            if (paneSettings.loadSettings == null) paneSettings.loadSettings = {};
-            paneSettings.loadSettings.placeholderLoadArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs();
-            paneSettings.loadSettings.placeholderLoadArgs.placeholderID = placeholderID;
-        }
-
-        var context = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_Context));
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(context) === false) paneSettings.context = context;
-
-        var selector = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_Selector)); //if we have a CSS selector, we will use that to "load" this pane.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(selector) === false)
-        {
-            if (paneSettings.loadSettings == null) paneSettings.loadSettings = {};
-            paneSettings.loadSettings.selector = selector;
-        }
-
-        var unloadOnHide = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_UnloadOnHide)); //only set this value if it is a valid boolean value (so it doesn't override the default by accident if it is not found)
-        if (unloadOnHide === "true") paneSettings.unloadOnHide = true;
-        if (unloadOnHide === "false") paneSettings.unloadOnHide = false;
-
-
-        var showSettings = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_ShowSettings)); //finally, see if any show settings were attached to the element. If so, parse them into a real show settings object.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(showSettings) === false)
-        {
-            var parsedSettings = parseSettingsString(showSettings);
-            if (parsedSettings.relativePosition != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativePosition.relativeElement) === true) parsedSettings.relativePosition.relativeElement = event.currentTarget;
-            if (parsedSettings != null) paneSettings.showSettings = parsedSettings;
-        }        
-
-        return paneSettings;
-    };
+    };    
 
     /**Creates a graph of all the properties we can determine about a Pane based on the currentTarget's attributes.
     @param {Event} event The event arguments used to trigger the action of showing or hiding the pane.
     @returns {PaneEventArgsIntepretationResult} */
-    var getPaneFromEventArgs2 = function (event, throwIfMissing)
+    var getPaneFromEventArgs = function (event, throwIfMissing)
     {
         var paneSettings = {};
         var result = new PaneEventArgsIntepretationResult();
@@ -2028,13 +1973,11 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         if (unloadOnHide === "true") paneSettings.unloadOnHide = true;
         if (unloadOnHide === "false") paneSettings.unloadOnHide = false;
 
-
-        var showSettings = objectAttrs.getValue(getAttributeName(EVUI.Modules.NewPanes.Constants.Attribute_ShowSettings)); //finally, see if any show settings were attached to the element. If so, parse them into a real show settings object.
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(showSettings) === false)
+        var parsedShowArgs = null;
+        var showArgs = objectAttrs.getValue(EVUI.Modules.NewPanes.Constants.Attribute_ShowArgs);
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(showArgs) === false)
         {
-            var parsedSettings = parseSettingsString(showSettings);
-            if (parsedSettings.relativePosition != null && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativePosition.relativeElement) === true) parsedSettings.relativePosition.relativeElement = event.currentTarget;
-            if (parsedSettings != null) paneSettings.showSettings = parsedSettings;
+            parsedShowArgs = getShowModeArgsFromAttribute(showArgs, event);
         }
 
         var internalEntry = getInternalPaneEntry(id);
@@ -2045,8 +1988,13 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 throw Error("No pane with an id of " + id + " exists.");
             }
 
-            result.entry = makeOrGetPane(paneSettings);
-            return result;
+            internalEntry = makeOrGetPane(paneSettings);
+        }
+
+        if (parsedShowArgs != null)
+        {
+            if (paneSettings.showSettings == null) paneSettings.showSettings = {};
+            EVUI.Modules.Core.Utils.deepExtend(paneSettings.showSettings, parsedShowArgs);
         }
 
         result.entry = internalEntry;
@@ -2208,6 +2156,173 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         //}
 
         return attribute;
+    };
+
+    var parseAttributeJSON = function (attrValue)
+    {
+        if (typeof attrValue !== "string") return {};
+
+        var firstBracket = attrValue.indexOf("{");
+        var lastBracket = attrValue.lastIndexOf("}");
+
+        if (firstBracket === -1 || lastBracket === -1) return {};
+
+        var attrJson = attrValue.substring(firstBracket, lastBracket);
+
+        try
+        {
+            return JSON.parse(attrJson);
+        }
+        catch (ex)
+        {
+            throw Error("Error parsing attribute JSON (" + attrValue + "): " + ex.message);
+        }
+    };
+
+    /**
+     * 
+     * @param {any} attrValue
+     * @param {Event} event
+     */
+    var getShowModeArgsFromAttribute = function (attrValue, event)
+    {
+        var showMode = null;
+        var firstBracket = attrValue.indexOf("{");
+        if (firstBracket === -1)
+        {
+            showMode = attrValue.trim().toLowerCase()
+        }
+        else
+        {
+            showMode = attrValue.substring(0, firstBracket).trim().toLowerCase();
+        }
+
+        var showArgs = {};
+        
+        var parsedSettings = parseAttributeJSON(attrValue);
+
+        if (showMode === EVUI.Modules.NewPanes.PaneShowMode.AbsolutePosition)
+        {
+            var top = parsedSettings.top;
+            var left = parsedSettings.left;
+
+            if (event instanceof MouseEvent)
+            {
+                if (typeof top !== "number") top = event.clientY;
+                if (typeof left !== "number") left = event.clientX;
+            }
+            else
+            {
+                if (typeof top !== "number") top = 0;
+                if (typeof left !== "number") left = 0;
+            }
+
+            showArgs.absolutePosition = {
+                top: top,
+                left: left
+            };
+        }
+        else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.RelativePosition)
+        {
+            var relativeElement = null;
+            var top = parsedSettings.top;
+            var left = parsedSettings.left;
+            var useCursor = parsedSettings.useCursor;
+            var alignment = parsedSettings.alignment;
+            var orientation = parsedSettings.orientation;
+
+            if (useCursor === true && event instanceof MouseEvent)
+            {
+                if (typeof top !== "number") top = event.clientY;
+                if (typeof left !== "number") left = event.clientX;
+            }
+            else
+            {
+                relativeElement = resolveElement(parsedSettings.relativeElement);
+                if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativeElement) === true)
+                {
+                    if (event.type === "contextmenu")
+                    {
+                        if (typeof top !== "number") top = event.clientY;
+                        if (typeof left !== "number") left = event.clientX;
+                    }
+                    else
+                    {
+                        relativeElement = event.currentTarget;
+                    }
+                }
+                else
+                {
+                    relativeElement = parsedSettings.relativeElement; //we keep the string selector around so we can resolve it later when we need it
+                }
+            }
+
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(alignment))
+            {
+                orientation = EVUI.Modules.NewPanes.RelativePositionOrientation.Bottom + " " + EVUI.Modules.NewPanes.RelativePositionOrientation.Right;
+            }
+
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(orientation))
+            {
+                alignment = EVUI.Modules.NewPanes.RelativePositionAlignment.None;
+            }
+
+            showArgs.relativePosition = {
+                relativeElement: relativeElement,
+                useCursor: useCursor,
+                top: top,
+                left: left,
+                orientation: orientation,
+                alignment: alignment
+            }
+
+            //if we summoned a context menu, odds are the user doesn't want the browser's right click menu to pop up
+            if (event.type === "contextmenu") event.preventDefault();
+        }
+        else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.Centered)
+        {
+            showArgs.center = true;
+        }
+        else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.Anchored)
+        {
+            showSettings.anchors = {
+                top: parsedSettings.top,
+                left: parsedSettings.left,
+                bottom: parsedSettings.bottom,
+                right: parsedSettings.right,
+                alignX: (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.alignX) === true) ? EVUI.Modules.NewPanes.AnchorAlignment.Elastic : parsedSettings.alignX,
+                alignY: (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.alignY) === true) ? EVUI.Modules.NewPanes.AnchorAlignment.Elastic : parsedSettings.alignY
+            };
+        }
+        else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.Fullscreen)
+        {
+            showArgs.fullscreen = true;
+        }
+        else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.DocumentFlow)
+        {
+            var relativeElement = null;
+            var mode = EVUI.Modules.NewPanes.PaneDocumentFlowMode.Append;
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativeElement) === true)
+            {
+                relativeElement = event.currentTarget;
+            }
+
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.mode) === true)
+            {
+                mode = parsedSettings.mode;
+            }
+
+            showArgs.documentFlow = {
+                relativeElement: relativeElement,
+                mode: mode
+            }
+        }
+        else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.PositionClass)
+        {
+            showArgs.positionClass = parsedSettings.positionClass;
+        }
+
+        return showArgs;
     };
 
     /**Turns a string of settings into an object with those settings as properties.
@@ -2489,7 +2604,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         if (templateType === EVUI.Modules.NewPanes.PaneTemplateType.Dialog)
         {            
             return {
-                autoCloseSettings:
+                autoHideSettings:
                 {
                     closeMode: EVUI.Modules.NewPanes.PaneCloseMode.Explicit,
                     autoCloseKeys: ["Escape", "Enter"],
@@ -2517,12 +2632,13 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         else if (templateType === EVUI.Modules.NewPanes.PaneTemplateType.Dropdown)
         {
             return {
-                autoCloseSettings:
+                autoHideSettings:
                 {
                     closeMode: EVUI.Modules.NewPanes.PaneCloseMode.GlobalClick,
                     autoCloseKeys: ["Escape"],
-                    cascadeClose: true,
-                    cascadeCloseGroupKey: [EVUI.Modules.NewPanes.Constants.CascadeCloseGroup_DropdownDefault]
+                    cascadeHide: true,
+                    cascadeHideGroupKey: [EVUI.Modules.NewPanes.Constants.CascadeCloseGroup_DropdownDefault],
+                    allowChaining: true
                 },
                 showSettings:
                 {
@@ -2542,7 +2658,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         else if (templateType === EVUI.Modules.NewPanes.PaneTemplateType.Modal)
         {
             return {
-                autoCloseSettings:
+                autoHideSettings:
                 {
                     closeMode: EVUI.Modules.NewPanes.PaneCloseMode.Explicit,
                     autoCloseKeys: ["Escape", "Enter"],
@@ -2572,30 +2688,28 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
      * 
      * @param {PaneOperationSession} opSession
      */
-    var cascadeClose = function (entry, userHideArgs, callback)
+    var cascadeHide = function (entry, userHideArgs, callback)
     {
         if (typeof callback !== "function") callback = function () { };
 
         var finalHideSettings = resolvePaneHideArgs(entry, userHideArgs);
-        if (finalHideSettings.cascadeClose !== true || finalHideSettings.cascadeCloseGroupKey == null)
+        if (finalHideSettings.cascadeHide !== true || finalHideSettings.cascadeHideGroupKey == null)
         {
             return callback();
         }
-        else if (EVUI.Modules.Core.Utils.isArray(finalHideSettings.cascadeCloseGroupKey) === true && finalHideSettings.cascadeCloseGroupKey.length === 0)
+        else if (EVUI.Modules.Core.Utils.isArray(finalHideSettings.cascadeHideGroupKey) === true && finalHideSettings.cascadeHideGroupKey.length === 0)
         {
             return callback();
         }
-        else if (typeof finalHideSettings.cascadeCloseGroupKey !== "string" || finalHideSettings.cascadeCloseGroupKey.trim().length === 0)
+        else if (typeof finalHideSettings.cascadeHideGroupKey !== "string" || finalHideSettings.cascadeHideGroupKey.trim().length === 0)
         {
             return callback();
         }
 
-        var cascadeCloseKeys = EVUI.Modules.Core.Utils.isArray(finalHideSettings.cascadeCloseGroupKey) === true ? finalHideSettings.cascadeCloseGroupKey : [finalHideSettings.cascadeCloseGroupKey];
-        var numCascadeClose = cascadeCloseKeys.length;
+        var cascadeHideKeys = EVUI.Modules.Core.Utils.isArray(finalHideSettings.cascadeHideGroupKey) === true ? finalHideSettings.cascadeHideGroupKey : [finalHideSettings.cascadeHideGroupKey];
 
         var numToClose = 0;
         var numClosed = 0;
-        var anyClosed = false;
 
         var commonCallback = function (closed)
         {
@@ -2603,6 +2717,26 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             if (numToClose !== numClosed) return;
             return callback();
         };
+
+        var autoClose = function (context, pane, curAutoHideSettings)
+        {
+            numToClose++;
+            shouldAutoClose(context, pane, curAutoHideSettings, function (shouldClose)
+            {
+                if (shouldClose === true)
+                {
+                    _self.hidePane(pane.id, finalHideSettings, function ()
+                    {
+                        commonCallback(true);
+                    });
+                }
+                else
+                {
+                    numToClose--;
+                    commonCallback(false);
+                }
+            });   
+        }
 
         var numPanes = _entries.length;
         for (var x = 0; x < numPanes; x++)
@@ -2613,65 +2747,74 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             if (curPane.link.pane.isVisible() === false || curPane.link.paneActionSequence.indexOf(ActionSequence.Show) === -1) continue; //not visible or not in the process of being shown, can't hide
             if (curPane.link.paneActionSequence.indexOf(ActionSequence.Hide) !== -1) continue; //already being hidden, don't re-issue command.
 
-            var curAutoCloseSettings = curPane.link.pane.autoCloseSettings;
-            if (EVUI.Modules.Core.Utils.isObject(curAutoCloseSettings) === false) continue; //no auto-close settings, no match possible
+            var curAutoHideSettings = curPane.link.pane.autoHideSettings;
+            if (EVUI.Modules.Core.Utils.isObject(curAutoHideSettings) === false) continue; //no auto-close settings, no match possible
 
-            //make an array of close keys out of whatever the user has in each pane so we can just do a array cross reference check
-            var curCloseKeys = null;
-            if (EVUI.Modules.Core.Utils.isArray(curAutoCloseSettings.autoCloseKeys) === false)
-            {
-                if (typeof curAutoCloseSettings.autoCloseKeys === "string")
-                {
-                    curCloseKeys = [curAutoCloseSettings.autoCloseKeys];
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                curCloseKeys = curAutoCloseSettings.autoCloseKeys;
-            }
-
-            //see if any of the target's auto close keys is included in the current pane's list
-            var found = false;
-            var curNumKeys = curCloseKeys.length;
-            for (var y = 0; y < curNumKeys; y++)
-            {
-                if (cascadeCloseKeys.indexOf(curCloseKeys[y]) > -1)
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (found === false) continue; //no match found, don't close
+            if (isInCascadeHideGroup(cascadeHideKeys, curPane.link.pane.autoHideSettings.cascadeHideGroupKey) === false) continue; //no match found, don't close
 
             var context = new EVUI.Modules.NewPanes.PaneAutoTriggerContext();
             context.event = null;
             context.pane = curPane.link.pane;
             context.triggerType = EVUI.Modules.NewPanes.PaneAutoTriggerType.Cascade;
-            context.cascadeCloseGroupKey = cascadeCloseKeys.slice();
+            context.cascadeHideGroupKey = cascadeHideKeys.slice();
+            context.sourcePane = entry.link.pane;
 
-            numToClose++;
-            //we have a candidate for auto-closing, see if it's filter agrees on the close
-            shouldAutoClose(context, entry, curAutoCloseSettings, function (shouldClose)
-            {
-                if (shouldClose === true)
-                {
-                    _self.hidePane(curPane.paneId, finalHideSettings, function ()
-                    {
-                        commonCallback(true);
-                    });
-                }
-                else
-                {
-                    numToClose--;
-                    commonCallback(false);
-                }
-            });         
+            autoClose(context, curPane, curAutoHideSettings);                            
         }
+    };
+
+    /**
+     * 
+     * @param {String|String[]} triggerGroupKey
+     * @param {String|String[]} targetGroupKey
+     */
+    var isInCascadeHideGroup = function (triggerGroupKey, targetGroupKey)
+    {
+        
+
+        var triggerArray = triggerGroupKey;
+        if (typeof triggerArray === "string")
+        {
+            triggerArray = [triggerGroupKey];
+        }
+        else if (EVUI.Modules.Core.Utils.isArray(triggerArray) === false)
+        {
+            triggerArray = null;
+        }
+
+        var targetArray = targetGroupKey;
+        if (typeof targetArray === "string")
+        {
+            targetArray = [targetArray];
+        }
+        else if (EVUI.Modules.Core.Utils.isArray(targetArray) === false)
+        {
+            targetArray = null;
+        }
+
+        if (targetArray == null && triggerArray == null) return true;
+
+        var numTarget = (targetArray == null) ? 0 : targetArray.length;
+        var numTrigger = (triggerArray == null) ? 0 : triggerArray.length;
+
+        for (var x = 0; x < numTrigger; x++)
+        {
+            var curTrigger = triggerArray[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curTrigger) === true) continue;
+
+            for (var y = 0; y < numTarget; y++)
+            {
+                var curTarget = targetArray[y];
+                if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(curTarget) === true) continue;
+
+                if (curTrigger === curTarget)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     };
 
    /**Determines whether or not any of the AutoClose triggers attached to the Dropdown should trigger a hide operation on the Dropdown. Every dropdown has their own listener, so this function fires once per visible dropdown.
@@ -2680,13 +2823,15 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     var shouldAutoCloseDropdown = function (autoCloseArgs)
     {
         if (autoCloseArgs == null) return true;
-        if (autoCloseArgs.triggerType === EVUI.Modules.NewPanes.PaneAutoTriggerType.Click)
+        if (autoCloseArgs.triggerType === EVUI.Modules.NewPanes.PaneAutoTriggerType.Click ||
+            autoCloseArgs.triggerType === EVUI.Modules.NewPanes.PaneAutoTriggerType.ExteriorClick ||
+            autoCloseArgs.triggerType === EVUI.Modules.NewPanes.PaneAutoTriggerType.GlobalClick)
         {
-            return shouldAutoCloseOnClick(autoCloseArgs);
+            return shouldAutoCloseDropdownOnClick(autoCloseArgs);
         }
         else if (autoCloseArgs.triggerType === EVUI.Modules.NewPanes.PaneAutoTriggerType.KeyDown)
         {
-            return shouldAutoCloseOnKeydown(autoCloseArgs);
+            return shouldAutoCloseDropdownOnKeydown(autoCloseArgs);
         }
 
         return true;
@@ -2699,31 +2844,53 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     {
         if (autoCloseArgs.event.type === "contextmenu") //if someone is showing a right-click menu, make sure the dropdown isn't already showing itself in response to the same click. If it is, don't cancel the show.
         {
-            var entry = _settings.getPaneEntry(autoCloseArgs.pane.id);
+            var entry = getPaneEntry(autoCloseArgs.pane.id);
             if (entry.currentPaneAction === EVUI.Modules.NewPanes.PaneAction.Show) return false;
 
             autoCloseArgs.event.preventDefault(); //if it's not being shown actively, close the dropdown.
             return true;
         }
 
-        var visibleDropdowns = _self.getDropdown(function (dd) { return dd.isVisible }, true);
-        if (visibleDropdowns == null) return true; //get any visible dropdowns
+        var visibleDropdowns = _entries.filter(function (entry) { return entry.link.pane.isVisible; })
+        var numVisible = visibleDropdowns.length;
 
-        var midShow = _settings.getPaneEntry(function (entry) { return entry.currentPaneAction === EVUI.Modules.NewPanes.PaneAction.Show }, true);
-        var numMidShow = (midShow == null) ? 0 : midShow.length; //get any dropdowns that are in the middle of showing themselves.
+        var autoCloseEntry = getInternalPaneEntry(autoCloseArgs.pane.id);
+        var autoHideSettings = autoCloseArgs.pane.autoHideSettings == null ? {} : autoCloseArgs.pane.autoHideSettings;
+        var currentZIndex = autoCloseArgs.pane.getCurrentZIndex();
 
-        var numDropdowns = visibleDropdowns.length;
-        for (var x = 0; x < numDropdowns; x++)
+        var inMidShow = _entries.filter(function (entry) { return entry.link.paneAction === EVUI.Modules.NewPanes.PaneAction.Show; });
+        var numInMidShow = inMidShow.length;
+
+        var numPanes = _entries.length;
+        for (var x = 0; x < numVisible; x++)
         {
-            var curDropdown = visibleDropdowns[x];
-            for (var y = 0; y < numMidShow; y++) //see if the relative element of the dropdown being shown is a child of one of the active dropdowns. If it is, don't hide anything.
+            var curEntry = visibleDropdowns[x];
+
+            var curAutoHideSettings = curEntry.link.pane.autoHideSettings == null ? {} : curEntry.link.pane.autoHideSettings;
+            if (isInCascadeHideGroup(autoHideSettings.cascadeHideGroupKey, curAutoHideSettings.cascadeHideGroupKey) === false) continue;
+
+            for (var y = 0; y < numInMidShow; y++)
             {
-                var curInMidShow = midShow[y];
-                if (curInMidShow.pane.showSettings != null && curInMidShow.pane.showSettings.relativeElement != null)
+                var curInMidShow = inMidShow[y];               
+                if (curInMidShow.link.currentOperation != null && curInMidShow.link.currentOperation.resolvedShowArgs != null && curInMidShow.link.currentOperation.resolvedShowArgs.relativePosition != null)
                 {
-                    if (curDropdown.element.contains(curInMidShow.pane.showSettings.relativeElement)) return false;
-                }
+                    if (curEntry.link.pane.element.contains(curInMidShow.link.currentOperation.resolvedShowArgs.relativePosition.relativeElement)) return false;
+                }              
             }
+            
+            if (curEntry.link.pane.autoHideSettings != null && curEntry.link.pane.autoHideSettings.allowChaining === true)
+            {
+                var zIndex = curEntry.link.pane.getCurrentZIndex()
+                if (zIndex >= currentZIndex)
+                {    
+                    if (numInMidShow === 0 && numVisible === 1) return true;
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }  
         }
 
         return true;
@@ -3094,6 +3261,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         opSession.entry.link.eventStream = eventStream;
         opSession.entry.link.paneActionSequence = actionSequence;
         opSession.entry.link.paneAction = opSession.action;
+        opSession.entry.link.currentOperation = opSession;
 
         setTimeout(function () //we set a timeout so synchronous calls cancel each other out and this ensures that the event stream only begins once the current stack frame has cleared.
         {
@@ -3555,9 +3723,9 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Visible);
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Positioned);
 
-                    if (opSession.resolvedHideArgs.cascadeClose === true)
+                    if (opSession.resolvedHideArgs.cascadeHide === true)
                     {
-                        cascadeClose(opSession.entry, opSession.resolvedHideArgs, function ()
+                        cascadeHide(opSession.entry, opSession.resolvedHideArgs, function ()
                         {
                             jobArgs.resolve();
                         });
@@ -4686,17 +4854,19 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         position.classNames.push(EVUI.Modules.NewPanes.Constants.CSS_Position);
         position.classNames.push(entry.link.paneCSSName);
 
-        position.zIndex = getNextZIndex();
+        position.zIndex = getNextZIndex(entry);
         EVUI.Modules.NewPanes.Constants.GlobalZIndex = position.zIndex;
 
         return position;
     };
 
     /**Gets the next highest z-index so that the newly placed Pane appears on top of all the others.
+    @param {InternalPaneEntry} entry
     @returns {Number}*/
-    var getNextZIndex = function ()
+    var getNextZIndex = function (entry)
     {
         var highestZIndex = EVUI.Modules.NewPanes.Constants.GlobalZIndex;
+        var entryZIndex = (entry != null) ? entry.link.pane.getCurrentZIndex() : -1;
 
         var numEntries = _entries.length;
         for (var x = 0; x < numEntries; x++)
@@ -4707,6 +4877,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             if (curZIndex > highestZIndex) highestZIndex = curZIndex;
         }
 
+        if (highestZIndex === entryZIndex) return entryZIndex;
         return highestZIndex + 1;
     };
 
@@ -5185,10 +5356,10 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         else
         {
             positionBounds = new EVUI.Modules.Dom.ElementBounds();
-            positionBounds.left = relativeSettings.x;
-            positionBounds.top = relativeSettings.y;
-            positionBounds.right = relativeSettings.x;
-            positionBounds.bottom = relativeSettings.y;
+            positionBounds.left = relativeSettings.left;
+            positionBounds.top = relativeSettings.top;
+            positionBounds.right = relativeSettings.left;
+            positionBounds.bottom = relativeSettings.top;
         }
 
         //parse the alignment so that the values for each axis are correct (i.e. the user can put "right top" or "top right" and we need to correctly assign "right" to the x axis and "top" to the y axis)
@@ -5454,7 +5625,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             {
                 return EVUI.Modules.NewPanes.PaneShowMode.RelativePosition; //the relative element must be part of the DOM to be a valid target to orient around (so we can get its position)
             }
-            else if (resolvedShowArgs.relativePosition.x !== 0 || resolvedShowArgs.relativePosition.y !== 0)
+            else if (resolvedShowArgs.relativePosition.left !== 0 || resolvedShowArgs.relativePosition.top !== 0)
             {
                 return EVUI.Modules.NewPanes.PaneShowMode.RelativePosition; //if one of the coordinates is non zero value it can be a target for orientation
             }
@@ -5802,10 +5973,10 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         else
         {
             eleBounds = new EVUI.Modules.Dom.ElementBounds();
-            eleBounds.top = resolvedShowArgs.relativePosition.y;
-            eleBounds.left = resolvedShowArgs.relativePosition.x;
-            eleBounds.right = resolvedShowArgs.relativePosition.y;
-            eleBounds.bottom = resolvedShowArgs.relativePosition.x;
+            eleBounds.top = resolvedShowArgs.relativePosition.top;
+            eleBounds.left = resolvedShowArgs.relativePosition.left;
+            eleBounds.right = resolvedShowArgs.relativePosition.top;
+            eleBounds.bottom = resolvedShowArgs.relativePosition.left;
         }
 
         if (isOffScreen(eleBounds))
@@ -6319,7 +6490,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.NewPanes.PaneEventBinding(attributeName, "click", closeZones.elements[x], function (event)
             {
-                if (entry.link.pane.autoCloseSettings == null || (typeof entry.link.pane.autoCloseSettings.autoCloseFilter === "function" && entry.link.pane.autoCloseSettings.autoCloseFilter(context) === false)) return;
+                if (entry.link.pane.autoHideSettings == null || (typeof entry.link.pane.autoHideSettings.autoCloseFilter === "function" && entry.link.pane.autoHideSettings.autoCloseFilter(context) === false)) return;
 
                 var context = new EVUI.Modules.NewPanes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.NewPanes.PaneAutoTriggerType.Click;
@@ -6342,10 +6513,10 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     @param {InternalPaneEntry} entry The Pane being hooked to the close events.*/
     var hookUpAutoCloseMode = function (entry, resolvedShowArgs)
     {
-        if (entry.link.pane.element == null || entry.link.pane.autoCloseSettings == null) return;
-        var autoCloseSettings = resolveAutoCloseSettings(entry.link.pane.autoCloseSettings);
+        if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
+        var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
-        if (autoCloseSettings.closeMode === EVUI.Modules.NewPanes.PaneCloseMode.Click) //a click anywhere will close the Pane
+        if (autoHideSettings.closeMode === EVUI.Modules.NewPanes.PaneCloseMode.Click) //a click anywhere will close the Pane
         {
             var handler = new EVUI.Modules.NewPanes.PaneEventBinding(EVUI.Modules.NewPanes.PaneCloseMode.Click, "click contextmenu", document, function (event)
             {
@@ -6355,7 +6526,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 context.pane = entry.link.pane;
 
                 handler.detach();
-                shouldAutoClose(context, entry, autoCloseSettings, function (shouldClose)
+                shouldAutoClose(context, entry, autoHideSettings, function (shouldClose)
                 {
                     if (shouldClose === true)
                     {
@@ -6379,7 +6550,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             handler.attach();
             entry.link.eventBindings.push(handler);
         }
-        else if (autoCloseSettings.closeMode === EVUI.Modules.NewPanes.PaneCloseMode.ExteriorClick) //only a click outside the Pane's root element will close the Pane
+        else if (autoHideSettings.closeMode === EVUI.Modules.NewPanes.PaneCloseMode.ExteriorClick) //only a click outside the Pane's root element will close the Pane
         {
             var handler = new EVUI.Modules.NewPanes.PaneEventBinding(EVUI.Modules.NewPanes.PaneCloseMode.ExteriorClick, "click contextmenu", document, function (event)
             {
@@ -6389,12 +6560,12 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 context.pane = entry.link.pane;
 
                 //make sure the click comes from outside the Pane
-                if ((typeof entry.link.pane.autoCloseSettings.autoCloseFilter === "function" && entry.link.pane.autoCloseSettings.autoCloseFilter(context) === true) || //if the filter says it shouldn't be closed, don't hide it
+                if ((typeof entry.link.pane.autoHideSettings.autoCloseFilter === "function" && entry.link.pane.autoHideSettings.autoCloseFilter(context) === true) || //if the filter says it shouldn't be closed, don't hide it
                     EVUI.Modules.Core.Utils.containsElement(event.target, entry.link.pane.element) === true || //or if the element target is contained by the element, don't hide it
                     event.target === entry.link.pane.element) return; //or if the element target is the Pane itself, don't hide it
 
                 handler.detach();
-                shouldAutoClose(context, entry, autoCloseSettings, function (shouldClose)
+                shouldAutoClose(context, entry, autoHideSettings, function (shouldClose)
                 {
                     if (shouldClose === true)
                     {
@@ -6418,21 +6589,55 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             handler.attach();
             entry.link.eventBindings.push(handler);
         }
-    };
+        else if (autoHideSettings.closeMode === EVUI.Modules.NewPanes.PaneCloseMode.GlobalClick) //only a click outside the Pane's root element will close the Pane
+        {
+            var handler = new EVUI.Modules.NewPanes.PaneEventBinding(EVUI.Modules.NewPanes.PaneCloseMode.GlobalClick, "click contextmenu", document, function (event)
+            {
+                var context = new EVUI.Modules.NewPanes.PaneAutoTriggerContext();
+                context.triggerType = EVUI.Modules.NewPanes.PaneAutoTriggerType.GlobalClick;
+                context.event = event;
+                context.pane = entry.link.pane;
+
+                handler.detach();
+                shouldAutoClose(context, entry, autoHideSettings, function (shouldClose)
+                {
+                    if (shouldClose === true)
+                    {
+                        _self.hidePane(entry.paneId, {
+                            context: context
+                        }, function ()
+                        {
+                            if (EVUI.Modules.Core.Utils.hasFlag(entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Visible) === true)
+                            {
+                                handler.attach();
+                            }
+                        });
+                    }
+                    else
+                    {
+                        handler.attach();
+                    }
+                });
+            });
+
+            handler.attach();
+            entry.link.eventBindings.push(handler);
+        }
+    }
 
     /**Hooks up an event listener on the document level listening for a keystroke that will close the Pane. 
     @param {InternalPaneEntry} entry The Pane that will be closed.*/
     var hookUpKeydownClose = function (entry)
     {
-        if (entry.link.pane.element == null || entry.link.pane.autoCloseSettings == null) return;
-        var autoCloseSettings = resolveAutoCloseSettings(entry.link.pane.autoCloseSettings);
+        if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
+        var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
-        if (autoCloseSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoCloseSettings.autoCloseKeys) === false) return;
+        if (autoHideSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoCloseKeys) === false) return;
 
         var handler = new EVUI.Modules.NewPanes.PaneEventBinding("autoCloseKey", "keydown", document, function (event)
         {
-            if (autoCloseSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoCloseSettings.autoCloseKeys) === false) return;
-            if (autoCloseSettings.autoCloseKeys.indexOf(event.key) === -1) return;
+            if (autoHideSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoCloseKeys) === false) return;
+            if (autoHideSettings.autoCloseKeys.indexOf(event.key) === -1) return;
 
             var context = new EVUI.Modules.NewPanes.PaneAutoTriggerContext();
             context.triggerType = EVUI.Modules.NewPanes.PaneAutoTriggerType.KeyDown;
@@ -6441,7 +6646,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             context.pane = entry.link.pane;
 
             handler.detach();
-            shouldAutoClose(context, entry, autoCloseSettings, function (shouldClose)
+            shouldAutoClose(context, entry, autoHideSettings, function (shouldClose)
             {
                 if (shouldClose === true)
                 {
@@ -6470,11 +6675,19 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
     @param {EVUI.Modules.NewPanes.PaneAutoTriggerContext} context The context of what caused the automatic closure of the Pane.
     @param {InternalPaneEntry} entry
     @param {Function} callback */
-    var shouldAutoClose = function (context, entry, resolvedAutoCloseSettings, callback)
+    var shouldAutoClose = function (context, entry, resolvedAutoHideSettings, callback)
     {
-        if (typeof resolvedAutoCloseSettings.autoCloseFilter !== "function") return callback(true);
+        if (resolvedAutoHideSettings.allowChaining === true)
+        {
+            if (shouldAutoCloseDropdown(context) === false)
+            {
+                return callback(false);
+            }
+        }
 
-        var value = resolvedAutoCloseSettings.autoCloseFilter(context);
+        if (typeof resolvedAutoHideSettings.autoCloseFilter !== "function") return callback(true);
+
+        var value = resolvedAutoHideSettings.autoCloseFilter(context);
         if (EVUI.Modules.Core.Utils.isPromise(value) === true)
         {
             value.then(function (result)
@@ -7185,9 +7398,9 @@ EVUI.Modules.NewPanes.Pane = function (entry)
     @type {EVUI.Modules.NewPanes.PaneResizeMoveSettings}*/
     this.resizeMoveSettings = new EVUI.Modules.NewPanes.PaneResizeMoveSettings();
 
-    /**Object. Settings for controlling how the Pane can be automatically closed.
-    @type {EVUI.Modules.NewPanes.PaneAutoCloseSettings}*/
-    this.autoCloseSettings = new EVUI.Modules.NewPanes.PaneAutoCloseSettings();
+    /**Object. Settings for controlling how the Pane can be automatically hidden.
+    @type {EVUI.Modules.NewPanes.PaneAutoHideSettings}*/
+    this.autoHideSettings = new EVUI.Modules.NewPanes.PaneAutoHideSettings();
 
     /**Boolean. Whether or not to unload the Pane from the DOM when it is hidden (only applies to elements that were loaded via HTTP). False by default.
     @type {Boolean}*/
@@ -7363,23 +7576,27 @@ EVUI.Modules.NewPanes.Pane = function (entry)
 
 /**Settings for controlling how the Pane will automatically close itself in response to user events.
 @class*/
-EVUI.Modules.NewPanes.PaneAutoCloseSettings = function ()
+EVUI.Modules.NewPanes.PaneAutoHideSettings = function ()
 {
     /**String. The trigger for what should close the Pane.
     @type {String}*/
     this.closeMode = EVUI.Modules.NewPanes.PaneCloseMode.Explicit;
 
-    /**Boolean. Whether or not the closing of this Pane should cause a cascade of other Panes (identified by their cascadeCloseGroupKey) to hide themselves.
+    /**Boolean. Whether or not the closing of this Pane should cause a cascade of other Panes (identified by their cascadeHideGroupKey) to hide themselves.
     @type {Boolean} */
-    this.cascadeClose = false;
+    this.cascadeHide = false;
 
-    /**String. The arbitrary group key used to determine which 'cascade close' this pane is a part of.
+    /**String. The arbitrary group key used to determine which 'cascade hide' this pane is a part of.
     @type {String|String[]}*/
-    this.cascadeCloseGroupKey = null;
+    this.cascadeHideGroupKey = null;
 
-    /**Array. An array of characters/key names ("a", "b", "Escape", "Enter" etc) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
+    /**Array. An array of characters/key names ("a", "b", "Escape", "Enter", etc.) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
     @type {String[]}*/
     this.autoCloseKeys = [];
+
+    /**Boolean. Controls whether or not a click-based closeMode will close the Pane that invoked show on the current Pane.
+    @type {Boolean}*/
+    this.allowChaining = false;
 
     /**An optional function to use to determine if an auto-close event should hide the Pane. Return false to prevent the Pane from being hidden.
     @param {EVUI.Modules.NewPanes.PaneAutoTriggerContext} autoTriggerContext The context object generated by the event handler.
@@ -7609,33 +7826,6 @@ EVUI.Modules.NewPanes.PaneDocumentFlow = function ()
     /**Object. The Element (or CSS selector of the Element) that the Pane will be inserted into the document flow relative to.
     @type {Element|String}*/
     this.relativeElement = null;
-    Object.defineProperty(this, "relativeElement",
-    {
-        get: function () { return _relativeElement; },
-        set: function (value)
-        {
-            if (value != null)
-            {
-                if (typeof value === "string")
-                {
-                    _relativeElement = value;
-                }
-                else
-                {
-                    var ele = EVUI.Modules.Core.Utils.getValidElement(value);
-                    if (ele == null) throw Error("Invalid input for PaneDocumentFlow.element. Must be a string or an object derived from an Element..");
-
-                    _relativeElement = ele;
-                }
-            }
-            else
-            {
-                _relativeElement = null;
-            }
-        },
-        configurable: false,
-        enumerable: true
-    });
 
     /**String. A value from EVUI.Modules.Pane.PaneDocumentFlowMode indicating whether or not to append, prepend, or insert before/after the relative element. Appends the Pane as a child to the reference element by default.
     @type {String}*/
@@ -7712,11 +7902,11 @@ EVUI.Modules.NewPanes.PaneRelativePosition = function ()
 {
     /**Number. The X-Coordinate to align the Pane to if it is not being aligned with an Element.
     @type {Number}*/
-    this.x = 0;
+    this.left = 0;
 
     /**Number. The Y-Coordinate to align the Pane to if it is not being aligned with an Element.
     @type {Number}*/
-    this.y = 0;
+    this.top = 0;
 
     /**String. The orientation of the Pane relative to the point or element. "bottom right" by default. If only "left" or "right" is specified, "bottom" is implied; if only "bottom" or "top" is specified, "right" is implied..
     @type {String}*/
@@ -7729,6 +7919,10 @@ EVUI.Modules.NewPanes.PaneRelativePosition = function ()
     /**Object. An Element (or CSS selector of an Element) to be used as a point or reference for the Pane to be placed next to. Defers to an x,y point specification.
     @type {Element|String}*/
     this.relativeElement = null;
+
+    /**Boolean. Whether or not the cursor should be used as the relative point to position the Pane at if being called from an MouseEvent event handler.
+    @type {Boolean} */
+    this.useCursor = false;
 };
 
 /**Object for describing how the Pane will recalculate its position.
@@ -7946,7 +8140,13 @@ EVUI.Modules.NewPanes.PaneAutoTriggerContext = function ()
     @type {EVUI.Modules.NewPanes.Pane}*/
     this.pane = null;
 
-    this.cascadeCloseGroupKey = null;
+    /**Object. If this auto-trigger is being triggered by another Pane, this is that Pane.
+    @type {EVUI.Modules.NewPanes.Pane}*/
+    this.sourcePane = null;
+
+    /**String. If this was a cascade close operation, these are the keys that matched and triggered the close.
+    @type {String|String[]}*/
+    this.cascadeHideGroupKey = null;
 };
 
 /**Enum for describing the type of auto-close method that is being used to automatically close the Pane.
@@ -7955,15 +8155,17 @@ EVUI.Modules.NewPanes.PaneAutoTriggerType =
 {
     /**Default. No trigger type.*/
     None: "none",
-    /**The BantPane is being closed due to a click event anywhere in the document.*/
-    Click: "globalClick",
-    /**The Pane is being closed due to a click outside of itself somewhere in the document.*/
-    ExteriorClick: "exteriorClick",
-    /**The Pane is being closed due to a keydown event.*/
+    /**The BantPane is being hidden due to a click event anywhere in the document.*/
+    GlobalClick: "click-global",
+    /**The BantPane is being hidden due to a click inside the Pane's element.*/
+    Click: "click",
+    /**The Pane is being hidden due to a click outside of itself somewhere in the document.*/
+    ExteriorClick: "click-exterior",
+    /**The Pane is being hidden due to a keydown event.*/
     KeyDown: "keydown",
-    /**The Pane is being closed due to one of its close handles being clicked on.*/
+    /**The Pane is being hidden due to one of its close handles being clicked on.*/
     Explicit: "explicit",
-    /**The Pane is being closed as the result of a cascading close of another Pane.*/
+    /**The Pane is being hidden as the result of a cascading close of another Pane.*/
     Cascade: "cascade"
 };
 Object.freeze(EVUI.Modules.NewPanes.PaneAutoTriggerType);
@@ -8271,13 +8473,13 @@ EVUI.Modules.NewPanes.PaneHideArgs = function ()
     @type {Any}*/
     this.context = undefined;
 
-    /**Boolean. Whether or not the closing of this Pane should cause a cascade of other Panes (identified by their cascadeCloseGroupKey) to hide themselves.
+    /**Boolean. Whether or not the closing of this Pane should cause a cascade of other Panes (identified by their cascadeHideGroupKey) to hide themselves.
     @type {Boolean} */
-    this.cascadeClose = undefined;
+    this.cascadeHide = undefined;
 
     /**String. The arbitrary group key used to determine which 'cascade close' group should be hidden.
     @type {String|String[]}*/
-    this.cascadeCloseGroupKey = undefined;
+    this.cascadeHideGroupKey = undefined;
 
     /**Object. The hide transition to use to hide the Pane.
     @type {EVUI.Modules.NewPanes.PaneTransition}*/
@@ -8288,7 +8490,7 @@ EVUI.Modules.NewPanes.PaneHideArgs = function ()
     this.unload = undefined;
 
     /**Object. The PaneUnloadArgs to use if unloading this Pane upon being hidden.
-    @type {EVUI.Modues.NewPanes.PaneUnloadArgs}*/
+    @type {EVUI.Modules.NewPanes.PaneUnloadArgs}*/
     this.unloadArgs = undefined;
 };
 

@@ -29,7 +29,7 @@
             canResizeTop: false,
             canDragMove: true
         },
-        autoCloseSettings:
+        autoHideSettings:
         {
             autoCloseKeys: ["Ctrl"]
         },

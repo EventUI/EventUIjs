@@ -15,15 +15,13 @@
 
     //document.body.appendChild(dd);
 
-    $evui.showPane("anotherTest", {
+    $evui.showPane({
+        id: "anotherTest",
         context: "123",
         template: "dropdown",
-        loadArgs:
+        loadSettings:
         {
-            loadSettings:
-            {
-                element: dd,
-            },
+            element: dd,
         },
         showSettings:
         {
