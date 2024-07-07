@@ -1117,7 +1117,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             case EVUI.Modules.NewPanes.PaneShowMode.Centered:
 
                 var center = defaultShowSettings.center;
-                if (userShowArgs.center === "boolean") center = userShowArgs.center;
+                if (typeof userShowArgs.center === "boolean") center = userShowArgs.center;
 
                 finalArgs.center = center;
                 break;
@@ -3275,6 +3275,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {
+                opSession.resolvedLoadArgs = resolvePaneLoadArgs(opSession.entry.link.pane.loadSettings, opSession.userLoadArgs);
                 if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded) === true && opSession.resolvedLoadArgs.reload === false) return jobArgs.resolve();
 
                 if (EVUI.Modules.Core.Utils.isElement(opSession.entry.link.pane.element) === true)
@@ -8252,10 +8253,6 @@ EVUI.Modules.NewPanes.Manager = null;
         configurable: false
     });
 })();
-
-
-
-
 
 /**Arguments for hiding a Pane. 
 @class*/

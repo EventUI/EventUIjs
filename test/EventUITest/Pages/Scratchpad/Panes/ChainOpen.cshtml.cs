@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace EventUITest.Pages.Scratchpad.Panes
 {
-    public class DropdownCascadeCloseModel : PageModel
+    public class ChainOpenModel : PageModel
     {
         public void OnGet()
         {
