@@ -31,7 +31,7 @@
         },
         autoHideSettings:
         {
-            autoCloseKeys: ["Ctrl"]
+            autoCloseKeys: ["Control"]
         },
         onShow: function ()
         {

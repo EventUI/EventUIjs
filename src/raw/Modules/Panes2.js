@@ -3301,6 +3301,11 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                     unloadRootElement(opSession.entry);
                 }
 
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded))
+                {
+                    return jobArgs.resolve();
+                }
+
                 loadRootElement(opSession.entry, opSession.resolvedLoadArgs, function (success)
                 {
                     if (success === true)
@@ -3781,20 +3786,21 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             type: EVUI.Modules.EventStream.EventStreamStepType.Job,
             handler: function (jobArgs)
             {
+                opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded);
+
                 if (skip === true) return jobArgs.resolve();
 
                 try
                 {
-                    opSession.resolvedUnloadArgs = resolvePaneUnloadArgs(opSession.entry, opSession.userUnloadArgs);
-                    opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded);
+                    opSession.resolvedUnloadArgs = resolvePaneUnloadArgs(opSession.entry, opSession.userUnloadArgs);                    
                     unloadRootElement(opSession.entry, opSession.entry.link.lastResolvedShowArgs);                    
                 }
                 catch (ex)
                 {
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.addFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded);
+                    return jobArgs.resolve();
                 }
 
-                opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Initialized);
                 jobArgs.resolve();
             }
         });
