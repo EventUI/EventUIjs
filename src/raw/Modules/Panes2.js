@@ -1042,7 +1042,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         opSession.callback = (typeof callback === "function") ? callback : function (success) { };
         opSession.userShowArgs = paneShowArgs;
         opSession.userLoadArgs = paneShowArgs == null ? null : paneShowArgs.loadArgs;
-
+        opSession.resolvedShowArgs = resolvePaneShowArgs(paneEntry, paneShowArgs);
+        opSession.resolvedLoadArgs = paneShowArgs == null ? null : resolvePaneLoadArgs(paneEntry, paneShowArgs.loadArgs);
         performOperation(opSession);
     };
 
@@ -1060,7 +1061,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userShowArgs, _showArgsFilter);
 
         //use the user's context if one was provided
-        if (EVUI.Modules.Core.Utils.isObject(userShowArgs.context) === true)
+        if (userShowArgs != null && userShowArgs.context !== undefined)
         {
             finalArgs.context = userShowArgs.context;
         }
@@ -1243,6 +1244,12 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         var existingLoadMode = getLoadMode(defaultLoadSettings);
         var argsLoadMode = getLoadMode(userLoadArgs);
 
+        //use the user's context if one was provided
+        if (userLoadArgs != null && userLoadArgs.context !== undefined)
+        {
+            finalArgs.context = userLoadArgs.context;
+        }
+
         var mode = null;
         var source = null;
         if (argsLoadMode === EVUI.Modules.NewPanes.PaneLoadMode.None && existingLoadMode !== EVUI.Modules.NewPanes.PaneLoadMode.None)
@@ -1361,7 +1368,12 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
         EVUI.Modules.Core.Utils.deepExtend(finalArgs, userHideArgs, { filter: _hideArgumentFilter });
 
-        finalArgs.context = userHideArgs.context;
+        //use the user's context if one was provided
+        if (userHideArgs != null && userHideArgs.context !== undefined)
+        {
+            finalArgs.context = userHideArgs.context;
+        }
+
         finalArgs.hideTransition = resolvePaneTransition(paneEntry.link.pane.showSettings != null ? paneEntry.link.pane.showSettings.hideTransition : {}, userHideArgs.hideTransition);
 
         return finalArgs;
@@ -1592,6 +1604,8 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         opSession.callback = (typeof callback === "function") ? callback : function (success) { };
         opSession.userHideArgs = paneHideArgs;
         opSession.userUnloadArgs = (paneHideArgs != null) ? paneHideArgs.unloadArgs : null;
+        opSession.resolvedHideArgs = resolvePaneHideArgs(paneEntry, paneHideArgs);
+        opSession.resolvedUnloadArgs = (paneHideArgs != null) ? resolvePaneUnloadArgs(paneEntry, paneHideArgs.unloadArgs) : null;
 
         performOperation(opSession);
     };
@@ -1670,6 +1684,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         opSession.currentAction = EVUI.Modules.NewPanes.PaneAction.Load;
         opSession.callback = (typeof callback === "function") ? callback : function (success) { };
         opSession.userLoadArgs = paneLoadArgs;
+        opSession.resolvedLoadArgs = resolvePaneLoadArgs(paneEntry.link.pane.loadSettings, paneLoadArgs);
 
         performOperation(opSession);
     };
@@ -1745,6 +1760,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         opSession.currentAction = EVUI.Modules.NewPanes.PaneAction.Unload;
         opSession.callback = (typeof callback === "function") ? callback : function (success) { };
         opSession.userUnloadArgs = paneUnloadArgs;
+        opSession.resolvedUnloadArgs = resolvePaneUnloadArgs(paneEntry, paneUnloadArgs);
 
         performOperation(opSession);
     };
@@ -3179,6 +3195,27 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
             paneArgs.cancel = eventStreamArgs.cancel;
             paneArgs.stopPropagation = eventStreamArgs.stopPropagation;
 
+            if (opSession.context == null)
+            {
+                if (opSession.action === EVUI.Modules.NewPanes.PaneAction.Show)
+                {
+                    if (opSession.resolvedShowArgs != null) opSession.context = opSession.resolvedShowArgs.context;
+                }
+                else if (opSession.action === EVUI.Modules.NewPanes.PaneAction.Load)
+                {
+                    if (opSession.resolvedLoadArgs != null) opSession.context = opSession.resolvedLoadArgs.context;
+                }
+                else if (opSession.action === EVUI.Modules.NewPanes.PaneAction.Hide)
+                {
+                    if (opSession.resolvedHideArgs != null) opSession.context = opSession.resolvedHideArgs.context;
+                }
+                else if (opSession.action === EVUI.Modules.NewPanes.PaneAction.Unload)
+                {
+                    if (opSession.resolvedUnloadArgs != null) opSession.context = opSession.resolvedUnloadArgs.context;
+                }
+            }
+
+
             paneArgs.context = opSession.context;
             paneArgs.hideArgs = opSession.userHideArgs;
             paneArgs.loadArgs = opSession.userLoadArgs;
@@ -3789,7 +3826,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.NewPanes.PaneStateFlags.Loaded);
 
                 if (skip === true) return jobArgs.resolve();
-
+                
                 try
                 {
                     opSession.resolvedUnloadArgs = resolvePaneUnloadArgs(opSession.entry, opSession.userUnloadArgs);                    
