@@ -1562,7 +1562,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 paneHideArgs = interpetResult.userHideArgs;
                 if (EVUI.Modules.Core.Utils.isObject(paneHideArgs) === true)
                 {
-                    paneShowArgs.context = interpetResult.context;
+                    paneHideArgs.context = interpetResult.context;
                 }
             }
         }
@@ -2124,7 +2124,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
         if (firstBracket === -1 || lastBracket === -1) return {};
 
-        var attrJson = attrValue.substring(firstBracket, lastBracket);
+        var attrJson = attrValue.substring(firstBracket, lastBracket + 1);
 
         try
         {
@@ -2182,7 +2182,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
         else if (showMode === EVUI.Modules.NewPanes.PaneShowMode.RelativePosition)
         {
             var relativeElement = null;
-            var top = parsedSettings.top;
+            var top = parsedSettingsr.top;
             var left = parsedSettings.left;
             var useCursor = parsedSettings.useCursor;
             var alignment = parsedSettings.alignment;
