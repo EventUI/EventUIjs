@@ -33,19 +33,19 @@
         switch (alignment)
         {
             case 0:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.None;
+                return EVUI.Modules.Panes.RelativePositionAlignment.None;
             case 1:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.Top;
+                return EVUI.Modules.Panes.RelativePositionAlignment.Top;
             case 2:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.YCenter;
+                return EVUI.Modules.Panes.RelativePositionAlignment.YCenter;
             case 3:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.Bottom;
+                return EVUI.Modules.Panes.RelativePositionAlignment.Bottom;
             case 4:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.Left;
+                return EVUI.Modules.Panes.RelativePositionAlignment.Left;
             case 5:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.XCenter;
+                return EVUI.Modules.Panes.RelativePositionAlignment.XCenter;
             case 6:
-                return EVUI.Modules.NewPanes.RelativePositionAlignment.Right;
+                return EVUI.Modules.Panes.RelativePositionAlignment.Right;
         }
     };
 

@@ -50,15 +50,15 @@ $evui.init(function ()
         switch (index)
         {
             case 0:
-                return EVUI.Modules.NewPanes.AnchorAlignment.None;
+                return EVUI.Modules.Panes.AnchorAlignment.None;
             case 1:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Left;
+                return EVUI.Modules.Panes.AnchorAlignment.Left;
             case 2:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Center;
+                return EVUI.Modules.Panes.AnchorAlignment.Center;
             case 3:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Right;
+                return EVUI.Modules.Panes.AnchorAlignment.Right;
             case 4:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Elastic;
+                return EVUI.Modules.Panes.AnchorAlignment.Elastic;
             default:
                 return null;
         }
@@ -69,15 +69,15 @@ $evui.init(function ()
         switch (index)
         {
             case 0:
-                return EVUI.Modules.NewPanes.AnchorAlignment.None;
+                return EVUI.Modules.Panes.AnchorAlignment.None;
             case 1:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Top;
+                return EVUI.Modules.Panes.AnchorAlignment.Top;
             case 2:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Center;
+                return EVUI.Modules.Panes.AnchorAlignment.Center;
             case 3:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Bottom;
+                return EVUI.Modules.Panes.AnchorAlignment.Bottom;
             case 4:
-                return EVUI.Modules.NewPanes.AnchorAlignment.Elastic;
+                return EVUI.Modules.Panes.AnchorAlignment.Elastic;
             default:
                 return null;
         }
@@ -85,7 +85,7 @@ $evui.init(function ()
 
     var getNextAnchorSettings = function (flagIndex)
     {
-        var anchorSettings = new EVUI.Modules.NewPanes.PaneAnchors();
+        var anchorSettings = new EVUI.Modules.Panes.PaneAnchors();
 
         switch (flagIndex)
         {
