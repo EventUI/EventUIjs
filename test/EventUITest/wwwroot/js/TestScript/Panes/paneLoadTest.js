@@ -13,18 +13,12 @@
     refButton.onclick = function ()
     {
         $evui.panes.loadPane("testDirect", {
-            loadSettings:
-            {
-                element: document.getElementById("direct")
-            }
+            element: document.getElementById("direct")            
         }, function (success)
         {
 
             $evui.panes.showPane("testDirect", {
-                showSettings:
-                {
-                    center: true
-                }
+                center: true                
             });
         });
     };
@@ -32,17 +26,11 @@
     cssButton.onclick = function ()
     {
         $evui.panes.loadPane("testCSS", {
-            loadSettings:
-            {
-                selector: "#cssMode"
-            }
+            selector: "#cssMode"            
         }, function (success)
         {
             $evui.panes.showPane("testCSS", {
-                showSettings:
-                {
-                    center: true
-                }
+                center: true                
             });
         });
     };
@@ -50,22 +38,16 @@
     httpButton.onclick = function ()
     {
         $evui.panes.loadPane("testHTTP", {
-            loadSettings:
+            httpLoadArgs:
             {
-                httpLoadArgs:
-                {
-                    url: "/Partials/Pane/Http.html",
-                    method: "GET"
-                }
-            }
+                url: "/Partials/Pane/Http.html",
+                method: "GET"
+            }            
         }, function (success)
         {
 
             $evui.panes.showPane("testHTTP", {
-                showSettings:
-                {
-                    center: true
-                }
+                center: true
             });
 
         });
@@ -74,20 +56,14 @@
     placeholderButton.onclick = function ()
     {
         $evui.panes.loadPane("testPlaceholder", {
-            loadSettings:
+            placeholderLoadArgs:
             {
-                placeholderLoadArgs:
-                {
-                    placeholderID: "testPlaceholder",
-                }
-            }
+                placeholderID: "testPlaceholder",
+            }        
         }, function (success)
         {
             $evui.panes.showPane("testPlaceholder", {
-                showSettings:
-                {
-                    center: true
-                }
+                center: true                
             });
         });
     };

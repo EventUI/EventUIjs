@@ -1273,14 +1273,14 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
             case EVUI.Modules.NewPanes.PaneLoadMode.HTTP:
                 var defaultHttp = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.httpLoadArgs : null;
-                var userHttp = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.httpLoadArgs : null;
+                var userHttp = EVUI.Modules.Core.Utils.isObject(userLoadArgs) ? userLoadArgs.httpLoadArgs : null;
 
                 finalArgs.httpLoadArgs = resolveHttpArgs(defaultHttp, userHttp);
                 break;
 
             case EVUI.Modules.NewPanes.PaneLoadMode.Placeholder:
                 var defaultPlaceholder = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.placeholderLoadArgs : null;
-                var userPlaceholder = EVUI.Modules.Core.Utils.isObject(defaultLoadSettings) ? defaultLoadSettings.placeholderLoadArgs : null;
+                var userPlaceholder = EVUI.Modules.Core.Utils.isObject(userLoadArgs) ? userLoadArgs.placeholderLoadArgs : null;
 
                 finalArgs.placeholderLoadArgs = resolvePlaceholderArgs(defaultPlaceholder, userPlaceholder);
                 break;
@@ -3841,6 +3841,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
 
         if (opAction === EVUI.Modules.NewPanes.PaneAction.Load)
         {
+            opSession.resolvedLoadArgs = resolvePaneLoadArgs(opSession.entry.link.pane.loadSettings, opSession.userLoadArgs);
             if (opSession.resolvedLoadArgs.reload === true)
             {
                 return actionSequence;
