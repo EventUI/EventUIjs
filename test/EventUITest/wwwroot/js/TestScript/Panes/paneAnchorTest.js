@@ -50,15 +50,15 @@ $evui.init(function ()
         switch (index)
         {
             case 0:
-                return EVUI.Modules.Panes.AnchorAlignment.None;
+                return EVUI.Modules.NewPanes.AnchorAlignment.None;
             case 1:
-                return EVUI.Modules.Panes.AnchorAlignment.Left;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Left;
             case 2:
-                return EVUI.Modules.Panes.AnchorAlignment.Center;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Center;
             case 3:
-                return EVUI.Modules.Panes.AnchorAlignment.Right;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Right;
             case 4:
-                return EVUI.Modules.Panes.AnchorAlignment.Elastic;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Elastic;
             default:
                 return null;
         }
@@ -69,15 +69,15 @@ $evui.init(function ()
         switch (index)
         {
             case 0:
-                return EVUI.Modules.Panes.AnchorAlignment.None;
+                return EVUI.Modules.NewPanes.AnchorAlignment.None;
             case 1:
-                return EVUI.Modules.Panes.AnchorAlignment.Top;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Top;
             case 2:
-                return EVUI.Modules.Panes.AnchorAlignment.Center;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Center;
             case 3:
-                return EVUI.Modules.Panes.AnchorAlignment.Bottom;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Bottom;
             case 4:
-                return EVUI.Modules.Panes.AnchorAlignment.Elastic;
+                return EVUI.Modules.NewPanes.AnchorAlignment.Elastic;
             default:
                 return null;
         }
@@ -85,7 +85,7 @@ $evui.init(function ()
 
     var getNextAnchorSettings = function (flagIndex)
     {
-        var anchorSettings = new EVUI.Modules.Panes.PaneAnchors();
+        var anchorSettings = new EVUI.Modules.NewPanes.PaneAnchors();
 
         switch (flagIndex)
         {
@@ -252,14 +252,11 @@ $evui.init(function ()
         //});
 
         $evui.showPane("test", {
-            showSettings:
+            anchors: settings,
+            clipSettings:
             {
-                anchors: settings,
-                clipSettings:
-                {
-                    mode: "shift"
-                }
-            }
+                mode: "shift"
+            }            
         });
     };
 
@@ -303,14 +300,11 @@ $evui.init(function ()
         setLabel(settings);
 
         $evui.showPane("test", {
-            showSettings:
+            anchors: settings,
+            clipSettings:
             {
-                anchors: settings,
-                clipSettings:
-                {
-                    mode: "shift"
-                }
-            }
+                mode: "shift"
+            }            
         });
     };
 
@@ -338,5 +332,8 @@ $evui.init(function ()
         {
             previousTest();
         }
-    })
+    });
+
+    document.getElementById("next").onclick = nextTest;
+    document.getElementById("previous").onclick = previousTest;
 });

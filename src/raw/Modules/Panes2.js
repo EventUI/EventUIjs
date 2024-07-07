@@ -4880,7 +4880,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 position.right = position.left + width;
 
                 var yBounds = getYAlignmentPosition(leftBounds, currentBounds, height, alignY);
-                position.top = yBounds.top;
+                position.top = Math.max(yBounds.top, leftBounds.top);
                 position.bottom = yBounds.bottom;
                 break;
 
@@ -4914,7 +4914,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 position.left = position.right - width;
 
                 var yBounds = getYAlignmentPosition(rightBounds, currentBounds, height, alignY);
-                position.top = yBounds.top;
+                position.top = Math.max(yBounds.top, rightBounds.top);
                 position.bottom = yBounds.bottom;
 
                 break;
@@ -4972,7 +4972,7 @@ EVUI.Modules.NewPanes.PaneManager = function (paneManagerServices)
                 }
                 else if (alignY === EVUI.Modules.NewPanes.AnchorAlignment.None)
                 {
-                    position.top = currentBounds.top;
+                    position.top = Math.max(currentBounds.top, Math.min(rightBounds.top, leftBounds.top));
                     position.bottom = currentBounds.bottom;
                 }
                 else //stretch between the furthest extents on both directions
