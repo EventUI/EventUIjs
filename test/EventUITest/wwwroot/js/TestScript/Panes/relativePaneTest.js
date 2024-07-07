@@ -33,19 +33,19 @@
         switch (alignment)
         {
             case 0:
-                return EVUI.Modules.Panes.RelativePositionAlignment.None;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.None;
             case 1:
-                return EVUI.Modules.Panes.RelativePositionAlignment.Top;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.Top;
             case 2:
-                return EVUI.Modules.Panes.RelativePositionAlignment.YCenter;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.YCenter;
             case 3:
-                return EVUI.Modules.Panes.RelativePositionAlignment.Bottom;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.Bottom;
             case 4:
-                return EVUI.Modules.Panes.RelativePositionAlignment.Left;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.Left;
             case 5:
-                return EVUI.Modules.Panes.RelativePositionAlignment.XCenter;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.XCenter;
             case 6:
-                return EVUI.Modules.Panes.RelativePositionAlignment.Right;
+                return EVUI.Modules.NewPanes.RelativePositionAlignment.Right;
         }
     };
 
@@ -77,19 +77,16 @@
         setDescription(nextOrientation, nextAlignment);
 
         $evui.panes.showPane("test", {
-            showSettings:
+            relativePosition:
             {
-                relativePosition:
-                {
-                    relativeElement: relativeElement,
-                    orientation: nextOrientation,
-                    alignment: nextAlignment
-                },
-                clipSettings:
-                {
-                    mode: "shift"
-                }
-            }
+                relativeElement: relativeElement,
+                orientation: nextOrientation,
+                alignment: nextAlignment
+            },
+            clipSettings:
+            {
+                mode: "shift"
+            }            
         });
     };
 
@@ -121,19 +118,16 @@
         setDescription(nextOrientation, nextAlignment);
 
         $evui.panes.showPane("test", {
-            showSettings:
+            relativePosition:
             {
-                relativePosition:
-                {
-                    relativeElement: relativeElement,
-                    orientation: nextOrientation,
-                    alignment: nextAlignment
-                },
-                clipSettings:
-                {
-                    mode: "shift"
-                }
-            }
+                relativeElement: relativeElement,
+                orientation: nextOrientation,
+                alignment: nextAlignment
+            },
+            clipSettings:
+            {
+                mode: "shift"
+            }            
         });
     };
 

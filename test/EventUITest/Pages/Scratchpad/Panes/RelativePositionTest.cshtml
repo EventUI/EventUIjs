@@ -1,0 +1,27 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Panes.RelativePositionTestModel
+@{
+}
+@section Scripts
+{
+    <script src="~/js/TestScript/Panes/relativePaneTest.js"></script>
+}
+
+@section CSS
+{
+    <style>
+        .menu {
+            width: 50px;
+            height: 200px;
+            background-color: chocolate;
+        }
+    </style>
+}
+
+<label id="desc"></label>
+<div id="point" style="position:absolute; top: 500px; left:500px; height: 175px; width: 300px; background-color:blue">
+</div>
+
+<div style="height:0; overflow:hidden;">
+    <div id="menu" class="menu"></div>
+</div>
