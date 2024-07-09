@@ -1367,11 +1367,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**************************************************************************************SETUP*************************************************************************************************************/
 
-    /**
-     * 
-     * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.Panes.PaneShowArgs} userShowArgs
-     */
+    /**Joins the values from the Pane definition with the PaneShowArgs graph that was provided by the user into a set of arguments usable by the PaneManager.
+    @param {InternalPaneEntry} paneEntry The pane to resolve the settings for.
+    @param {EVUI.Modules.Panes.PaneShowArgs} userShowArgs The graph of show arguments provided by the user.
+    @returns {EVUI.Modules.Panes.PaneShowArgs}*/
     var resolvePaneShowArgs = function (paneEntry, userShowArgs)
     {
         var finalArgs = new EVUI.Modules.Panes.PaneShowArgs();
@@ -1411,6 +1410,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         var mode = null;
 
+        //figure out which value to set to set the display mode appropriately - the mode is determined by what is populated so we only populate the values specific to the detected mode
         if (argsMode === EVUI.Modules.Panes.PaneShowMode.None && defaultMode !== EVUI.Modules.Panes.PaneShowMode.None) //args had no show args, but the default does. Use the default over the arguments.
         {
             mode = defaultMode;
@@ -1423,8 +1423,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             return finalArgs;
         }
-
-        //figure out which value to set to set the display mode appropriately
+       
         switch (mode)
         {
             case EVUI.Modules.Panes.PaneShowMode.AbsolutePosition:
@@ -1495,6 +1494,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     };
 
+    /**Creates PaneAbsolutePosition based on the Pane's default absolutePosition and the user-provided absolutePosition to resolve a usable PaneAbsolutePosition object.
+    @param {EVUI.Modules.Panes.PaneAbsolutePosition} defaultAbsolutePosition The showSettings.absolutePosition of a Pane
+    @param {EVUI.Modules.Panes.PaneAbsolutePosition} userAbsolutePosition The user's absolute position args.
+    @returns {EVUI.Modules.Panes.PaneAbsolutePosition}*/
     var resolveAbsolutePosition = function (defaultAbsolutePosition, userAbsolutePosition)
     {
         var finalAbsolutePosition = new EVUI.Modules.Panes.PaneAbsolutePosition();
@@ -1502,7 +1505,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             if ((propName === "top" || propName === "left") && (targetObj === finalAbsolutePosition))
             {
-                if (typeof sourceObj[propName] !== "number") return false;
+                if (typeof sourceObj[propName] !== "number") return false; //don't write non-numbers onto the final arguments top and left coordinates.
             }
 
             return true;
@@ -1514,12 +1517,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalAbsolutePosition;
     };
 
+    /**Resolves anchor positioning by joining the showSettings.anchors from the Pane and the user provided anchors graph to produce a valid PaneAnchors object.
+    @param {EVUI.Modules.Panes.PaneAnchors} defaultAnchors The Pane's showSettings.anchors object.
+    @param {EVUI.Modules.Panes.PaneAnchors} userAnchors The user's PaneAnchors graph.
+    @returns {EVUI.Modules.Panes.PaneAnchors}*/
     var resolveAnchors = function (defaultAnchors, userAnchors)
     {
         var finalAnchors = new EVUI.Modules.Panes.PaneAnchors();
         EVUI.Modules.Core.Utils.shallowExtend(finalAnchors, defaultAnchors);
         EVUI.Modules.Core.Utils.shallowExtend(finalAnchors, userAnchors);
 
+        //we 'resolve' the elements because they could be: a valid element, a CSS selector, a jQuery object, or a DomHelper object. We want a valid Element reference.
         finalAnchors.top = resolveElement(finalAnchors.top);
         finalAnchors.left = resolveElement(finalAnchors.left);
         finalAnchors.bottom = resolveElement(finalAnchors.bottom);
@@ -1528,6 +1536,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalAnchors;
     };
 
+    /**Joins the showSettings.documentFlow object with the user's graph of a PaneDocumentFlow object to produce a usable PaneDocumentFlow object.
+    @param {EVUI.Modules.Panes.PaneDocumentFlow} defaultDocFlow
+    @param {EVUI.Modules.Panes.PaneDocumentFlow} userDocFlow
+    @returns {EVUI.Modules.Panes.PaneDocumentFlow}*/
     var resolveDocumentFlow = function (defaultDocFlow, userDocFlow)
     {
         var finalFlow = new EVUI.Modules.Panes.PaneDocumentFlow();
@@ -1539,6 +1551,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalFlow;
     };
 
+    /**Joins the showettings.relativePosition object of the Pane with the user-provided graph of PaneRelativePosition.
+    @param {EVUI.Modules.Panes.PaneRelativePosition} defaultPosistion The showSettings.relatviePosition of the Pane object.
+    @param {EVUI.Modules.Panes.PaneRelativePosition} userPosition The PaneRelativePosition object made by the user.
+    @returns {EVUI.Modules.Panes.PaneRelativePosition}*/
     var resolveRelativePosition = function (defaultPosistion, userPosition)
     {
         var finalPosition = new EVUI.Modules.Panes.PaneRelativePosition();
@@ -1550,11 +1566,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalPosition;
     };
 
-    /**
-     * 
-     * @param {EVUI.Modules.Panes.PaneLoadSettings} defaultLoadSettings
-     * @param {EVUI.Modules.Panes.PaneLoadArgs} userLoadArgs
-     */
+    /**Creates a useable PaneLoadArgs object from the Pane's loadSettings and the user-provided PaneLoadArgs.
+    @param {EVUI.Modules.Panes.PaneLoadSettings} defaultLoadSettings The Pane's loadSettings.
+    @param {EVUI.Modules.Panes.PaneLoadArgs} userLoadArgs The user's PaneLoadArgs.
+    @returns {EVUI.Modules.Panes.PaneLoadArgs} */
     var resolvePaneLoadArgs = function (defaultLoadSettings, userLoadArgs)
     {
         var finalArgs = new EVUI.Modules.Panes.PaneLoadArgs();
@@ -1570,6 +1585,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             finalArgs.context = userLoadArgs.context;
         }
 
+        //figure out which mode to use to load the pane and only populate that specific mode in the final object.
         var mode = null;
         var source = null;
         if (argsLoadMode === EVUI.Modules.Panes.PaneLoadMode.None && existingLoadMode !== EVUI.Modules.Panes.PaneLoadMode.None)
@@ -1616,6 +1632,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     };
 
+    /**Creates a usable HttpRequestArgs from the Pane's loadSettings and the user's HttpRequestArgs.
+    @param {EVUI.Modules.Http.HttpRequestArgs} defaultHttpArgs The Pane's loadSettings.httpArgs.
+    @param {EVUI.Modules.Http.HttpRequestArgs} userHttpArgs The user's httpArgs.
+    @returns {EVUI.Modules.Http.HttpRequestArgs}*/
     var resolveHttpArgs = function (defaultHttpArgs, userHttpArgs)
     {
         var finalArgs = new EVUI.Modules.Http.HttpRequestArgs();
@@ -1659,6 +1679,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     };
 
+    /**Resolves the Pane's loadSettings.placeholderLoadArgs with the user's placeholderLoadArgs to create the full placeholderLoadArgs.
+    @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} defaultPlaceholderArgs
+    @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs} userPlaceholderArgs
+    @returns {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
     var resolvePlaceholderArgs = function (defaultPlaceholderArgs, userPlaceholderArgs)
     {
         var finalArgs = new EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs();
@@ -1674,11 +1698,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     };
 
-    /**
-     * 
-     * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.Panes.PaneHideArgs} userHideArgs
-     */
+    /**Joins the pane's hide settings with the PaneHideArgs object provided by the user.
+    @param {InternalPaneEntry} paneEntry The internal entry that the PaneHideArgs are being calculated for.
+    @param {EVUI.Modules.Panes.PaneHideArgs} userHideArgs The user's PaneHideArgs.
+    @returns {EVUI.Modules.Panes.PaneHideArgs}*/
     var resolvePaneHideArgs = function (paneEntry, userHideArgs)
     {
         var finalArgs = new EVUI.Modules.Panes.PaneHideArgs();
@@ -1699,11 +1722,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     };
 
-    /**
-     * 
-     * @param {InternalPaneEntry} paneEntry
-     * @param {EVUI.Modules.Panes.PaneUnloadArgs} userUnloadArgs
-     */
+    /**Makes a fresh PaneUnloadArgs based on the user's PaneUnloadArgs.
+    @param {InternalPaneEntry} paneEntry The internal Pane entry whose unload settings are being calculated for.
+    @param {EVUI.Modules.Panes.PaneUnloadArgs} userUnloadArgs The user's PaneUnloadArgs*/
     var resolvePaneUnloadArgs = function (paneEntry, userUnloadArgs)
     {
         var finalArgs = EVUI.Modules.Core.Utils.deepExtend(new EVUI.Modules.Panes.PaneUnloadArgs(), userUnloadArgs);
@@ -1711,12 +1732,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     }
 
-    /**
-     * 
-     * @param {EVUI.Modules.Panes.PaneTransition} defaultTransition
-     * @param {EVUI.Modules.Panes.PaneTransition} userArgsTransition
-     * @returns {EVUI.Modules.Panes.PaneTransition}
-     */
+    /**Resolves a transition from a graph found in the Pane object and one provided by the user.
+    @param {EVUI.Modules.Panes.PaneTransition} defaultTransition The transition's default settings.
+    @param {EVUI.Modules.Panes.PaneTransition} userArgsTransition The user provided arugments for the transition.
+    @returns {EVUI.Modules.Panes.PaneTransition}*/
     var resolvePaneTransition = function (defaultTransition, userArgsTransition)
     {
         var finalTransition = new EVUI.Modules.Panes.PaneTransition();
@@ -1742,6 +1761,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalTransition;
     };
 
+    /**Resolves the PaneClipSettings by combining the Pane's clipSettings with the user provided clipSettings.
+    @param {EVUI.Modules.Panes.PaneClipSettings} defaultClipSettings
+    @param {EVUI.Modules.Panes.PaneClipSettings} userClipSettings
+    @returns {EVUI.Modules.Panes.PaneClipSettings}*/
     var resolvePaneClipSettings = function (defaultClipSettings, userClipSettings)
     {
         var finalClipSettings = new EVUI.Modules.Panes.PaneClipSettings();
@@ -1782,6 +1805,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalClipSettings;
     };
 
+    /**Resolves the Pane's default backdrop settings with a user-provided backdrop setting.
+    @param {EVUI.Modules.Panes.PaneBackdropSettings} defaultBackdrop The Pane's backdrop settings.
+    @param {EVUI.Modules.Panes.PaneBackdropSettings} userBackdrop The user's backdrop settings.
+    @returns {EVUI.Modules.Panes.PaneBackdropSettings}*/
     var resolveBackdropSettings = function (defaultBackdrop, userBackdrop)
     {
         var finalBackdrop = new EVUI.Modules.Panes.PaneBackdropSettings();
@@ -1802,11 +1829,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalBackdrop;
     };
 
-    /**
-     * 
-     * @param {EVUI.Modules.Panes.PaneAutoHideSettings} defaultAutoClose
-     * @param {EVUI.Modules.Panes.PaneAutoHideSettings} userArgs
-     */
+    /**Resolves the Pane's auto-hide settings with the user's auto-hide settings passed in by a user.
+    @param {EVUI.Modules.Panes.PaneAutoHideSettings} defaultAutoClose The Pane's auto close settings.
+    @param {EVUI.Modules.Panes.PaneAutoHideSettings} userArgs The user arguments close settings.
+    @returns {EVUI.Modules.Panes.PaneAutoHideSettings} */
     var resolveAutoHideSettings = function (defaultAutoClose, userArgs)
     {
         var finalArgs = new EVUI.Modules.Panes.PaneAutoHideSettings();
@@ -1832,6 +1858,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     };
 
+    /**Takes an ambiguous representation of an Element (a CSS selector, jQuery object, DomHelper object or a regular Element) and returns the corresponding Element reference.
+    @param {String|jQuery|EVUI.Modules.Dom.DomHelper|Element|DocumentFragment} userElementValue
+    @param {Boolean} allowFragments Whether or not DocumentFragments count as valid elements.
+    @returns*/
     var resolveElement = function (userElementValue, allowFragments)
     {
         if (typeof userElementValue === "string")
@@ -2095,6 +2125,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return attribute;
     };
 
+    /**Parses JSON from an attribute value.
+    @param {String} attrValue The value of an attribute on an Element.
+    @returns {{}}*/
     var parseAttributeJSON = function (attrValue)
     {
         if (typeof attrValue !== "string") return {};
@@ -2116,13 +2149,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
     };
 
-    /**
-     * 
-     * @param {any} attrValue
-     * @param {Event} event
-     */
+    /**Gets the PaneShowArguments from a string of JSON attached to an Element.
+    @param {String} attrValue The value of an attribute on an Element.
+    @param {Event} event The event that was raised to invoke the Pane action.
+    @returns {EVUI.Modules.Panes.PaneShowArgs}*/
     var getShowModeArgsFromAttribute = function (attrValue, event)
     {
+        //separate the "showMode" (PaneShowMode) from the JSON arguemnts corresponding to that mode.
         var showMode = null;
         var firstBracket = attrValue.indexOf("{");
         if (firstBracket === -1)
@@ -2138,7 +2171,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         
         var parsedSettings = parseAttributeJSON(attrValue);
 
-        if (showMode === EVUI.Modules.Panes.PaneShowMode.AbsolutePosition)
+        if (showMode === EVUI.Modules.Panes.PaneShowMode.AbsolutePosition) //absolute position - use what the user provided and fall back to the mouse coordinates if possible
         {
             var top = parsedSettings.top;
             var left = parsedSettings.left;
@@ -2159,7 +2192,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 left: left
             };
         }
-        else if (showMode === EVUI.Modules.Panes.PaneShowMode.RelativePosition)
+        else if (showMode === EVUI.Modules.Panes.PaneShowMode.RelativePosition) //relative position - positioning relative to another Element
         {
             var relativeElement = null;
             var top = parsedSettings.top;
@@ -2168,15 +2201,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             var alignment = parsedSettings.alignment;
             var orientation = parsedSettings.orientation;
 
-            if (useCursor === true && event instanceof MouseEvent)
+            if (useCursor === true && event instanceof MouseEvent) //if we've been told to use the cursor position, just blindly use it
             {
                 if (typeof top !== "number") top = event.clientY;
                 if (typeof left !== "number") left = event.clientX;
             }
-            else
+            else //otherwise figure out the "right" coordinates for the Pane to appear at
             {
                 relativeElement = resolveElement(parsedSettings.relativeElement);
-                if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.relativeElement) === true)
+                if (EVUI.Modules.Core.Utils.isElement(relativeElement) === false) //no relative element - see if it's a right click, where we almost always want to have the Pane appear relative to the mouse
                 {
                     if (event.type === "contextmenu")
                     {
@@ -2187,10 +2220,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     {
                         relativeElement = event.currentTarget;
                     }
-                }
-                else
-                {
-                    relativeElement = parsedSettings.relativeElement; //we keep the string selector around so we can resolve it later when we need it
                 }
             }
 
@@ -2220,13 +2249,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             showArgs.center = true;
         }
-        else if (showMode === EVUI.Modules.Panes.PaneShowMode.Anchored)
+        else if (showMode === EVUI.Modules.Panes.PaneShowMode.Anchored) //if we have an anchored posotion from JSON, all the elements should be CSS selectors
         {
             showSettings.anchors = {
-                top: parsedSettings.top,
-                left: parsedSettings.left,
-                bottom: parsedSettings.bottom,
-                right: parsedSettings.right,
+                top: resolveElement(parsedSettings.top),
+                left: resolveElement(parsedSettings.left),
+                bottom: resolveElement(parsedSettings.bottom),
+                right: resolveElement(parsedSettings.right),
                 alignX: (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.alignX) === true) ? EVUI.Modules.Panes.AnchorAlignment.Elastic : parsedSettings.alignX,
                 alignY: (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(parsedSettings.alignY) === true) ? EVUI.Modules.Panes.AnchorAlignment.Elastic : parsedSettings.alignY
             };
@@ -2619,7 +2648,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
     };
 
-   /**Determines whether or not any of the AutoClose triggers attached to the Dropdown should trigger a hide operation on the Dropdown. Every dropdown has their own listener, so this function fires once per visible dropdown.
+   /**Determines whether or not any of the AutoClose triggers attached to the Pane should trigger a hide operation on the Pane. Every Pane has their own listener, so this function fires once per visible Pane.
    @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoCloseArgs The auto-close arguments from the Pane's auto-close handlers.
    @returns {Boolean} */
     var shouldAutoHideChainedPane = function (autoCloseArgs)
@@ -2686,7 +2715,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
 
-    /**Makes it so Panes close in descending order of Z-Index when the keydown auto-close command is issued. Every Pane has their own listener, so this function fires once per visible dropdown.
+    /**Makes it so Panes close in descending order of Z-Index when the keydown auto-close command is issued. Every Pane has their own listener, so this function fires once per visible Pane.
     @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoCloseArgs The auto-close args generated by the handler.
     @returns {Boolean} */
     var shouldAutoHideChainedPaneOnKeydown = function (autoCloseArgs)
