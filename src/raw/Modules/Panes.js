@@ -43,8 +43,6 @@ EVUI.Modules.Panes.Constants.CSS_Transition_Show = "evui-transition-show";
 EVUI.Modules.Panes.Constants.CSS_Transition_Hide = "evui-transition-hide";
 EVUI.Modules.Panes.Constants.CSS_Transition_Adjust = "evui-transition-adjust";
 
-EVUI.Modules.Panes.Constants.CascadeCloseGroup_DropdownDefault = "evui-dropdown-default";
-
 /**String. The name of the "template" attribute for the Pane, used to define the initial behavior for a Pane if it is being created and shown from markup.
 @type {String}*/
 EVUI.Modules.Panes.Constants.Attribute_Template = "evui-pane-template";
