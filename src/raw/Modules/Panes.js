@@ -7352,7 +7352,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Awaitable. Shows a Pane asynchronously.
-    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} showArgs Optional. A PaneShowArgs object graph or the callback. If omitted, the Pane's existing show/load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} showArgs Optional. A PaneShowArgs object graph. If omitted, the Pane's existing show/load settings are used instead.
     @returns {Promise<Boolean>}*/
     this.showAsync = function (showArgs)
     {
@@ -7367,8 +7367,8 @@ EVUI.Modules.Panes.Pane = function (entry)
         return _entry.link.manager.hidePane(_entry.paneId, hideArgs, callback);
     };
 
-    /**Awaitable. Hides a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
-    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} hideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted, the Pane's existing hide/unload settings are used instead.
+    /**Awaitable. Hides a Pane asynchronously. 
+    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} hideArgs Optional. A PaneHideArgs object graph. If omitted, the Pane's existing hide/unload settings are used instead.
     @returns {Promise<Boolean>}*/
     this.hideAsync = function (hideArgs)
     {
@@ -7384,8 +7384,9 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Awaitable. Asynchronously loads a Pane. 
-    @param {EVUI.Modules.Panes.PaneLoadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneLoadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted, the Pane's existing load settings are used instead.
-    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    @param {EVUI.Modules.Panes.PaneLoadArgs} loadArgs Optional. A PaneLoadArgs object graph. If omitted, the Pane's existing load settings are used instead.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.
+    @returns {Promise<Boolean>}*/
     this.loadAsync = function (loadArgs)
     {
         return options.link.manager.loadPaneAsync(_entry.paneId, loadArgs);
