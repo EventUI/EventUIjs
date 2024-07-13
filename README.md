@@ -48,9 +48,10 @@ Both of these solutions are well and good, but this means that each modal needs 
 
 What is needed is a little bit of structure to make the showing a data-driven modal a more uniform process. In EventUI, the modal could be declared and shown like so:
 
-    $evui.addModal({
+    $evui.addPane({
         id: "myModal",
         element: "#myModal",
+        template: "modal",
         onShow: async function (eventArgs) //fires when the command to show the modal is issued and awaits the function before continuing to show the modal
         {
             var response = await fetch(/*some request*/)
@@ -66,15 +67,15 @@ What is needed is a little bit of structure to make the showing a data-driven mo
         }
     });
 
-    await $evui.showModalAsync("myModal");
+    await $evui.showPaneAsync("myModal");
 
 EventUI gives the programmer a hook (in this case, the first event in the 'show' process, which fires when the modal's root element is available in memory but before it is visible to the user) to get the data before the modal is ever shown that will block the showing of the modal before it is positioned and made visible to the user. 
 
 If the request is successful, the modal is populated with data before being positioned, so it will be in the center of the viewport no matter how big it gets. 
 
-If the request fails, the `eventArgs` object (a `ModalEventArgs` instance) passed into the event gives the option to cancel showing the modal, which will prevent it from ever being seen (although this doesn't fix the problem of confusing the user, it's better than a flickering modal). All of EventUI's event handlers use custom event argument objects that are not related to the DOM's native `Event` object.
+If the request fails, the `eventArgs` object (a `PaneEventArgs` instance) passed into the event gives the option to cancel showing the modal, which will prevent it from ever being seen (although this doesn't fix the problem of confusing the user, it's better than a flickering modal). All of EventUI's event handlers use custom event argument objects that are not related to the DOM's native `Event` object.
 
-Finally, there is now one simple call to show this modal that can be used everywhere in the codebase: `await $evui.showModalAsync("myModal")`. The modal is declared once, then can be re-used infinitely. Other modals that are declared will all follow the same event-driven pattern (although the problem of uneven UX still exists if different programmers use loading spinners and such in uneven ways, but it will be easier to homogenize than hand-crafted show functions).
+Finally, there is now one simple call to show this modal that can be used everywhere in the codebase: `await $evui.showPaneAsync("myModal")`. The modal is declared once, then can be re-used infinitely. Other modals that are declared will all follow the same event-driven pattern (although the problem of uneven UX still exists if different programmers use loading spinners and such in uneven ways, but it will be easier to homogenize than hand-crafted show functions).
 
 ## Modular Organization
 EventUI is organized as a collection JavaScript codefiles, each of which contains a module (note: not an ECMA module export, but rather just a vanilla codefile with a single piece of functionality - module exports are coming soon), and some modules are reliant on other modules to do their jobs. 
