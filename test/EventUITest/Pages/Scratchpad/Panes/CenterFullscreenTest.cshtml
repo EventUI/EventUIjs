@@ -1,0 +1,27 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Panes.CenterFullscreenTestModel
+@{
+}
+
+@section CSS
+{
+    <style>
+        .window {
+            height: 250px;
+            width: 400px;
+            background-color: blue;
+        }
+    </style>
+}
+
+
+
+<div id="win" class="window" style="display: none;"></div>
+
+@section Scripts
+{
+    <script src="~/js/TestScript/Panes/fullScreenCenteredTest.js"></script>
+}
+
+<button id="fullscreen">Show Fullscreen</button>
+<button id="center">Show Center</button>

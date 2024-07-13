@@ -1,0 +1,13 @@
+﻿@page
+@model EventUITest.Pages.Scratchpad.Panes.ShowFromMarkupModel
+@{
+}
+
+<button evui-pane-src="/Partials/Pane/Http.html" evui-pane-show='absolute {"top": 750, "left" : 750}' onclick="$evui.showPane(event)">Via HTTP</button>
+<button evui-pane-src="/Partials/Pane/Http.html" evui-pane-show='absolute {"top": 500, "left": 500}' onclick="$evui.showPane(event)">Via HTTP2</button>
+<button evui-pane-id="http" onclick="$evui.hidePane(event)">Hide</button>
+
+@section Scripts
+{
+    <script src="/js/TestScript/Panes/showFromMarkup.js"></script>
+}

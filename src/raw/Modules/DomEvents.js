@@ -2,22 +2,15 @@
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.DomEvents|DomEvents)#*/
-/*#REPLACE(EVUI.Modules.DomEvents|DomEvents)#*/
 
 /**Module for adding event listeners to EventTargets that are designed to more gracefully handle multiple async-function listeners that go in sequence instead of racing each other.
 @module*/
 EVUI.Modules.DomEvents = {};
 
-/*#MODULEDEF(DomEvents|"1.0"|"DomEvents")#*/
-/*#VERSIONCHECK(EVUI.Modules.DomEvents|DomEvents)#*/
-
 EVUI.Modules.DomEvents.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -1032,4 +1025,3 @@ $evui.dispatchAsyncEvent = function (eventTarget, event)
 };
 
 Object.freeze(EVUI.Modules.DomEvents);
-/*#ENDWRAP(DomEvents)#*/

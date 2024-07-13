@@ -3,21 +3,13 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.DomTree|DT)#*/
-/*#REPLACE(EVUI.Modules.DomTree|DT)#*/
-
 /**Module for turning an Element, Document, or DocumentFragment into JSON and vice-versa.
 @module*/
 EVUI.Modules.DomTree = {};
 
-/*#MODULEDEF(DT|"1.0"|"DomTree")#*/
-/*#VERSIONCHECK(EVUI.Modules.DomTree|DT)#*/
-
 EVUI.Modules.DomTree.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -2635,5 +2627,3 @@ $evui.parseHtmlToDomTree = function (html, options)
 };
 
 Object.freeze(EVUI.Modules.DomTree);
-
-/*#ENDWRAP(DT)#*/

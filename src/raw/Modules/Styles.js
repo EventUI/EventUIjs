@@ -3,21 +3,13 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Styles|Styles)#*/
-/*#REPLACE(EVUI.Modules.Styles|Styles)#*/
-
 /**Module for building and manipulating stylesheets at runtime without resorting to injecting a string of CSS into a style tag.
 @module*/
 EVUI.Modules.Styles = {};
 
-/*#MODULEDEF(Styles|"1.0";|"Styles")#*/
-/*#VERSIONCHECK(EVUI.Modules.Styles|Styles)#*/
-
 EVUI.Modules.Styles.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ required: true })
 };
 
 (function ()
@@ -1769,5 +1761,3 @@ $evui.css = function (cssOrOptions)
 
 Object.freeze(EVUI.Modules.Styles.Constants);
 Object.freeze(EVUI.Modules.Styles);
-
-/*#ENDWRAP(Styles)#*/

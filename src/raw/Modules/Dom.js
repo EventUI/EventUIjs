@@ -3,22 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Dom|Dom)#*/
-/*#REPLACE(EVUI.Modules.Dom|Dom)#*/
-
 /**Module for containing a DOM helper utility for simple DOM manipulation.
 @module*/
 EVUI.Modules.Dom = {};
 
-/*#MODULEDEF(Dom|"1.0";|"DomHelper")#*/
-/*#VERSIONCHECK(EVUI.Modules.Dom|Dom)#*/;
-
 EVUI.Modules.Dom.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    DomTree: Object.freeze({ version: "1.0", required: false})
+    Core: Object.freeze({ required: true }),
+    DomTree: Object.freeze({ required: false})
 };
 
 (function ()
@@ -1069,4 +1061,4 @@ $evui.dom = function (elementsOrCssSelector, context)
     return new EVUI.Modules.Dom.DomHelper(elementsOrCssSelector, context);
 };
 
-/*#ENDWRAP(Dom)#*/
+Object.freeze(EVUI.Modules.Dom);

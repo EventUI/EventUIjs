@@ -3,21 +3,13 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Enums|Enums)#*/
-/*#REPLACE(EVUI.Modules.Enums|Enums)#*/
-
 /**Utility module for a shortcut to getting EventUI's enum values or constant values.
 @module*/
 EVUI.Modules.Enums = {};
 
-/*#MODULEDEF(Enums|"1.0"|"Enums")#*/
-/*#VERSIONCHECK(EVUI.Modules.Enums|Enums)#*/
-
 EVUI.Modules.Enums.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -595,5 +587,3 @@ $evui.module = function (moduleName)
 };
 
 Object.freeze(EVUI.Modules.Enums);
-
-/*#ENDWRAP(Enums)#*/
