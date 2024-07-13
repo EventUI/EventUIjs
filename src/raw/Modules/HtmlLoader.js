@@ -3,24 +3,16 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.HtmlLoader|HtmlLoader)#*/
-/*#REPLACE(EVUI.Modules.HtmlLoader|HtmlLoader)#*/
-
 /**Module for containing a EventStream-driven Html partial/placeholder loader that loads foreign Html via Http.
 @module*/
 EVUI.Modules.HtmlLoader = {};
 
-/*#MODULEDEF(HtmlLoader|"1.0";|"HtmlLoader")#*/
-/*#VERSIONCHECK(EVUI.Modules.HtmlLoader|HtmlLoader)#*/
-
 EVUI.Modules.HtmlLoader.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
-    Http: Object.freeze({ version: "1.0", required: true }),
-    DomTree: Object.freeze({version: "1.0", required: false})
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
+    Http: Object.freeze({ required: true }),
+    DomTree: Object.freeze({ required: false})
 };
 
 (function ()
@@ -262,7 +254,8 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         }
         catch (ex)
         {
-            return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.HtmlLoaderController.Manager", "translateResponseToText", ex.stack, null);
+            EVUI.Modules.Core.Utils.log(ex);
+            callback(null);
         }
     };
 
@@ -1584,4 +1577,3 @@ $evui.loadAllPlaceholdersAsync = function (placehoderLoadArgs)
 };
 
 Object.freeze(EVUI.Modules.HtmlLoader);
-/*#ENDWRAP(HtmlLoaderController)#*/

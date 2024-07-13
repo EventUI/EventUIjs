@@ -23,8 +23,8 @@ EVUITest.Constants.Fn_TestPass = function () { };
 
 /**Function definition for the basic arguments for a Test to run in the TestRunner.
 @param {String} reason The reason why the test failed.  
-@param {Boolean} intentionalFailure Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
-EVUITest.Constants.Fn_TestFail = function (reason, intentionalFailure) { };
+@param {Boolean} isSimulatedFailure Whether or not the failure is an expected or simulated failure that should be treated as the "successful" result.*/
+EVUITest.Constants.Fn_TestFail = function (reason, isSimulatedFailure) { };
 
 /**A predicate function that is fed the assertion value and returns true or false. 
 @param {Any} assertionValue The value wrapped by the assertion.
@@ -250,7 +250,7 @@ EVUITest.LogLevel =
 @class*/
 EVUITest.TestOptions = function ()
 {
-    /**Number. The number of milliseconds to wait before automatically failing the test. 100ms by default.
+    /**Number. The number of milliseconds to wait before automatically failing the test. 100ms by default. Note that this cannot be set once the test has begun.
     @type {Number}*/
     this.timeout = 100;
 
@@ -363,7 +363,7 @@ EVUITest.TestHostController = function ()
         return _testResults.slice();
     };
 
-    /**Clears the internal TestResults list of all rsults.*/
+    /**Clears the internal TestResults list of all results.*/
     this.clearResults = function ()
     {
         _testResults.splice(0, _testResults.length);
@@ -417,7 +417,14 @@ EVUITest.TestHostController = function ()
             }
             else if (typeof arguments === "object")
             {
-                argsStr += JSON.stringify(testResult.arguments);
+                try
+                {
+                    argsStr += JSON.stringify(testResult.arguments);
+                }
+                catch (ex)
+                {
+                    argsStr += "<JSON.stringify crashed: " + ex.message.replace(/\n\r|\r\n|\n|\r|\t/g, " ").replace(/\s+/g, " ") + ">";
+                }
             }
             else
             {
@@ -486,14 +493,14 @@ EVUITest.TestHostController = function ()
         return state;
     };
 
-    /**Gets the complete array of test arguments from the user's input, regardless if it was a properly formatted array, a generator function, or a vanialla function
+    /**Gets the complete array of test arguments from the user's input, regardless if it was a properly formatted array, a generator function, or a vanilla function
     @param {[]} args
     @returns {[]} */
     var getTestArguments = function (args)
     {
         if (args == null) return [];
         
-        if (Array.isArray(args) === false) //args shoud be an array of arrays
+        if (Array.isArray(args) === false) //args should be an array of arrays
         {
             if (typeof args === "function")
             {
@@ -522,7 +529,7 @@ EVUITest.TestHostController = function ()
                         }
                     }
                 }
-                else //wasnt even an object, wrap it in an array
+                else //wasn't even an object, wrap it in an array
                 {
                     args = [returnedArgs];
                 }
@@ -770,6 +777,7 @@ EVUITest.TestHostController = function ()
 
                     result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
+                        console.log(args);
                         fail(ex);
                     });
                 }
@@ -1236,7 +1244,7 @@ EVUITest.Assertion = function (value, settings)
     /**Determines if two values are "equivalent" in that
     1. If both are objects, at least one of their property values do not match regardless if the object references differ.
     
-    Otherwise equivlanecy is based on strict ValueCompareOptions by default.
+    Otherwise equivalence is based on strict ValueCompareOptions by default.
     @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
@@ -1257,7 +1265,7 @@ EVUITest.Assertion = function (value, settings)
     /**Determines if two values are NOT "equivalent" in that:
     1. If both are objects, at least one of their property values do not match regardless if the object references differ.
     
-    Otherwise equivlanecy is based on strict ValueCompareOptions by default.
+    Otherwise equivalence is based on strict ValueCompareOptions by default.
     @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
     @returns {EVUITest.ValueCompareResult}*/
@@ -1279,6 +1287,7 @@ EVUITest.Assertion = function (value, settings)
     1. If both are objects, their property values match regardless if the object references differ. 
     2. If an object being compared is an array, the order of elements does not matter.
     3. If strings are being compared, their case does not matter.
+    4. When objects are compared, mismatches in their child object's relative hierarchy are ignored as long as their property values match.
 
     Otherwise, loose equality is used by default.
     @param {Any} b The value to compare against the Assertion's value.
@@ -1294,6 +1303,7 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.ignoreOrder = true;
         defaultSettings.strictEquals = false;
         defaultSettings.ignoreCase = true;
+        defaultSettings.ignoreRelativeReferences = true;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1305,6 +1315,7 @@ EVUITest.Assertion = function (value, settings)
     1. If both are objects, their property values match regardless if the object references differ. 
     2. If an object being compared is an array, the order of elements does not matter.
     3. If strings are being compared, their case does not matter.
+    4. When objects are compared, mismatches in their child object's relative hierarchy are ignored as long as their property values match.
 
     Otherwise, loose equality is used by default.
     @param {any} b The value to compare against the Assertion's value.
@@ -1320,6 +1331,7 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.ignoreOrder = true;
         defaultSettings.strictEquals = false;
         defaultSettings.ignoreCase = true;
+        defaultSettings.ignoreRelativeReferences = true;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1957,25 +1969,29 @@ EVUITest.ValueComparer = function ()
     {
         options = ensureOptions(options);
         var context = buildComparisonContext(a, b, options);
+        var result = null;
 
         if (options.compareType === EVUITest.ValueCompareType.Equality ||
             options.compareType === EVUITest.ValueCompareType.Equivalency ||
             options.compareType === EVUITest.ValueCompareType.Roughly)
         {
-            return compareValues(a, b, context);
+            result = compareValues(a, b, context);
         }
         else if (options.compareType === EVUITest.ValueCompareType.Containment)
         {
-            return containmentCompare(a, b, context);
+            result = containmentCompare(a, b, context);
         }
         else if (options.compareType === EVUITest.ValueCompareType.Predicate)
         {
-            return predicateCompare(a, b, context);
+            result = predicateCompare(a, b, context);
         }
         else
         {
             throw Error("Invalid comparison type. Must be a value from EVUITest2.ValueCompareType.");
         }
+
+        deTagReferences(context);
+        return result;
     };
 
     /**Creates a ComparisonContext object to hold the state data about the comparison. 
@@ -2054,7 +2070,7 @@ EVUITest.ValueComparer = function ()
     };
 
     /**Looks up to see if there are any custom comparers to be used in this comparison. If so, the custom comparers are used instead of the default compare logic. Returns true if a custom comparer was used.
-    @param {EVUITest.ValueCompareResult} comparison The comparison to check agsinst the custom equality comparers list.
+    @param {EVUITest.ValueCompareResult} comparison The comparison to check against the custom equality comparers list.
     @param {ComparisonContext} context The active comparison context.
     @returns {Boolean}*/
     var applyCustomComparer = function (comparison, context)
@@ -2272,6 +2288,9 @@ EVUITest.ValueComparer = function ()
         stackItem.compareResult = comparison;
 
         context.compareStack.push(stackItem);
+
+        //make sure the structure of object references is the same between both objects (unless we are specifically told to ignore this difference)
+        if (context.options.ignoreRelativeReferences !== true && validateRelativeReferences(comparison, context) === false) return false;
 
         //if both objects are arrays, do the special array comparison logic
         if (isArray(comparison.a) && isArray(comparison.b))
@@ -2498,17 +2517,16 @@ EVUITest.ValueComparer = function ()
             }
         }
 
-        //finally, un-tag all the objects so they return to their pristine state
+        //finally, UN-tag all the objects so they return to their pristine state
         for (var x = 0; x < numTagged; x++)
         {
             delete taggedObjects[x][context.tagKey];
         }
 
-
         return mismatched;
     };
 
-    /**Computes a "key" to use in a lookup dictionary of values when doing an array equivalency check.
+    /**Computes a "key" to use in a lookup dictionary of values when doing an array equivalence check.
     @param {Any} value The value to make the key for.
     @param {String} valueType The typeof the value.
     @param {Array} taggedObjects The array of objects that have had the context's tagKey applied to them.
@@ -2599,6 +2617,7 @@ EVUITest.ValueComparer = function ()
         var affirmativeCheck;
         var nullCheckOnly;
         var shortCircuit;
+        var ignoreRelativeReferences;
 
         //pull all the options off of the user's options object
         if (isObject(options) === true)
@@ -2612,6 +2631,7 @@ EVUITest.ValueComparer = function ()
             affirmativeCheck = options.affirmitiveCheck;
             nullCheckOnly = options.nullCheckOnly;
             shortCircuit = options.shortCircuit;
+            ignoreRelativeReferences - options.ignoreRelativeReferences;
         }
         else
         {
@@ -2624,6 +2644,7 @@ EVUITest.ValueComparer = function ()
         if (typeof affirmativeCheck !== "boolean") affirmativeCheck = true;
         if (typeof nullCheckOnly !== "boolean") nullCheckOnly = true;
         if (typeof shortCircuit !== "boolean") shortCircuit = true;
+        if (typeof ignoreRelativeReferences !== "boolean") ignoreRelativeReferences = false;
 
         if (Array.isArray(equalityComparers) === false) equalityComparers = [];
 
@@ -2674,6 +2695,7 @@ EVUITest.ValueComparer = function ()
         options.affirmitiveCheck = affirmativeCheck;
         options.nullCheckOnly = nullCheckOnly;
         options.shortCircuit = shortCircuit;
+        options.ignoreRelativeReferences = ignoreRelativeReferences;
 
         return options;
     };
@@ -2703,6 +2725,88 @@ EVUITest.ValueComparer = function ()
         return target;
     };
 
+    /**Validates that the same objects are appearing in the same places in both object graphs.
+    @param {EVUITest.ValueCompareResult} comparison The two objects being compared.
+    @param {ComparisonContext} context
+    @returns {Boolean}*/
+    var validateRelativeReferences = function (comparison, context)
+    {
+        //make sure the current path for the comparison gets added to both ExistingObject records for a and b
+        var existing = addExistingObjects(comparison, context);
+
+        var numAPaths = existing.aObj.paths.length;
+        var numBPaths = existing.bObj.paths.length;
+
+        if (numAPaths !== numBPaths) return false; //one referenced more other than the other, references out of sync
+
+        var paths = {};
+        for (var x = 0; x < numAPaths; x++)
+        {
+            paths[existing.aObj.paths[x]] = true;
+        }
+
+        //make sure that, for every path reference a appears at, reference b also appears
+        for (var x = 0; x < numBPaths; x++)
+        {
+            if (paths[existing.bObj.paths[x]] !== true) return false;
+        }
+
+        return true;
+    };
+
+    /**Adds the comparison's a and b object values to the lookup tables for each object graph's child objects and/or records the paths that the objects occur at.
+    @param {EVUITest.ValueCompareResult} comparison The comparison whose data is being added to the lookup table.
+    @param {ComparisonContext} context The comparison in progress.*/
+    var addExistingObjects = function (comparison, context)
+    {
+        var existingInA = context.aObjects[comparison.a[context.referenceKey]];
+        if (existingInA == null)
+        {
+            existingInA = new ExistingObject(comparison.a);
+            comparison.a[context.referenceKey] = Math.random();
+            context.aObjects[comparison.a[context.referenceKey]] = existingInA;
+        }
+
+        existingInA.paths.push(comparison.path);        
+
+        var existingInB = context.bObjects[comparison.b[context.referenceKey]];
+        if (existingInB == null)
+        {
+            existingInB = new ExistingObject(comparison.b);
+            comparison.b[context.referenceKey] = Math.random();
+            context.bObjects[comparison.b[context.referenceKey]] = existingInB;
+        }
+
+        existingInB.paths.push(comparison.path);
+
+        var returnValue =
+        {
+            aObj: existingInA,
+            bObj: existingInB
+        };
+
+        return returnValue;
+    };
+
+    /**Removes all the referenceKey tags added to objects during the compare operation.
+    @param {ComparisonContext} context The compare session in progress.*/
+    var deTagReferences = function(context)
+    {
+        var inA = Object.keys(context.aObjects);
+        var numInA = inA.length;
+        for (var x = 0; x < numInA; x++)
+        {
+            delete context.aObjects[inA[x]].obj[context.referenceKey];
+        }
+
+        var inB = Object.keys(context.bObjects);
+        var numInB = inB.length;
+        for (var x = 0; x < numInB; x++)
+        {
+            delete context.bObjects[inB[x]].obj[context.referenceKey];
+        }
+    };
+
     /**The contextual information about a comparison in progress.
     @class*/
     var ComparisonContext = function ()
@@ -2723,12 +2827,28 @@ EVUITest.ValueComparer = function ()
         @type {CompareStackItem[]}*/
         this.compareStack = [];
 
+        /**Object. Dictionary of refereneceKey values to ExistingObject instances for object graph a.
+        @type {Object}*/
+        this.aObjects = {};
+
+        /**Object. Dictionary of refereneceKey values to ExistingObject instances for object graph b.
+        @type {Object}*/
+        this.bObjects = {};
+
         /**String. The key with which objects are tagged to make comparing object references easier.
         @type {String}*/
         this.tagKey = (Math.random() * 1000).toString(36);
         if (typeof Symbol !== "undefined")
         {
             this.tagKey = Symbol(this.tagKey);
+        }
+
+        /**String. The key with which object references are stored in the 'aObjects' and 'bObjects' lookup tables.
+        @type {String}*/
+        this.referenceKey = (Math.random() * 1000).toString(36);
+        if (typeof Symbol !== "undefined")
+        {
+            this.referenceKey = Symbol(this.referenceKey);
         }
     };
 
@@ -2739,6 +2859,18 @@ EVUITest.ValueComparer = function ()
         /**Object. A possible parent comparison to another comparison.
         @type {EVUITest.ValueCompareResult}*/
         this.compareResult = null;
+    };
+
+    /**Container for a previously encountered object.
+    @class*/
+    var ExistingObject = function (obj)
+    {
+        /**Object. The object from the 'a' graph.
+        @type {Object}*/
+        this.obj = obj;
+        /**Array. All of the paths in the object graph that point to this object.
+        @type {String[]}*/
+        this.paths = [];
     };
 };
 
@@ -2774,7 +2906,7 @@ EVUITest.ValueCompareType =
     /**A comparison that determines if two values are equal. If objects are being compared, differences in reference, value, and array order are not ignored.*/
     Equality: "equality",
     /**A comparison that determines if two values are equivalents. If objects are being compared differences in object references are ignored, but their values and array order are not.*/
-    Equivalency: "equivalency",
+    Equivalency: "equivalence",
     /**A comparison that determines if a value, when fed into a predicate function, returns true.*/
     Predicate: "predicate",
     /**A comparison that determines if a value is present in an array.*/
@@ -2961,6 +3093,10 @@ EVUITest.ValueCompareOptions = function ()
     @type {Boolean}*/
     this.ignoreReferences = false;
 
+    /**Boolean. Whether or not differences in where objects appear in both graphs count as valid differences (i.e. whether or not the references of objects under the root are out of sync between the A and B graphs). False by default.
+    @type {Boolean}*/
+    this.ignoreRelativeReferences = false;
+
     /**Boolean. Whether or not differences between the indexes of the elements in an array should be ignored when comparing two arrays. False by default.
     @type {Boolean}*/
     this.ignoreOrder = false;
@@ -3040,7 +3176,7 @@ EVUITest.ValueCompareOptions = function ()
     Node.prototype[EVUITest.Constants.Symbol_EqualityComparer] = function (context)
     {
         if (context.a == context.b) return true; //nodes are the same node
-        if (context.options.ignoreReferences !== true) return false; //nodes are not the same node and we are not doing an equivalency check
+        if (context.options.ignoreReferences !== true) return false; //nodes are not the same node and we are not doing an equivalence check
 
         return compareNodes(context.a, context.b, context);
     }

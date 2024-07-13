@@ -3,22 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Events|Event)#*/
-/*#REPLACE(EVUI.Modules.Events|Event)#*/
-
 /**Module for custom events that are not attached to the DOM.
 @module*/
 EVUI.Modules.Events = {};
 
-/*#MODULEDEF(Event|"1.0";|"Events")#*/
-/*#VERSIONCHECK(EVUI.Modules.Events|Event)#*/
-
 EVUI.Modules.Events.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -368,7 +360,7 @@ EVUI.Modules.Events.EventManager = function ()
     @param {InternalEventListener} eventListener An instance of InternalEventListener.*/
     var trace = function (triggerArgs, eventListener)
     {
-        if (EVUI.Modules.Core.Utils.isSettingTrue("traceEvents") === false) return;
+        if (EVUI.Modules.Core.Settings.traceEvents === false) return;
 
         var handlerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventListener.handlerName) ? "unknown" : eventListener.handlerName;
         var triggerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(triggerArgs.triggerName) ? "unknown" : triggerArgs.triggerName;
@@ -457,9 +449,9 @@ EVUI.Modules.Events.EventManager = function ()
 
                         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
                         {
-                            if (error != null)
+                            if (error != null && error.length > 0)
                             {
-                                throw error;
+                                throw error[0];
                             }
 
                             args.resolve();
@@ -847,5 +839,3 @@ $evui.askAsync = function (eventNameOrTriggerArgs, data, triggerName)
 };
 
 Object.freeze(EVUI.Modules.Events);
-
-/*#ENDWRAP(Event)#*/

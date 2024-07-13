@@ -3,22 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Diff|Diff)#*/
-/*#REPLACE(EVUI.Modules.Diff|Diff)#*/
-
 /**Module for doing diff comparisons on strings and objects.
 @module*/
 EVUI.Modules.Diff = {};
 
-/*#MODULEDEF(Diff|"1.0"|"Diff")#*/
-/*#VERSIONCHECK(EVUI.Modules.Diff|Diff)#*/
-
 /**Dependency list for the Diff module.*/
 EVUI.Modules.Diff.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -76,7 +68,7 @@ EVUI.Modules.Diff.DiffController = function ()
         @type {Object[]}*/
         this.objectParentage = [];
 
-        /**Number. A counter that keeps track of the number of conversions in an object graph and ensures a unique ID for each.
+        /**Number. A counter that keeps track of the number of comparisons in an object graph and ensures a unique ID for each.
         @type {Number}*/
         this.counter = 0;
 
@@ -321,13 +313,11 @@ EVUI.Modules.Diff.DiffController = function ()
                 comparison = compareObjects(session, comparison);
                 if (a.constructor.prototype !== b.constructor.prototype) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Prototype;
             }
-            else //otherwise, if one is null, don't bother doing a comparison.
+            else
             {
                 if (aNull === false || bNull === false)
                 {
                     comparison.flags |= (aNull === false) ? EVUI.Modules.Diff.DiffFlags.AOnly : EVUI.Modules.Diff.DiffFlags.BOnly;
-
-                    //if (session.compareResult.options.compareValuesOnly === false) comparison.flags |= EVUI.Modules.Diff.DiffFlags.Reference;
                     comparison.flags |= EVUI.Modules.Diff.DiffFlags.Reference;
                 }
 
@@ -1222,5 +1212,3 @@ $evui.getValueHashCode = function (value, options)
 };
 
 Object.freeze(EVUI.Modules.Diff);
-
-/*#ENDWRAP(Diff)#*/
