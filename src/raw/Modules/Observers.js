@@ -3,21 +3,13 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Observers|Observer)#*/
-/*#REPLACE(EVUI.Modules.Observers|Observer)#*/
-
 /**Module for functionality applicable to all objects.
 @module*/
 EVUI.Modules.Observers = {};
 
-/*#MODULEDEF(Observers|"1.0"|"Observers")#*/
-/*#VERSIONCHECK(EVUI.Modules.Observers|Observer)#*/
-
 EVUI.Modules.Observers.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -1010,4 +1002,4 @@ $evui.observeArray = function (arr)
     return new EVUI.Modules.Observers.ArrayObserver(arr);
 };
 
-/*#ENDWRAP(Observer)#*/
+Object.freeze(EVUI.Modules.Observers);

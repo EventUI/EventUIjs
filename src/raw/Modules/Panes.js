@@ -3,17 +3,9 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Panes|Pane)#*/
-/*#REPLACE(EVUI.Modules.Panes|Pane)#*/
-
 /**Module for containing a generic, lazy-loaded, EventStream powered UI component that sits on top of other components rather than being injected into the document flow.
 @module*/
 EVUI.Modules.Panes = {};
-
-/*#MODULEDEF(Pane|"1.0";|"Pane")#*/
-/*#VERSIONCHECK(EVUI.Modules.Panes|Pane)#*/
 
 EVUI.Modules.Panes.Constants = {};
 
@@ -149,13 +141,13 @@ Object.freeze(EVUI.Modules.Panes.Constants);
 
 EVUI.Modules.Panes.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
-    Styles: Object.freeze({ version: "1.0", required: true }),
-    Dom: Object.freeze({ version: "1.0", required: true }),
-    Observers: Object.freeze({ version: "1.0", required: true}),
-    HtmlLoader: Object.freeze({ version: "1.0", required: false }),
-    Http: Object.freeze({ version: "1.0", required: false })
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
+    Styles: Object.freeze({ required: true }),
+    Dom: Object.freeze({ required: true }),
+    Observers: Object.freeze({ required: true}),
+    HtmlLoader: Object.freeze({ required: false }),
+    Http: Object.freeze({ required: false })
 };
 
 (function ()
@@ -8219,4 +8211,4 @@ $evui.hidePaneAsync = function (paneID, paneHideArgs)
     return $evui.panes.hidePaneAsync(paneID, paneHideArgs);
 };
 
-/*#ENDWRAP(Pane)#*/
+Object.freeze(EVUI.Modules.Panes);

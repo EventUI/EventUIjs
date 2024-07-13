@@ -3,22 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.IFrames|IFrames)#*/
-/*#REPLACE(EVUI.Modules.IFrames|IFrames)#*/
-
 /**Module containing utilities for managing cross-window communication with child iframes and/or when running as a child to another window.
 @module*/
 EVUI.Modules.IFrames = {};
 
-/*#MODULEDEF(IFrames|"1.0";|"IFrames")#*/
-/*#VERSIONCHECK(EVUI.Modules.IFrames|IFrames)#*/
-
 EVUI.Modules.IFrames.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
     Dom: Object.freeze({version: "1.0", required: true})
 };
 
@@ -1618,5 +1610,3 @@ $evui.addIFrame = function (addRequestOrIFrame)
 };
 
 Object.freeze(EVUI.Modules.IFrames);
-
-/*#ENDWRAP(IFrames)#*/

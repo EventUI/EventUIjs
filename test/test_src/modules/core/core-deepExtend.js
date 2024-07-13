@@ -110,9 +110,9 @@ $evui.testAsync({
 		};
 
 		var options = new EVUI.Modules.Core.DeepExtenderOptions();
-		options.filter = function (propName, sourceObj, targetObj)
+		options.filter = function (context)
 		{
-			if (typeof sourceObj[propName] === "string") return false;
+			if (typeof context.source[context.propertyName] === "string") return false;
 			return true;
 		};
 

@@ -3,22 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Http|Http)#*/
-/*#REPLACE(EVUI.Modules.Http|Http)#*/
-
 /**Module for containing an EventStream driven Http interface.
 @module*/
 EVUI.Modules.Http = {};
 
-/*#MODULEDEF(Http|"1.0";|"Http")#*/
-/*#VERSIONCHECK(EVUI.Modules.Http|Http)#*/
-
 EVUI.Modules.Http.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -1123,5 +1115,3 @@ $evui.httpAsync = function (requestArgs)
 };
 
 Object.freeze(EVUI.Modules.Http);
-
-/*#ENDWRAP(Http)#*/

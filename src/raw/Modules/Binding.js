@@ -3,27 +3,19 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Binding|Binding)#*/
-/*#REPLACE(EVUI.Modules.Binding|Binding)#*/
-
 /**Module for data binding an object hierarchy to a set of DOM nodes.
 @module*/
 EVUI.Modules.Binding = {};
 
-/*#MODULEDEF(Binding|"1.0"|"Binding")#*/
-/*#VERSIONCHECK(EVUI.Modules.Binding|Binding)#*/
-
 EVUI.Modules.Binding.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    DomTree: Object.freeze({ version: "1.0", required: true }),
-    Diff: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
-    Dom: Object.freeze({ version: "1.0", required: true }),
-    Observers: Object.freeze({ version: "1.0", required: true }),
-    Http: Object.freeze({ version: "1.0", required: false })
+    Core: Object.freeze({ required: true }),
+    DomTree: Object.freeze({ required: true }),
+    Diff: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
+    Dom: Object.freeze({ required: true }),
+    Observers: Object.freeze({ required: true }),
+    Http: Object.freeze({ required: false })
 };
 
 (function ()
@@ -5435,7 +5427,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 }
             };
 
-            EVUI.Modules.Core.Utils.require("Http", EVUI.Modules.Binding.Dependencies.Http.version);
+            EVUI.Modules.Core.Utils.require("Http");
 
             var httpOptions = null;
             if (session.bindingHandle.binding.contentLoadSettings != null)
@@ -8297,4 +8289,4 @@ $evui.removeBindingHtmlContent = function (key)
     return $evui.binder.removeHtmlContent(key)
 };
 
-/*#ENDWRAP(Binding)#*/
+Object.freeze(EVUI.Modules.Binding);

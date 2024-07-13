@@ -3,22 +3,14 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Diff|Diff)#*/
-/*#REPLACE(EVUI.Modules.Diff|Diff)#*/
-
 /**Module for doing diff comparisons on strings and objects.
 @module*/
 EVUI.Modules.Diff = {};
 
-/*#MODULEDEF(Diff|"1.0"|"Diff")#*/
-/*#VERSIONCHECK(EVUI.Modules.Diff|Diff)#*/
-
 /**Dependency list for the Diff module.*/
 EVUI.Modules.Diff.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -1220,5 +1212,3 @@ $evui.getValueHashCode = function (value, options)
 };
 
 Object.freeze(EVUI.Modules.Diff);
-
-/*#ENDWRAP(Diff)#*/

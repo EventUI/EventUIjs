@@ -3,17 +3,10 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Core|Core)#*/
-/*#REPLACE(EVUI.Modules.Core|Core)#*/
 
 /**Core module containing the Initialization and Utility functionality that is shared by all other modules.
 @module*/
 EVUI.Modules.Core = {};
-
-/*#MODULEDEF(Core|"1.0"|"Core")#*/
-/*#VERSIONCHECK(EVUI.Modules.Core|Core)#*/
 
 /**Property bag for holding various settings that alter the runtime behavior of the library.*/
 EVUI.Modules.Core.Settings = {};
@@ -1993,16 +1986,9 @@ EVUI.Modules.Core.Utils.isDomHelper = function (domHelper)
 /**Determines if a required dependency is present.
  @param {String} moduleName The name of the required module.
  @param {String} minVersion The minimum version of the module required.*/
-EVUI.Modules.Core.Utils.require = function (moduleName, minVersion, message)
+EVUI.Modules.Core.Utils.require = function (moduleName, message)
 {
     if (EVUI.Modules[moduleName] == null) throw Error("Dependency missing: Module EVUI.Modules." + moduleName + " is required." + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(message) === false) ? " " + message : ""));
-    if (EVUI.Modules.VersionCheck != null) //if VersionCheck is present, we have a processed file and can check the module's version number.
-    {
-        if (minVersion !== EVUI.Modules[moduleName].version)
-        {
-            if (EVUI.Modules.VersionCheck.isNewer(minVersion, EVUI.Modules[moduleName].version) === false) throw Error("Dependency missing: Module EVUI.Modules." + moduleName + " must be at least version " + minVersion + " or higher.");
-        }
-    }
 };
 
 /**Determines if all the required dependencies for a module are present.
@@ -2016,7 +2002,7 @@ EVUI.Modules.Core.Utils.requireAll = function (dependencies)
     {
         if (dependencies[dependency].required === true)
         {
-            EVUI.Modules.Core.Utils.require(dependency, dependencies[dependency].version);
+            EVUI.Modules.Core.Utils.require(dependency);
         }
     }
 
@@ -2372,4 +2358,3 @@ $evui.createController = function (name, args)
 Object.freeze(EVUI.Modules.Core);
 Object.freeze(EVUI.Modules.Core.Constants);
 Object.freeze(EVUI.Modules.Core.Utils);
-/*#ENDWRAP(Core)#*/

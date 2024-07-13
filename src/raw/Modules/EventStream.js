@@ -2,21 +2,14 @@
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.EventStream|ES)#*/
-/*#REPLACE(EVUI.Modules.EventStream|ES)#*/
 
 /**Module for containing the EventStream, an asynchronous Promise driven chain of arbitrary functions used to create event-driven interfaces.
 @module*/
 EVUI.Modules.EventStream = {};
 
-/*#MODULEDEF(ES|"1.0"|"EventStream")#*/
-/*#VERSIONCHECK(EVUI.Modules.EventStream|ES)#*/
-
 EVUI.Modules.EventStream.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ required: true })
 };
 
 (function ()
@@ -2223,5 +2216,3 @@ Object.freeze(EVUI.Modules.EventStream);
 
 /**Constructor reference for the EventStream.*/
 EVUI.Constructors.EventStream = EVUI.Modules.EventStream.EventStream;
-
-/*#ENDWRAP(ES)#*/

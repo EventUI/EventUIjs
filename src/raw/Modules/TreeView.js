@@ -3,25 +3,18 @@
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.TreeView|TreeView)#*/
-/*#REPLACE(EVUI.Modules.TreeView|TreeView)#*/
 
 /**Module for data-driven TreeViews.
 @module*/
 EVUI.Modules.TreeView = {};
 
-/*#MODULEDEF(TreeView|"1.0";|"TreeView")#*/
-/*#VERSIONCHECK(EVUI.Modules.TreeView|TreeView)#*/
-
 EVUI.Modules.TreeView.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    Binding: Object.freeze({ version: "1.0", required: true }),
-    Styles: Object.freeze({version: "1.0", required: true}),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
-    Dom: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ required: true }),
+    Binding: Object.freeze({ required: true }),
+    Styles: Object.freeze({ required: true}),
+    EventStream: Object.freeze({ required: true }),
+    Dom: Object.freeze({ required: true })
 };
 
 (function ()
@@ -4081,4 +4074,4 @@ $evui.removeTreeView = function (treeViewId, dispose)
     return $evui.treeViews.removeTreeView(treeViewId, dispose)
 };
 
-/*#ENDWRAP(TreeView)#*/
+Object.freeze(EVUI.Modules.TreeView);
