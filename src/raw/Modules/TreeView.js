@@ -1,5 +1,5 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
-
+﻿/**Copyright (c) 2024 Richard H Stannard
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
@@ -2945,7 +2945,7 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
         enumerable: true
     });
 
-    /**Object. The HTMLElement under which the TreeView will be appended under.
+    /**Object. The HTMLElement under which the TreeView will be appended.
     @type {Element}*/
     this.element = null;
     Object.defineProperty(this, "element", {

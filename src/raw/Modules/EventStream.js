@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -136,7 +136,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     this.context = null;
 
     /**Object. A BubblingEventsManager that bubbling events will be drawn from during the EventStream's execution.
-    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    @type {EVUI.Modules.EventStream.BubblingEventManager|EVUI.Modules.EventStream.BubblingEventManager[]}*/
     this.bubblingEvents = null;
 
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
@@ -828,7 +828,24 @@ EVUI.Modules.EventStream.EventStream = function (config)
 
         try
         {
-            bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            if (EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === true)
+            {
+                bubblingEvents = [];
+                var numBubblers = _self.bubblingEvents.length;
+                for (var x = 0; x < numBubblers; x++)
+                {
+                    var curBubblingEvents = _self.bubblingEvents[x].getBubblingEvents(step);
+                    var numEvents = (curBubblingEvents == null) ? 0 : curBubblingEvents.length;
+                    for (var y = 0; y < numEvents; y++)
+                    {
+                        bubblingEvents.push(curBubblingEvents[y]);
+                    }
+                }
+            }
+            else
+            {
+                bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            }           
         }
         catch (ex)
         {
@@ -1910,17 +1927,16 @@ EVUI.Modules.EventStream.EventStreamEventListenerOptions = function ()
     @type {Number}*/
     this.priority = null;
 
-    /**Boolean. Whether or not this event should fire after a local or global event.
+    /**Boolean. The type of event that should cause this event to fire.
     @type {Boolean}*/
-    this.isGlobal = false;
+    this.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
 };
 
 /**Controller for managing a stack of secondary event handlers that "bubble" in order of addition after the primary event has executed by an EventStream. Assign to an EventStream's bubblingEvents property to use.
 @class*/
-EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
+EVUI.Modules.EventStream.BubblingEventManager = function ()
 {
     var _eventsDictionary = {}; //the internal registry of events. The keys are event names, and the values are arrays of InternalEventListners.
-    var _forceGlobal = forceGlobal;
 
     /**Add an event listener to fire after an event with the same name has been executed.
     @param {String} eventName The name of the event in the EventStream to execute after.
@@ -1976,7 +1992,19 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
             listener.options = options;
         }
 
-        if (_forceGlobal === true) options.isGlobal = true;
+        //set the type of event that should raise this event
+        var lowerEventType = typeof options.eventType === "string" ? lowerEventType.toLowerCase() : options.eventType;
+        if (lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent && lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.Event)
+        {
+            options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+        }
+        else
+        {
+            options.eventType = lowerEventType;
+        }
+
+
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
 
         //add the listener to the events dictionary
         var existingEvents = _eventsDictionary[listener.listener.eventName];
@@ -2020,12 +2048,12 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
             //sort the list into global and non-global events
             if (step.type === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent)
             {
-                if (curEvent.options.isGlobal === false) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent) continue;
                 eventsToFire.push(curEvent);
             }
             else 
             {
-                if (curEvent.options.isGlobal === true) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.Event) continue;
                 eventsToFire.push(curEvent);
             }
 
@@ -2193,7 +2221,7 @@ EVUI.Modules.EventStream.EventStreamStepType =
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
     Event: "event",
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
-    GlobalEvent: "globalEvent",
+    GlobalEvent: "global",
 
     /**Takes a string and returns a correct EventStreamStepType.
     @method GetStepType
@@ -2210,6 +2238,16 @@ EVUI.Modules.EventStream.EventStreamStepType =
         return this.Job;
     }
 };
+
+/**Sets the behavior for the Handler function in a EventStreamStep.
+ @enum*/
+EVUI.Modules.EventStream.EventStreamEventType =
+{
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
+    Event: "event",
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
+    GlobalEvent: "global",
+}
 
 Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
 Object.freeze(EVUI.Modules.EventStream);

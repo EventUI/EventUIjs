@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -331,6 +331,9 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
     this.addEventListener = function (eventName, handler, options)
     {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
         return _bubblingEvents.addEventListener(eventName, handler, options);
     };
 
@@ -1141,7 +1144,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         session.eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream.eventState = session.context;
-        session.eventStream.bubblingEvents = _bubblingEvents;
+        session.eventStream.bubblingEvents = [session.bindingHandle.wrapper.bubblingEvents, _bubblingEvents];
         session.eventStream.context = session.bindingHandle.binding;
         session.eventStream.extendSteps = false;
 
@@ -6183,6 +6186,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         wrapper.getValidElement = getValidElement;
         wrapper.triggerUpdate = triggerUpdate;
         wrapper.toDomNode = toDomNode;
+        wrapper.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         return wrapper;
     };
@@ -6776,6 +6780,10 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         /**Function for turning a DomTreeElement into a DOM Node object.*/
         this.toDomNode = null;
+
+        /**Controller's bubbling events manager.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = null;
     };
 
     /**Container for all things related to an active Binding in progress.
@@ -7792,6 +7800,28 @@ EVUI.Modules.Binding.Binding = function (handle)
     /**Event that fires when the binding operation is complete and the complete content and all its children has been injected.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBound = null;
+
+    /**Add an event listener to fire after an event with the same name has been executed.
+    @param {String} eventName The name of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventName, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.wrapper.bubblingEvents.addEventListener(eventName, handler, options);
+    };
+
+    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
+    @param {String} eventNameOrId The name or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventNameOrId, handler)
+    {
+        return _handle.wrapper.bubblingEvents.removeEventListener(eventNameOrId, handler);
+    };
 };
 
 /**Searches all the children underneath this Binding using the predicate function to find a match.
