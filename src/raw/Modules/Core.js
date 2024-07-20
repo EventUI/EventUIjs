@@ -1188,7 +1188,17 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
 
     //check the cache for the resolved path first - if we already did this path, just return a copy of the path's array
     var existing = EVUI.Modules.Core.Utils.PathCache[propertyPath];
-    if (existing != null) return existing.slice();
+    if (existing != null)
+    {
+        try //in some rare cases paths that are the names of the properties of the Object prototype can get 'pulled' from the cache if they haven't been added before, in which case they won't have a slice method, so we let it fail and fall through to the code that will add it to the cache (and it won't fail again)
+        {
+            return existing.slice();
+        }
+        catch (ex)
+        {
+            //do nothing, we want the code below to execute if this block gets hit
+        }
+    }
 
     var segs = [];
 
@@ -1621,6 +1631,14 @@ EVUI.Modules.Core.Utils.isjQuery = function (object)
 EVUI.Modules.Core.Utils.isElement = function (object)
 {
     return object instanceof Element;
+};
+
+/**Checks to see if an object is derived from an Element-derived object.
+@param {Object} object The object to check.
+@returns {Boolean}*/
+$evui.isElement = function (object)
+{
+    return EVUI.Modules.Core.Utils.isElement(object);
 };
 
 

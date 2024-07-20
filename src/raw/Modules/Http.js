@@ -307,7 +307,7 @@ EVUI.Modules.Http.HttpManager = function ()
                     if (typeof requestArgs.timeout === "number" && requestArgs.timeout > 0) xhr.timeout = requestArgs.timeout;
 
                     //add all the headers
-                    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(requestArgs.headers) === true)
+                    if (EVUI.Modules.Core.Utils.isArray(requestArgs.headers) === true)
                     {
                         var numHeaders = requestArgs.headers.length;
                         for (var x = 0; x < numHeaders; x++)
