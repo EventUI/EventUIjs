@@ -233,13 +233,11 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (this.reset() === false) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
-
-        //kick off the process
         triggerAsyncCall(function ()
         {
             _currentStep = _sequence[0];
             executeStep(_sequence, 0);
-        }, 0);
+        });        
 
         return true;
     };
@@ -850,7 +848,11 @@ EVUI.Modules.EventStream.EventStream = function (config)
                 var numBubblers = _self.bubblingEvents.length;
                 for (var x = 0; x < numBubblers; x++)
                 {
-                    var curBubblingEvents = _self.bubblingEvents[x].getBubblingEvents(step);
+                    var curBubbler = _self.bubblingEvents[x];
+                    if (EVUI.Modules.Core.Utils.isObject(curBubbler) === false) continue;
+                    if (typeof curBubbler.getBubblingEvents !== "function") continue;
+
+                    var curBubblingEvents = curBubbler.getBubblingEvents(step);
                     var numEvents = (curBubblingEvents == null) ? 0 : curBubblingEvents.length;
                     for (var y = 0; y < numEvents; y++)
                     {
@@ -874,52 +876,60 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var numEvents = bubblingEvents.length;
         if (numEvents === 0) return callback();
 
-        var config = new EVUI.Modules.EventStream.EventStreamConfig();
-        config.context = _self.context;
-        config.canSeek = _self.canSeek;
-        config.endExecutionOnEventHandlerCrash = true;
-        config.eventState = _self.eventState;
-        config.processReturnedEventArgs = _self.processReturnedEventArgs;
-        config.skipInterval = _self.skipInterval;
-        config.extendSteps = _self.extendSteps;
-        config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
-        config.onComplete = function () { callback(); } //call the callback in the complete handler, which will fire no matter what.
-
-        var subStream = new EVUI.Modules.EventStream.EventStream(config);
-
-        //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
-        subStream.processInjectedEventArgs = function (eventArgs)
+        var p = new Promise(function (resolve)
         {
-            var processedArgs = _self.processInjectedEventArgs(eventArgs);
-            if (_self.canSeek === true && processedArgs.seek != null)
+            var config = new EVUI.Modules.EventStream.EventStreamConfig();
+            config.context = _self.context;
+            config.canSeek = _self.canSeek;
+            config.endExecutionOnEventHandlerCrash = true;
+            config.eventState = _self.eventState;
+            config.processReturnedEventArgs = _self.processReturnedEventArgs;
+            config.skipInterval = _self.skipInterval;
+            config.extendSteps = _self.extendSteps;
+            config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
+            config.onComplete = function () { resolve(); } //call the callback in the complete handler, which will fire no matter what.
+
+            var subStream = new EVUI.Modules.EventStream.EventStream(config);
+
+            //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
+            subStream.processInjectedEventArgs = function (eventArgs)
             {
-                processedArgs.seek = function (indexOrKey, seekInParent)
+                var processedArgs = _self.processInjectedEventArgs(eventArgs);
+                if (_self.canSeek === true && processedArgs.seek != null)
                 {
-                    if (seekInParent === true)
+                    processedArgs.seek = function (indexOrKey, seekInParent)
                     {
-                        subStream.cancel();
-                        _self.seek(indexOrKey);
-                    }
-                    else
-                    {
-                        subStream.seek(indexOrKey);
-                    }
-                };
+                        if (seekInParent === true)
+                        {
+                            subStream.cancel();
+                            _self.seek(indexOrKey);
+                        }
+                        else
+                        {
+                            subStream.seek(indexOrKey);
+                        }
+                    };
+                }
+
+                return processedArgs;
+            };
+
+            for (var x = 0; x < numEvents; x++)
+            {
+                var curEvent = bubblingEvents[x];
+                if (curEvent == null) continue;
+
+                subStream.addStep(makeBubblingStep(step, curEvent));
             }
 
-            return processedArgs;
-        };
+            //execute the sub-stream
+            subStream.execute();
+        });
 
-        for (var x = 0; x < numEvents; x++)
+        p.then(function ()
         {
-            var curEvent = bubblingEvents[x];
-            if (curEvent == null) continue;
-
-            subStream.addStep(makeBubblingStep(step, curEvent));
-        }
-
-        //execute the sub-stream
-        subStream.execute();
+            callback();
+        });
     };
 
     /**Makes a EventStreamStep representing the "bubbling" events that come off of real events via being added by addEventListener.
@@ -1954,20 +1964,20 @@ EVUI.Modules.EventStream.EventStreamEventListenerOptions = function ()
 @class*/
 EVUI.Modules.EventStream.BubblingEventManager = function ()
 {
-    var _eventsDictionary = {}; //the internal registry of events. The keys are event names, and the values are arrays of InternalEventListners.
+    var _eventsDictionary = {}; //the internal registry of events. The keys are event keys, and the values are arrays of InternalEventListners.
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.EventStream.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
         var listener = new InternalEventListener();
 
-        if (EVUI.Modules.Core.Utils.instanceOf(eventName, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
+        if (EVUI.Modules.Core.Utils.instanceOf(eventKey, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
         {
-            listener.listener = eventName;
+            listener.listener = eventKey;
 
             if (handler != null && typeof handler === "object") //second parameter could be the options object
             {
@@ -1990,11 +2000,11 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
                 listener.options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
             }
 
-            listener.options.immutable = eventName.immutable;
+            listener.options.immutable = eventKey.immutable;
         }
         else //handed normal parameters, make the listener object
         {
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("eventName must be a non-whitespace string.");
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventKey) === true) throw Error("eventKey must be a non-whitespace string.");
             if (typeof handler !== "function") throw Error("Function expected.");
             if (options == null || typeof options !== "object")
             {
@@ -2005,7 +2015,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
                 options = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.EventStream.EventStreamEventListenerOptions(), options);
             }
 
-            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventName, handler, options.priority, options.immutable);
+            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventKey, handler, options.priority, options.immutable);
             listener.listener = eventListener;
             listener.options = options;
         }
@@ -2110,13 +2120,13 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
         return listeners;
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an event listener based on its event name, its id, or its handling function.
+    @param {String} eventKeyOrId The name or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        var existingList = _eventsDictionary[eventNameOrId];
+        var existingList = _eventsDictionary[eventKeyOrId];
         if (existingList != null)
         {
             var removed = false;
@@ -2133,7 +2143,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
 
                     if (numInList === 0)
                     {
-                        delete _eventsDictionary[eventNameOrId];
+                        delete _eventsDictionary[eventKeyOrId];
                         break;
                     }
                 }
@@ -2152,14 +2162,14 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
                 for (var x = 0; x < numListeners; x++)
                 {
                     var curListener = curListeners[x];
-                    if (curListener.listener.immutable === false && (curListener.handlerId === eventNameOrId || curListener.listener.handler === handler))
+                    if (curListener.listener.immutable === false && (curListener.handlerId === eventKeyOrId || curListener.listener.handler === handler))
                     {
                         curListeners.splice(x, 1);
                         numListeners--;
 
                         if (numListeners === 0)
                         {
-                            delete _eventsDictionary[eventNameOrId];
+                            delete _eventsDictionary[eventKeyOrId];
                         }
 
                         removed = true;

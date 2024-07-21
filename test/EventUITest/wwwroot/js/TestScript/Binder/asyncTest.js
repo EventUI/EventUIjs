@@ -11,7 +11,7 @@ $evui.init(async function ()
         var data = [];
         for (var x = 0; x < numRows; x++)
         {
-            data.push({ index: x, label: "hades " + guid});
+            data.push({ index: x, label: "hades " + guid });
         }
 
         return data;
@@ -20,9 +20,10 @@ $evui.init(async function ()
     var htmlContent = "<div><label>{{index}}</label><strong>{{label}}</strong></div>";
     $evui.binder.addBindingTemplate({
         templateName: "test",
-        htmlContent: htmlContent,        
+        htmlContent: htmlContent,
         onBind: function (bindArgs)
         {
+            console.log("Item Binding");
             if (bindArgs.binding.parentBinding != null && bindArgs.binding.source.index > 33 && bindArgs.binding.source.index < 67)
             {
                 bindArgs.pause();
@@ -32,7 +33,16 @@ $evui.init(async function ()
                     bindArgs.resume();
                 }, 100);
             }
+        },
+        onBound: function (bindArgs)
+        {
+            console.log("Main Bound");
         }
+    });
+
+    $evui.binder.addEventListener("bind", function (args)
+    {
+        console.log("Item Binding Bubble");
     });
 
     var binding = null;

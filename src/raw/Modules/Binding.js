@@ -324,26 +324,26 @@ EVUI.Modules.Binding.BindingController = function (services)
         return null;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
         if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
         options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
 
-        return _bubblingEvents.addEventListener(eventName, handler, options);
+        return _bubblingEvents.addEventListener(eventKey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventKeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        return _bubblingEvents.removeEventListener(eventNameOrId, handler);
+        return _bubblingEvents.removeEventListener(eventKeyOrId, handler);
     };
 
     /**Event that fires immediately before the binding process begins.
@@ -7806,26 +7806,26 @@ EVUI.Modules.Binding.Binding = function (handle)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBound = null;
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventkey, handler, options)
     {
         if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
         options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
 
-        return _handle.wrapper.bubblingEvents.addEventListener(eventName, handler, options);
+        return _handle.wrapper.bubblingEvents.addEventListener(eventkey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventkeyOrId, handler)
     {
-        return _handle.wrapper.bubblingEvents.removeEventListener(eventNameOrId, handler);
+        return _handle.wrapper.bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 };
 

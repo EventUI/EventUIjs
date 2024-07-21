@@ -22,6 +22,10 @@ EVUI.Modules.Panes.Constants.Fn_LoadCallback = function (success) { };
 @param {Boolean} success Whether or not the operation completed successfully.*/
 EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback = function (success) { };
 
+/**Function definition for the event handlers attached to Panes and the PaneManager.
+@param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The Pane's event args.*/
+EVUI.Modules.Panes.Constants.Fn_PaneEventHandler = function (paneEventArgs) { };
+
 EVUI.Modules.Panes.Constants.CSS_Position = "evui-position";
 EVUI.Modules.Panes.Constants.CSS_ClippedX = "evui-clipped-x";
 EVUI.Modules.Panes.Constants.CSS_ClippedY = "evui-clipped-y";
@@ -233,6 +237,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @type {String[]}*/
     var _unloadArgumentFilter = ["context"];
 
+    /**Manager for adding additional events to this controller.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Settings object for dependencies used by this Pane manager.
     @class*/
     var PaneSettings = function ()
@@ -269,6 +277,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Object. The EventStream doing the work of the operations for the Pane.
         @type {EVUI.Modules.EventStream.EventStream}*/
         this.eventStream = null;
+
+        /**Object. The bubbling event manager for this Pane.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**Number. Bit flags indicating the current state of the Pane (initialized, loaded, etc).
         @type {Number}*/
@@ -1289,6 +1301,28 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 resolve(success);
             });
         });
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 
     /**************************************************************************************EVENTS*************************************************************************************************************/
@@ -2913,6 +2947,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         eventStream.canSeek = true;
         eventStream.endExecutionOnEventHandlerCrash = false;
+        eventStream.bubblingEvents = [opSession.entry.link.bubblingEvents, _bubblingEvents];
+
         var curArgs = null;
 
         eventStream.processInjectedEventArgs = function (eventStreamArgs)
@@ -7164,6 +7200,28 @@ EVUI.Modules.Panes.Pane = function (entry)
             if (isNaN(zIndex) === true) return -1;
             return zIndex;
         }
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _entry.link.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _entry.link.bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 };
 

@@ -64,6 +64,10 @@ EVUI.Modules.HtmlLoader.Constants.Fn_GetPartials_Callback = function (loadReques
  @param {EVUI.Modules.HtmlLoader.HtmlPlaceholder} placeholderResult The details of the completed placeholder load.*/
 EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback = function (placeholderResult) { }
 
+/**Event handler definition for HtmlLoader events. 
+@param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} htmlLoaderEventArgs The event args from the HtmlLoaders.*/
+EVUI.Modules.HtmlLoader.Constants.Fn_HtmlLoaderEventHandler = function (htmlLoaderEventArgs) { };
+
 Object.freeze(EVUI.Modules.HtmlLoader.Constants)
 
 /**Controller for loading HTML, either as a bunch of small partial pieces of HTML or for loading larger placeholders which can also contain placeholders.
@@ -83,6 +87,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     /**A counter to generate ID's for each load session.
     @type {Number}*/
     var _sessionIdCtr = 0;
+
+    /**The bubbling event manager used to attach additional events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
     /**Makes a simple GET request to get Html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
     @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl The Url of the html or the arguments for getting the Html.
@@ -301,7 +309,29 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 resolve(results);
             })
         })
-    }
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.HtmlLoader.Constants.Fn_HtmlLoaderEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _entry.link.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _entry.link.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 
     /**Internal implementation of loading all placeholders currently present in the document (and optionally, all their children). 
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderLoadArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
@@ -829,6 +859,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         var eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream = eventStream;
         session.eventStream.context = session.placeholderArgs;
+        session.eventStream.bubblingEvents = _bubblingEvents;
 
         //set basic event stream properties
         setUpEventStream(session, callback);

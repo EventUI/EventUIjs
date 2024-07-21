@@ -103,6 +103,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     @type {Number}*/
     var _defaultAskTimeout = 5000;
 
+    /**Object. Manager for adding additional bubbling events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Represents the union of all the objects required for the IFrameManager to manage parent and child Windows.
     @class*/
     var IFrameEntry = function ()
@@ -143,6 +147,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         /**An array of the message listeners attached to this IFrame.
         @type {EVUI.Modules.IFrames.IFrameMessageListener[]}*/
         this.messageHandlers = [];
+
+        /**The bubbling event manager used to add additional events to an Iframe.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**The origin of the URL associated with either the parent window or the iframe.
         @type {String}*/
@@ -515,6 +523,28 @@ EVUI.Modules.IFrames.IFrameManager = function ()
 
         _children.push(entry);
         return entry.iFrame;
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 
     /**Creates an IFrameHandle that contains the injectable functionality for the IFrame object.
@@ -1009,6 +1039,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     {
         var es = new EVUI.Modules.EventStream.EventStream();
         es.context = messageSession.entry.iFrame;
+        es.bubblingEvents = [messageSession.entry.handle.bubblingEvents, _bubblingEvents];
 
         es.processInjectedEventArgs = function (eventArgs)
         {
@@ -1409,6 +1440,28 @@ EVUI.Modules.IFrames.IFrame = function (iframeHandle)
     this.remove = function ()
     {
         return _handle.remove();
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 };
 
