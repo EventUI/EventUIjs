@@ -4616,6 +4616,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             bindingHandle.currentState.parentBindingHandle = session.bindingHandle;
             bindingHandle.currentState.parentBindingPath = curChild.path;
 
+            if (bindingHandle.currentState.htmlContent == null)
+            {
+                bindingHandle.currentState.htmlContent = session.bindingHandle.currentState.htmlContent;
+            }
+
             var segments = EVUI.Modules.Core.Utils.getValuePathSegments(curChild.path);
             if (segments.length === 0)
             {
