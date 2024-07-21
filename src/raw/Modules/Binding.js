@@ -41,7 +41,7 @@ EVUI.Modules.Binding.Constants.Attr_HtmlContentKey = "evui-binder-html-key";
 EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl = "evui-binder-html-src";
 EVUI.Modules.Binding.Constants.Attr_BoundObj = "evui-binder-source";
 EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
-EVUI.Modules.Binding.Constants.Attr_BindingTemplateName = "evui-binder-template-name";
+EVUI.Modules.Binding.Constants.Attr_BindingTemplate = "evui-binder-template";
 
 EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
 EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "sethtmlcontent";
@@ -5790,7 +5790,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var bindingAttributes = new BindingElementAttributes();
         bindingAttributes.key = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
         bindingAttributes.mode = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_Mode);
-        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplateName);
+        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
         bindingAttributes.sourcePath = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BoundObj);
         bindingAttributes.src = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
 
