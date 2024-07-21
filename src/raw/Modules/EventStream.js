@@ -383,14 +383,19 @@ EVUI.Modules.EventStream.EventStream = function (config)
         }
         else //we were likely paused by the event args, so the event handler was firing when we paused, so just start the next step
         {
-            if (_eventExecuting === false)
+            if (_eventExecuting === false) //if the event code has exited
             {
                 var index = _pausedStepIndex;
                 _pausedStepIndex = -1;
 
-                triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                //trigger the bubblinf events for the step that was paused (which will always be 1 less than the pausedStepIndex, which is the index of the paused step + 1)
+                triggerBubblingEvents(_sequence[index - 1], function ()
+                {
+                    //call the next step
+                    triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                });
             }
-            else
+            else //still executing an event handler
             {
                 _resumedWhileEventExecuting = true;
             }
@@ -519,7 +524,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
 
             if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.key) === true) streamStep.key = EVUI.Modules.Core.Utils.makeGuid();
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.EventKey + ")"
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.key + ")"
         }
         else
         {
@@ -576,6 +581,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (typeof handlerOrKey === "function")
         {
             handler = handlerOrKey;
+            handlerOrKey = null;
+
             handlerSet = true;
         }
         else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
@@ -586,16 +593,25 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (handlerSet === false && typeof handlerOrName === "function")
         {
             handler = handlerOrName;
+            handlerOrName = null;
+
             handlerSet = true;
         }
-        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
+        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === false)
         {
             name = handlerOrName;
+        }
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === true && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(key) === false)
+        {
+            name = key;
         }
 
         if (handlerSet === false && typeof handlerOrTimeout === "function")
         {
             handler = handlerOrTimeout;
+            handlerOrTimeout = null;
+
             handlerSet = true;
         }
         else if (typeof handlerOrTimeout === "number")
@@ -822,7 +838,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @param {Function} callback A callback function to call once the sub EventStream completes.*/
     var triggerBubblingEvents = function (step, callback)
     {
-        if (_self.bubblingEvents == null || typeof _self.bubblingEvents.getBubblingEvents !== "function") return callback();
+        if (_self.bubblingEvents == null || (typeof _self.bubblingEvents.getBubblingEvents !== "function" && EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === false)) return callback();
 
         var bubblingEvents = null;
 
@@ -1006,6 +1022,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         eventArgs.totalSteps = sequence.length;
         eventArgs.status = _self.getStatus();
         eventArgs.error = error;
+        eventArgs.state = _self.eventState;
+
         attachEvents(eventArgs, step);
 
         if (typeof _self.processInjectedEventArgs == "function" && step.type !== EVUI.Modules.EventStream.EventStreamStepType.Job) //there is a "ProcessEventArgs" override function that is going to be used to make custom event args.
@@ -1993,7 +2011,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
         }
 
         //set the type of event that should raise this event
-        var lowerEventType = typeof options.eventType === "string" ? lowerEventType.toLowerCase() : options.eventType;
+        var lowerEventType = typeof options.eventType === "string" ? options.eventType.toLowerCase() : options.eventType;
         if (lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent && lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.Event)
         {
             options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
@@ -2001,10 +2019,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function ()
         else
         {
             options.eventType = lowerEventType;
-        }
-
-
-        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+        }       
 
         //add the listener to the events dictionary
         var existingEvents = _eventsDictionary[listener.listener.eventName];
