@@ -1398,22 +1398,12 @@ $evui.isObject = function (o)
 @param {Array} arr The object to test.
 @returns {Boolean}*/
 EVUI.Modules.Core.Utils.isArray = function (arr)
-{
-    if (arr == null) return false;
-
-    var arrType = typeof arr;
-    if (arrType === "string" || arrType === "function") return false;
+{    
+    //note: this is an ancient function that used to have a looser definition of what 'is' an array, but that led to false positives on plain objects that were not arrays, so it got stripped down to the most basic (and reliable) check.
 
     if (Array.isArray(arr) === true) return true;
 
-    if (typeof arr.length === "number")
-    {
-        return true;
-    }
-    else
-    {    
-        return false;
-    }
+    return false;
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
