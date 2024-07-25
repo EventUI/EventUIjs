@@ -1311,17 +1311,21 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         if (session.cancel === true || session.bindingHandle.disposing === true) return jobArgs.cancel();
 
+        if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
+        if (session.bindingArgs.bindingSource == null)
+        {
+            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
+            session.eventStream.seek(EVUI.Modules.Binding.Constants.Job_FinishBinding);
+            triggerDispose(session.bindingHandle);
+
+            return jobArgs.resolve();
+            // ("Cannot bind a null reference. " + parentPath);
+        }
+
         //flip the states so that we have a new state to populate and that the current state becomes the old state.
         swapStates(session);
 
-        if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
-        if (session.bindingHandle.currentState.source == null)
-        {
-            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
-            triggerDispose(session.bindingHandle);            
 
-            return jobArgs.reject("Cannot bind a null reference. " + parentPath);
-        }
 
         jobArgs.resolve();
     };
@@ -2657,7 +2661,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         }
 
-        if (session.bindingHandle.currentState.source === session.bindingHandle.oldState.source) return;
+        if (session.observedDifferences != null && (session.observedDifferences.length === 0 || (session.observedDifferences.allDifferences != null && session.observedDifferences.allDifferences.length === 0))) return; // === session.bindingHandle.oldState.source) return;
 
         //var numDiffs = session.observedDifferences.rootComparison.differences.length;
         //if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
@@ -4738,8 +4742,8 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (curChange.bindingStructureChangeType === BindingStructureChangeType.Added) //item was added to the list of bindingChildren, add it to the process list. The processing will add it like normal.
             {
-                if (session.isArray === true)
-                {
+                if (session.isArray === true) //EVUI.Modules.Core.Utils.isArray(curChange.binding.currentState.source) === true
+                {                   
                     curChange.binding.currentState.boundContent = null;
                 }
 
@@ -5053,10 +5057,19 @@ EVUI.Modules.Binding.BindingController = function (services)
         {
             var curDiff = diffs[x];
 
+
             if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Changed || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
             {
                 var objectPath = curDiff.path;
                 if (objectPath == null) continue;
+
+                if (EVUI.Modules.Core.Utils.isObject(curDiff.newValue) === false && EVUI.Modules.Core.Utils.isObject(curDiff.originalValue) === false)
+                {
+                    if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
+                    {
+                        curDiff.type = EVUI.Modules.Observers.ObservedObjectChangeType.Changed;
+                    }
+                }
 
                 //first see if the unmodified path is a match
                 var curBinding = getBindingContentList(allBindings, objectPath);
