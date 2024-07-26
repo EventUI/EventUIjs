@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -23,8 +23,8 @@ $evui = {};
 
 
 /********************************************************Binding.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
-
+/**Copyright (c) 2024 Richard H Stannard
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
@@ -66,7 +66,7 @@ EVUI.Modules.Binding.Constants.Attr_HtmlContentKey = "evui-binder-html-key";
 EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl = "evui-binder-html-src";
 EVUI.Modules.Binding.Constants.Attr_BoundObj = "evui-binder-source";
 EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
-EVUI.Modules.Binding.Constants.Attr_BindingTemplateName = "evui-binder-template-name";
+EVUI.Modules.Binding.Constants.Attr_BindingTemplate = "evui-binder-template";
 
 EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
 EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "sethtmlcontent";
@@ -349,23 +349,26 @@ EVUI.Modules.Binding.BindingController = function (services)
         return null;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
-        return _bubblingEvents.addEventListener(eventName, handler, options);
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventKey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventKeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        return _bubblingEvents.removeEventListener(eventNameOrId, handler);
+        return _bubblingEvents.removeEventListener(eventKeyOrId, handler);
     };
 
     /**Event that fires immediately before the binding process begins.
@@ -1166,7 +1169,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         session.eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream.eventState = session.context;
-        session.eventStream.bubblingEvents = _bubblingEvents;
+        session.eventStream.bubblingEvents = [session.bindingHandle.wrapper.bubblingEvents, _bubblingEvents];
         session.eventStream.context = session.bindingHandle.binding;
         session.eventStream.extendSteps = false;
 
@@ -1333,17 +1336,21 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         if (session.cancel === true || session.bindingHandle.disposing === true) return jobArgs.cancel();
 
+        if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
+        if (session.bindingArgs.bindingSource == null)
+        {
+            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
+            session.eventStream.seek(EVUI.Modules.Binding.Constants.Job_FinishBinding);
+            triggerDispose(session.bindingHandle);
+
+            return jobArgs.resolve();
+            // ("Cannot bind a null reference. " + parentPath);
+        }
+
         //flip the states so that we have a new state to populate and that the current state becomes the old state.
         swapStates(session);
 
-        if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
-        if (session.bindingHandle.currentState.source == null)
-        {
-            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
-            triggerDispose(session.bindingHandle);            
 
-            return jobArgs.reject("Cannot bind a null reference. " + parentPath);
-        }
 
         jobArgs.resolve();
     };
@@ -2679,7 +2686,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         }
 
-        if (session.bindingHandle.currentState.source === session.bindingHandle.oldState.source) return;
+        if (session.observedDifferences != null && (session.observedDifferences.length === 0 || (session.observedDifferences.allDifferences != null && session.observedDifferences.allDifferences.length === 0))) return; // === session.bindingHandle.oldState.source) return;
 
         //var numDiffs = session.observedDifferences.rootComparison.differences.length;
         //if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
@@ -4638,6 +4645,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             bindingHandle.currentState.parentBindingHandle = session.bindingHandle;
             bindingHandle.currentState.parentBindingPath = curChild.path;
 
+            if (bindingHandle.currentState.htmlContent == null)
+            {
+                bindingHandle.currentState.htmlContent = session.bindingHandle.currentState.htmlContent;
+            }
+
             var segments = EVUI.Modules.Core.Utils.getValuePathSegments(curChild.path);
             if (segments.length === 0)
             {
@@ -4755,8 +4767,8 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (curChange.bindingStructureChangeType === BindingStructureChangeType.Added) //item was added to the list of bindingChildren, add it to the process list. The processing will add it like normal.
             {
-                if (session.isArray === true)
-                {
+                if (session.isArray === true) //EVUI.Modules.Core.Utils.isArray(curChange.binding.currentState.source) === true
+                {                   
                     curChange.binding.currentState.boundContent = null;
                 }
 
@@ -5070,10 +5082,19 @@ EVUI.Modules.Binding.BindingController = function (services)
         {
             var curDiff = diffs[x];
 
+
             if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Changed || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
             {
                 var objectPath = curDiff.path;
                 if (objectPath == null) continue;
+
+                if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
+                {
+                    if (EVUI.Modules.Core.Utils.isObject(curDiff.newValue) === false && EVUI.Modules.Core.Utils.isObject(curDiff.originalValue) === false)
+                    {
+                        curDiff.type = EVUI.Modules.Observers.ObservedObjectChangeType.Changed;
+                    }
+                }
 
                 //first see if the unmodified path is a match
                 var curBinding = getBindingContentList(allBindings, objectPath);
@@ -5812,7 +5833,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var bindingAttributes = new BindingElementAttributes();
         bindingAttributes.key = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
         bindingAttributes.mode = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_Mode);
-        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplateName);
+        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
         bindingAttributes.sourcePath = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BoundObj);
         bindingAttributes.src = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
 
@@ -6208,6 +6229,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         wrapper.getValidElement = getValidElement;
         wrapper.triggerUpdate = triggerUpdate;
         wrapper.toDomNode = toDomNode;
+        wrapper.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         return wrapper;
     };
@@ -6801,6 +6823,10 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         /**Function for turning a DomTreeElement into a DOM Node object.*/
         this.toDomNode = null;
+
+        /**Controller's bubbling events manager.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = null;
     };
 
     /**Container for all things related to an active Binding in progress.
@@ -7817,6 +7843,28 @@ EVUI.Modules.Binding.Binding = function (handle)
     /**Event that fires when the binding operation is complete and the complete content and all its children has been injected.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBound = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.wrapper.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.wrapper.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Searches all the children underneath this Binding using the predicate function to find a match.
@@ -8318,7 +8366,7 @@ Object.freeze(EVUI.Modules.Binding);
 
 
 /********************************************************Core.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -9508,7 +9556,17 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
 
     //check the cache for the resolved path first - if we already did this path, just return a copy of the path's array
     var existing = EVUI.Modules.Core.Utils.PathCache[propertyPath];
-    if (existing != null) return existing.slice();
+    if (existing != null)
+    {
+        try //in some rare cases paths that are the names of the properties of the Object prototype can get 'pulled' from the cache if they haven't been added before, in which case they won't have a slice method, so we let it fail and fall through to the code that will add it to the cache (and it won't fail again)
+        {
+            return existing.slice();
+        }
+        catch (ex)
+        {
+            //do nothing, we want the code below to execute if this block gets hit
+        }
+    }
 
     var segs = [];
 
@@ -9708,22 +9766,12 @@ $evui.isObject = function (o)
 @param {Array} arr The object to test.
 @returns {Boolean}*/
 EVUI.Modules.Core.Utils.isArray = function (arr)
-{
-    if (arr == null) return false;
-
-    var arrType = typeof arr;
-    if (arrType === "string" || arrType === "function") return false;
+{    
+    //note: this is an ancient function that used to have a looser definition of what 'is' an array, but that led to false positives on plain objects that were not arrays, so it got stripped down to the most basic (and reliable) check.
 
     if (Array.isArray(arr) === true) return true;
 
-    if (typeof arr.length === "number")
-    {
-        return true;
-    }
-    else
-    {    
-        return false;
-    }
+    return false;
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
@@ -9941,6 +9989,14 @@ EVUI.Modules.Core.Utils.isjQuery = function (object)
 EVUI.Modules.Core.Utils.isElement = function (object)
 {
     return object instanceof Element;
+};
+
+/**Checks to see if an object is derived from an Element-derived object.
+@param {Object} object The object to check.
+@returns {Boolean}*/
+$evui.isElement = function (object)
+{
+    return EVUI.Modules.Core.Utils.isElement(object);
 };
 
 
@@ -10528,7 +10584,7 @@ Object.freeze(EVUI.Modules.Core.Utils);
 
 
 /********************************************************Diff.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -11746,7 +11802,7 @@ Object.freeze(EVUI.Modules.Diff);
 
 
 /********************************************************Dom.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -12813,7 +12869,7 @@ Object.freeze(EVUI.Modules.Dom);
 
 
 /********************************************************DomEvents.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -13843,7 +13899,7 @@ Object.freeze(EVUI.Modules.DomEvents);
 
 
 /********************************************************DomTree.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -16475,7 +16531,7 @@ Object.freeze(EVUI.Modules.DomTree);
 
 
 /********************************************************Enums.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -17067,7 +17123,7 @@ Object.freeze(EVUI.Modules.Enums);
 
 
 /********************************************************Events.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -17911,7 +17967,7 @@ Object.freeze(EVUI.Modules.Events);
 
 
 /********************************************************EventStream.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -18049,7 +18105,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     this.context = null;
 
     /**Object. A BubblingEventsManager that bubbling events will be drawn from during the EventStream's execution.
-    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    @type {EVUI.Modules.EventStream.BubblingEventManager|EVUI.Modules.EventStream.BubblingEventManager[]}*/
     this.bubblingEvents = null;
 
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
@@ -18146,13 +18202,11 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (this.reset() === false) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
-
-        //kick off the process
         triggerAsyncCall(function ()
         {
             _currentStep = _sequence[0];
             executeStep(_sequence, 0);
-        }, 0);
+        });        
 
         return true;
     };
@@ -18296,14 +18350,19 @@ EVUI.Modules.EventStream.EventStream = function (config)
         }
         else //we were likely paused by the event args, so the event handler was firing when we paused, so just start the next step
         {
-            if (_eventExecuting === false)
+            if (_eventExecuting === false) //if the event code has exited
             {
                 var index = _pausedStepIndex;
                 _pausedStepIndex = -1;
 
-                triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                //trigger the bubblinf events for the step that was paused (which will always be 1 less than the pausedStepIndex, which is the index of the paused step + 1)
+                triggerBubblingEvents(_sequence[index - 1], function ()
+                {
+                    //call the next step
+                    triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                });
             }
-            else
+            else //still executing an event handler
             {
                 _resumedWhileEventExecuting = true;
             }
@@ -18432,7 +18491,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
 
             if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.key) === true) streamStep.key = EVUI.Modules.Core.Utils.makeGuid();
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.EventKey + ")"
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.key + ")"
         }
         else
         {
@@ -18489,6 +18548,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (typeof handlerOrKey === "function")
         {
             handler = handlerOrKey;
+            handlerOrKey = null;
+
             handlerSet = true;
         }
         else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
@@ -18499,16 +18560,25 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (handlerSet === false && typeof handlerOrName === "function")
         {
             handler = handlerOrName;
+            handlerOrName = null;
+
             handlerSet = true;
         }
-        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
+        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === false)
         {
             name = handlerOrName;
+        }
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === true && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(key) === false)
+        {
+            name = key;
         }
 
         if (handlerSet === false && typeof handlerOrTimeout === "function")
         {
             handler = handlerOrTimeout;
+            handlerOrTimeout = null;
+
             handlerSet = true;
         }
         else if (typeof handlerOrTimeout === "number")
@@ -18735,13 +18805,34 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @param {Function} callback A callback function to call once the sub EventStream completes.*/
     var triggerBubblingEvents = function (step, callback)
     {
-        if (_self.bubblingEvents == null || typeof _self.bubblingEvents.getBubblingEvents !== "function") return callback();
+        if (_self.bubblingEvents == null || (typeof _self.bubblingEvents.getBubblingEvents !== "function" && EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === false)) return callback();
 
         var bubblingEvents = null;
 
         try
         {
-            bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            if (EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === true)
+            {
+                bubblingEvents = [];
+                var numBubblers = _self.bubblingEvents.length;
+                for (var x = 0; x < numBubblers; x++)
+                {
+                    var curBubbler = _self.bubblingEvents[x];
+                    if (EVUI.Modules.Core.Utils.isObject(curBubbler) === false) continue;
+                    if (typeof curBubbler.getBubblingEvents !== "function") continue;
+
+                    var curBubblingEvents = curBubbler.getBubblingEvents(step);
+                    var numEvents = (curBubblingEvents == null) ? 0 : curBubblingEvents.length;
+                    for (var y = 0; y < numEvents; y++)
+                    {
+                        bubblingEvents.push(curBubblingEvents[y]);
+                    }
+                }
+            }
+            else
+            {
+                bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            }           
         }
         catch (ex)
         {
@@ -18754,52 +18845,60 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var numEvents = bubblingEvents.length;
         if (numEvents === 0) return callback();
 
-        var config = new EVUI.Modules.EventStream.EventStreamConfig();
-        config.context = _self.context;
-        config.canSeek = _self.canSeek;
-        config.endExecutionOnEventHandlerCrash = true;
-        config.eventState = _self.eventState;
-        config.processReturnedEventArgs = _self.processReturnedEventArgs;
-        config.skipInterval = _self.skipInterval;
-        config.extendSteps = _self.extendSteps;
-        config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
-        config.onComplete = function () { callback(); } //call the callback in the complete handler, which will fire no matter what.
-
-        var subStream = new EVUI.Modules.EventStream.EventStream(config);
-
-        //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
-        subStream.processInjectedEventArgs = function (eventArgs)
+        var p = new Promise(function (resolve)
         {
-            var processedArgs = _self.processInjectedEventArgs(eventArgs);
-            if (_self.canSeek === true && processedArgs.seek != null)
+            var config = new EVUI.Modules.EventStream.EventStreamConfig();
+            config.context = _self.context;
+            config.canSeek = _self.canSeek;
+            config.endExecutionOnEventHandlerCrash = true;
+            config.eventState = _self.eventState;
+            config.processReturnedEventArgs = _self.processReturnedEventArgs;
+            config.skipInterval = _self.skipInterval;
+            config.extendSteps = _self.extendSteps;
+            config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
+            config.onComplete = function () { resolve(); } //call the callback in the complete handler, which will fire no matter what.
+
+            var subStream = new EVUI.Modules.EventStream.EventStream(config);
+
+            //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
+            subStream.processInjectedEventArgs = function (eventArgs)
             {
-                processedArgs.seek = function (indexOrKey, seekInParent)
+                var processedArgs = _self.processInjectedEventArgs(eventArgs);
+                if (_self.canSeek === true && processedArgs.seek != null)
                 {
-                    if (seekInParent === true)
+                    processedArgs.seek = function (indexOrKey, seekInParent)
                     {
-                        subStream.cancel();
-                        _self.seek(indexOrKey);
-                    }
-                    else
-                    {
-                        subStream.seek(indexOrKey);
-                    }
-                };
+                        if (seekInParent === true)
+                        {
+                            subStream.cancel();
+                            _self.seek(indexOrKey);
+                        }
+                        else
+                        {
+                            subStream.seek(indexOrKey);
+                        }
+                    };
+                }
+
+                return processedArgs;
+            };
+
+            for (var x = 0; x < numEvents; x++)
+            {
+                var curEvent = bubblingEvents[x];
+                if (curEvent == null) continue;
+
+                subStream.addStep(makeBubblingStep(step, curEvent));
             }
 
-            return processedArgs;
-        };
+            //execute the sub-stream
+            subStream.execute();
+        });
 
-        for (var x = 0; x < numEvents; x++)
+        p.then(function ()
         {
-            var curEvent = bubblingEvents[x];
-            if (curEvent == null) continue;
-
-            subStream.addStep(makeBubblingStep(step, curEvent));
-        }
-
-        //execute the sub-stream
-        subStream.execute();
+            callback();
+        });
     };
 
     /**Makes a EventStreamStep representing the "bubbling" events that come off of real events via being added by addEventListener.
@@ -18902,6 +19001,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         eventArgs.totalSteps = sequence.length;
         eventArgs.status = _self.getStatus();
         eventArgs.error = error;
+        eventArgs.state = _self.eventState;
+
         attachEvents(eventArgs, step);
 
         if (typeof _self.processInjectedEventArgs == "function" && step.type !== EVUI.Modules.EventStream.EventStreamStepType.Job) //there is a "ProcessEventArgs" override function that is going to be used to make custom event args.
@@ -19823,30 +19924,29 @@ EVUI.Modules.EventStream.EventStreamEventListenerOptions = function ()
     @type {Number}*/
     this.priority = null;
 
-    /**Boolean. Whether or not this event should fire after a local or global event.
+    /**Boolean. The type of event that should cause this event to fire.
     @type {Boolean}*/
-    this.isGlobal = false;
+    this.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
 };
 
 /**Controller for managing a stack of secondary event handlers that "bubble" in order of addition after the primary event has executed by an EventStream. Assign to an EventStream's bubblingEvents property to use.
 @class*/
-EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
+EVUI.Modules.EventStream.BubblingEventManager = function ()
 {
-    var _eventsDictionary = {}; //the internal registry of events. The keys are event names, and the values are arrays of InternalEventListners.
-    var _forceGlobal = forceGlobal;
+    var _eventsDictionary = {}; //the internal registry of events. The keys are event keys, and the values are arrays of InternalEventListners.
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.EventStream.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
         var listener = new InternalEventListener();
 
-        if (EVUI.Modules.Core.Utils.instanceOf(eventName, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
+        if (EVUI.Modules.Core.Utils.instanceOf(eventKey, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
         {
-            listener.listener = eventName;
+            listener.listener = eventKey;
 
             if (handler != null && typeof handler === "object") //second parameter could be the options object
             {
@@ -19869,11 +19969,11 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 listener.options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
             }
 
-            listener.options.immutable = eventName.immutable;
+            listener.options.immutable = eventKey.immutable;
         }
         else //handed normal parameters, make the listener object
         {
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("eventName must be a non-whitespace string.");
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventKey) === true) throw Error("eventKey must be a non-whitespace string.");
             if (typeof handler !== "function") throw Error("Function expected.");
             if (options == null || typeof options !== "object")
             {
@@ -19884,12 +19984,21 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 options = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.EventStream.EventStreamEventListenerOptions(), options);
             }
 
-            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventName, handler, options.priority, options.immutable);
+            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventKey, handler, options.priority, options.immutable);
             listener.listener = eventListener;
             listener.options = options;
         }
 
-        if (_forceGlobal === true) options.isGlobal = true;
+        //set the type of event that should raise this event
+        var lowerEventType = typeof options.eventType === "string" ? options.eventType.toLowerCase() : options.eventType;
+        if (lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent && lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.Event)
+        {
+            options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+        }
+        else
+        {
+            options.eventType = lowerEventType;
+        }       
 
         //add the listener to the events dictionary
         var existingEvents = _eventsDictionary[listener.listener.eventName];
@@ -19933,12 +20042,12 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
             //sort the list into global and non-global events
             if (step.type === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent)
             {
-                if (curEvent.options.isGlobal === false) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent) continue;
                 eventsToFire.push(curEvent);
             }
             else 
             {
-                if (curEvent.options.isGlobal === true) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.Event) continue;
                 eventsToFire.push(curEvent);
             }
 
@@ -19980,13 +20089,13 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
         return listeners;
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an event listener based on its event name, its id, or its handling function.
+    @param {String} eventKeyOrId The name or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        var existingList = _eventsDictionary[eventNameOrId];
+        var existingList = _eventsDictionary[eventKeyOrId];
         if (existingList != null)
         {
             var removed = false;
@@ -20003,7 +20112,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
 
                     if (numInList === 0)
                     {
-                        delete _eventsDictionary[eventNameOrId];
+                        delete _eventsDictionary[eventKeyOrId];
                         break;
                     }
                 }
@@ -20022,14 +20131,14 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 for (var x = 0; x < numListeners; x++)
                 {
                     var curListener = curListeners[x];
-                    if (curListener.listener.immutable === false && (curListener.handlerId === eventNameOrId || curListener.listener.handler === handler))
+                    if (curListener.listener.immutable === false && (curListener.handlerId === eventKeyOrId || curListener.listener.handler === handler))
                     {
                         curListeners.splice(x, 1);
                         numListeners--;
 
                         if (numListeners === 0)
                         {
-                            delete _eventsDictionary[eventNameOrId];
+                            delete _eventsDictionary[eventKeyOrId];
                         }
 
                         removed = true;
@@ -20106,7 +20215,7 @@ EVUI.Modules.EventStream.EventStreamStepType =
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
     Event: "event",
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
-    GlobalEvent: "globalEvent",
+    GlobalEvent: "global",
 
     /**Takes a string and returns a correct EventStreamStepType.
     @method GetStepType
@@ -20124,6 +20233,16 @@ EVUI.Modules.EventStream.EventStreamStepType =
     }
 };
 
+/**Sets the behavior for the Handler function in a EventStreamStep.
+ @enum*/
+EVUI.Modules.EventStream.EventStreamEventType =
+{
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
+    Event: "event",
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
+    GlobalEvent: "global",
+}
+
 Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
 Object.freeze(EVUI.Modules.EventStream);
 
@@ -20133,7 +20252,7 @@ EVUI.Constructors.EventStream = EVUI.Modules.EventStream.EventStream;
 
 
 /********************************************************HtmlLoader.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -20199,6 +20318,10 @@ EVUI.Modules.HtmlLoader.Constants.Fn_GetPartials_Callback = function (loadReques
  @param {EVUI.Modules.HtmlLoader.HtmlPlaceholder} placeholderResult The details of the completed placeholder load.*/
 EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback = function (placeholderResult) { }
 
+/**Event handler definition for HtmlLoader events. 
+@param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} htmlLoaderEventArgs The event args from the HtmlLoaders.*/
+EVUI.Modules.HtmlLoader.Constants.Fn_HtmlLoaderEventHandler = function (htmlLoaderEventArgs) { };
+
 Object.freeze(EVUI.Modules.HtmlLoader.Constants)
 
 /**Controller for loading HTML, either as a bunch of small partial pieces of HTML or for loading larger placeholders which can also contain placeholders.
@@ -20218,6 +20341,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     /**A counter to generate ID's for each load session.
     @type {Number}*/
     var _sessionIdCtr = 0;
+
+    /**The bubbling event manager used to attach additional events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
     /**Makes a simple GET request to get Html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
     @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl The Url of the html or the arguments for getting the Html.
@@ -20436,7 +20563,29 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 resolve(results);
             })
         })
-    }
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.HtmlLoader.Constants.Fn_HtmlLoaderEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _entry.link.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _entry.link.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 
     /**Internal implementation of loading all placeholders currently present in the document (and optionally, all their children). 
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderLoadArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
@@ -20964,6 +21113,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         var eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream = eventStream;
         session.eventStream.context = session.placeholderArgs;
+        session.eventStream.bubblingEvents = _bubblingEvents;
 
         //set basic event stream properties
         setUpEventStream(session, callback);
@@ -21715,7 +21865,7 @@ Object.freeze(EVUI.Modules.HtmlLoader);
 
 
 /********************************************************Http.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -21869,23 +22019,25 @@ EVUI.Modules.Http.HttpManager = function ()
         return copy;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Http.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventkey, handler, options)
     {
-        return _bubbler.addEventListener(eventName, handler, options);
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+        return _bubbler.addEventListener(eventkey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventkeyOrId, handler)
     {
-        return _bubbler.removeEventListener(eventNameOrId, handler);
+        return _bubbler.removeEventListener(eventkeyOrId, handler);
     };
 
     /**Builds the internal RequestInstance object that manages the lifetime of the XMLHttpRequest. Sets up the EventStream's function and setting overrides.
@@ -22024,7 +22176,7 @@ EVUI.Modules.Http.HttpManager = function ()
                     if (typeof requestArgs.timeout === "number" && requestArgs.timeout > 0) xhr.timeout = requestArgs.timeout;
 
                     //add all the headers
-                    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(requestArgs.headers) === true)
+                    if (EVUI.Modules.Core.Utils.isArray(requestArgs.headers) === true)
                     {
                         var numHeaders = requestArgs.headers.length;
                         for (var x = 0; x < numHeaders; x++)
@@ -22835,7 +22987,7 @@ Object.freeze(EVUI.Modules.Http);
 
 
 /********************************************************IFrames.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -22940,6 +23092,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     @type {Number}*/
     var _defaultAskTimeout = 5000;
 
+    /**Object. Manager for adding additional bubbling events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Represents the union of all the objects required for the IFrameManager to manage parent and child Windows.
     @class*/
     var IFrameEntry = function ()
@@ -22980,6 +23136,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         /**An array of the message listeners attached to this IFrame.
         @type {EVUI.Modules.IFrames.IFrameMessageListener[]}*/
         this.messageHandlers = [];
+
+        /**The bubbling event manager used to add additional events to an Iframe.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**The origin of the URL associated with either the parent window or the iframe.
         @type {String}*/
@@ -23352,6 +23512,28 @@ EVUI.Modules.IFrames.IFrameManager = function ()
 
         _children.push(entry);
         return entry.iFrame;
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 
     /**Creates an IFrameHandle that contains the injectable functionality for the IFrame object.
@@ -23846,6 +24028,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     {
         var es = new EVUI.Modules.EventStream.EventStream();
         es.context = messageSession.entry.iFrame;
+        es.bubblingEvents = [messageSession.entry.handle.bubblingEvents, _bubblingEvents];
 
         es.processInjectedEventArgs = function (eventArgs)
         {
@@ -24247,6 +24430,28 @@ EVUI.Modules.IFrames.IFrame = function (iframeHandle)
     {
         return _handle.remove();
     };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**The event arguments for when a message is sent or received.
@@ -24450,7 +24655,7 @@ Object.freeze(EVUI.Modules.IFrames);
 
 
 /********************************************************Observers.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -25458,7 +25663,7 @@ Object.freeze(EVUI.Modules.Observers);
 
 
 /********************************************************Panes.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
  * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -25481,6 +25686,10 @@ EVUI.Modules.Panes.Constants.Fn_LoadCallback = function (success) { };
 /**Function for reporting whether or not an operation Pane was successful.
 @param {Boolean} success Whether or not the operation completed successfully.*/
 EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback = function (success) { };
+
+/**Function definition for the event handlers attached to Panes and the PaneManager.
+@param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The Pane's event args.*/
+EVUI.Modules.Panes.Constants.Fn_PaneEventHandler = function (paneEventArgs) { };
 
 EVUI.Modules.Panes.Constants.CSS_Position = "evui-position";
 EVUI.Modules.Panes.Constants.CSS_ClippedX = "evui-clipped-x";
@@ -25693,6 +25902,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @type {String[]}*/
     var _unloadArgumentFilter = ["context"];
 
+    /**Manager for adding additional events to this controller.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Settings object for dependencies used by this Pane manager.
     @class*/
     var PaneSettings = function ()
@@ -25729,6 +25942,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Object. The EventStream doing the work of the operations for the Pane.
         @type {EVUI.Modules.EventStream.EventStream}*/
         this.eventStream = null;
+
+        /**Object. The bubbling event manager for this Pane.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**Number. Bit flags indicating the current state of the Pane (initialized, loaded, etc).
         @type {Number}*/
@@ -26749,6 +26966,28 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 resolve(success);
             });
         });
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 
     /**************************************************************************************EVENTS*************************************************************************************************************/
@@ -28373,6 +28612,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         eventStream.canSeek = true;
         eventStream.endExecutionOnEventHandlerCrash = false;
+        eventStream.bubblingEvents = [opSession.entry.link.bubblingEvents, _bubblingEvents];
+
         var curArgs = null;
 
         eventStream.processInjectedEventArgs = function (eventStreamArgs)
@@ -32625,6 +32866,28 @@ EVUI.Modules.Panes.Pane = function (entry)
             return zIndex;
         }
     };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _entry.link.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _entry.link.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Settings for controlling how the Pane will automatically close itself in response to user events.
@@ -33675,7 +33938,7 @@ Object.freeze(EVUI.Modules.Panes);
 
 
 /********************************************************Styles.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2024 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -35441,8 +35704,8 @@ Object.freeze(EVUI.Modules.Styles);
 
 
 /********************************************************TreeView.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
-
+/**Copyright (c) 2024 Richard H Stannard
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
@@ -35819,8 +36082,6 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
             throw Error("Invalid action.");
         }
     };
-
-
 
     /**Issues the command to build a node (or the entire tree view) from a TreeView object.
     @param {TreeViewEntry} treeViewEntry The TreeView invoking the command.
@@ -36251,6 +36512,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
         opSession.eventStream = new EVUI.Modules.EventStream.EventStream();
         opSession.eventStream.context = opSession.nodeEntry.node;
         opSession.eventStream.extendSteps = false;
+        opSession.eventStream.bubblingEvents = [opSession.nodeEntry.bubblingEvents, opSession.nodeEntry.treeViewEntry.bubblingEvents];
 
         opSession.eventStream.onCancel = function ()
         {
@@ -38095,6 +38357,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         /**Gets a valid element for the root node of the TreeView based on ambiguous user input.*/
         this.getValidElement = getValidRootElement;
+
+        /**The event manager used to attach more events to the TreeView.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
     };
 
     /**Object that is injected into a TreeViewNode and is used internally to perform all operations on TreeViewNodes.
@@ -38239,6 +38505,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         /**Triggers the disposal of this node.*/
         this.dispose = disposeTreeViewNode;
+
+        /**The event manager used to attach additional events to the node.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
     };
 
     /**Represents one of the objects used by the internal Binding to stamp out a tree view child node list for each child source object in the user's source object
@@ -38388,7 +38658,7 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
         enumerable: true
     });
 
-    /**Object. The HTMLElement under which the TreeView will be appended under.
+    /**Object. The HTMLElement under which the TreeView will be appended.
     @type {Element}*/
     this.element = null;
     Object.defineProperty(this, "element", {
@@ -38617,6 +38887,28 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
     /**Event that fires after a collapse operation completes.
     @type {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler}*/
     this.onCollapsed = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _treeViewEntry.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _treeViewEntry.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Expands all the TreeViewNodes in the TreeView.
@@ -39075,6 +39367,28 @@ EVUI.Modules.TreeView.TreeViewNode = function (nodeEntry)
     /**Event that fires after a collapse operation completes.
     @type {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler}*/
     this.onCollapsed = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _nodeEntry.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _nodeEntry.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Object for containing configuration options for a TreeView and its TreeViewNodes.
