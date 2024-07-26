@@ -5063,9 +5063,9 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var objectPath = curDiff.path;
                 if (objectPath == null) continue;
 
-                if (EVUI.Modules.Core.Utils.isObject(curDiff.newValue) === false && EVUI.Modules.Core.Utils.isObject(curDiff.originalValue) === false)
+                if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
                 {
-                    if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
+                    if (EVUI.Modules.Core.Utils.isObject(curDiff.newValue) === false && EVUI.Modules.Core.Utils.isObject(curDiff.originalValue) === false)
                     {
                         curDiff.type = EVUI.Modules.Observers.ObservedObjectChangeType.Changed;
                     }
