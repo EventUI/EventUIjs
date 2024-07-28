@@ -124,10 +124,6 @@ EVUI.Modules.Binding.BindingController = function (services)
     @type {EVUI.Modules.Binding.BindingTemplate[]}*/
     var _bindingTemplates = [];
 
-    /**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
-    @type {Object}*/
-    var _invocationDictionary = {};
-
     /**Object. Injected services into this controller to use custom 
     @type {EVUI.Modules.Binding.BindingControllerServices}*/
     var _services = services;
@@ -354,11 +350,11 @@ EVUI.Modules.Binding.BindingController = function (services)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -1071,7 +1067,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var curHandle = session.rollbackDispatchHandles[x];
 
                 //re-set the reference in the invocation dictionary so the old handler is called
-                _invocationDictionary[curHandle.hashKey] = curHandle;
+                EVUI.Modules.Binding.BindingController.BoundEvents[curHandle.hashKey] = curHandle;
 
                 //then go re-set the reference in the dispatch handles array
                 for (var y = 0; y < numCurHandles; y++)
@@ -6400,7 +6396,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var replacementValue = "$evui.dispatch(event, \`" + hashKey + "\`)";
 
         //look to see if we don't have the same handler there already
-        var existing = _invocationDictionary[hashKey];
+        var existing = EVUI.Modules.Binding.BindingController.BoundEvents[hashKey];
         if (existing != null)
         {
             if (existing.handler === fn)
@@ -6465,7 +6461,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         };
 
-        _invocationDictionary[handle.hashKey] = handle;
+        EVUI.Modules.Binding.BindingController.BoundEvents[handle.hashKey] = handle;
         session.bindingHandle.dispatchHandles.push(handle);
 
         return replacementValue;
@@ -6496,7 +6492,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {Any}*/
     var invokeHandle = function (eventArgs, handleHash)
     {
-        var dispatchHandle = _invocationDictionary[handleHash];
+        var dispatchHandle = EVUI.Modules.Binding.BindingController.BoundEvents[handleHash];
         if (dispatchHandle == null)
         {
             var logMessage = "Dispatch function for event " + eventArgs.type + " element " + getElementMoniker(eventArgs.currentTarget) + " could not be found.";
@@ -7040,7 +7036,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         this.invocationSites = [];
 
-        if (_invocationDictionary[this.hashKey] === this) delete _invocationDictionary[this.hashKey];
+        if (EVUI.Modules.Binding.BindingController.BoundEvents[this.hashKey] === this) delete EVUI.Modules.Binding.BindingController.BoundEvents[this.hashKey];
     };
 
     /**Represents a location in markup where a BindingDispatchHandle was invoked from.
@@ -7311,6 +7307,15 @@ EVUI.Modules.Binding.BindingController = function (services)
     cacheObjectKeys();
     ensureServices();
 };
+
+/**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
+@type {Object}*/
+Object.defineProperty(EVUI.Modules.Binding.BindingController, "BoundEvents", {
+    value: {},
+    writable: false,
+    enumerable: true,
+    configuable: false
+});
 
 /**A container for Html content that is stored in the BindingController that can be referenced by its key in Bindings so that the same Html can be re-used and referenced in multiple places.
 @class*/
@@ -7799,11 +7804,11 @@ EVUI.Modules.Binding.Binding = function (handle)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -7964,11 +7969,11 @@ EVUI.Modules.Binding.BindingTemplate = function (templateEntry)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
