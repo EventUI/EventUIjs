@@ -1033,6 +1033,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     var rollBackStates = function (session)
     {
         if (EVUI.Modules.Core.Utils.hasFlag(session.bindingHandle.progressState, EVUI.Modules.Binding.BindingProgressStateFlags.Injected) === true) return; //can't roll back states after the binding operation is complete
+        if (session.cancel === true) return;
 
         if (session.bindingHandle.oldState != null)
         {
@@ -1309,19 +1310,13 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
         if (session.bindingArgs.bindingSource == null)
-        {
-            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
-            session.eventStream.seek(EVUI.Modules.Binding.Constants.Job_FinishBinding);
+        {            
             triggerDispose(session.bindingHandle);
-
-            return jobArgs.resolve();
-            // ("Cannot bind a null reference. " + parentPath);
+            return jobArgs.cancel();
         }
 
         //flip the states so that we have a new state to populate and that the current state becomes the old state.
         swapStates(session);
-
-
 
         jobArgs.resolve();
     };
@@ -6366,6 +6361,9 @@ EVUI.Modules.Binding.BindingController = function (services)
         return result;
     };
 
+    /**Gets a path for a property that only contains "." to separate values instead of brackets (if there were any).
+    @param {String} path The path to normalize.
+    @returns {String}*/
     var getNormalizedPath = function (path)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === true) return path;
@@ -6378,6 +6376,10 @@ EVUI.Modules.Binding.BindingController = function (services)
     /****************************************************************************EVENT DISPATCH HANDLING******************************************************************************************** */
 
 
+    /**Calculates the hash code of an invocation of a function as an event handler.
+    @param {BinidngSession} session The session in progress.
+    @param {EVUI.Modules.Binding.BoundProperty} boundProperty The property being bound.
+    @returns*/
     var getInvocationHash = function (session, boundProperty)
     {
         return EVUI.Modules.Core.Utils.getHashCode(_salt + session.bindingHandle.id + ":" + boundProperty.path).toString(36);
