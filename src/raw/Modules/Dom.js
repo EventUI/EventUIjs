@@ -676,6 +676,9 @@ EVUI.Modules.Dom.DomHelper = (function ()
         }
     };
 
+    /**Turns a snake-case string into a camel case string. 
+    @param {String} propName The string to convert.
+    @returns {String}*/
     var normalizeStylePropertyName = function (propName)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(propName) === true) return null;
