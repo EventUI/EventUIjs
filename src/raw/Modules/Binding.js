@@ -42,6 +42,7 @@ EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl = "evui-binder-html-src";
 EVUI.Modules.Binding.Constants.Attr_BoundObj = "evui-binder-source";
 EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
 EVUI.Modules.Binding.Constants.Attr_BindingTemplate = "evui-binder-template";
+EVUI.Modules.Binding.Constants.Attr_ElementBindingTemplate = "evui-binder-element-template";
 
 EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
 EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "sethtmlcontent";
@@ -1097,7 +1098,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             var eh = null;
             if (session.bindingHandle.binding.parentBinding != null && session.bindingHandle.options.scopedCSSSelectors !== false) //if we're a child binding and are using scoped selectors, look inside the parent for the element
             {
-                eh = new EVUI.Modules.Dom.DomHelper(session.bindingArgs.bindingTarget, session.bindingHandle.binding.parentBinding.boundContentFragment);
+                eh = new EVUI.Modules.Dom.DomHelper(session.bindingArgs.bindingTarget, session.bindingHandle.binding.parentBinding.element);
             }
             else //otherwise look in the whole document.
             {
@@ -3001,9 +3002,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             var values = attributeData.dictionary[curKey];
 
             var newAttrMeta = getNewAttributeMetadata(session, curKey, values.currentValue, values.newValue, currentMeta, newMeta);
+            if (newAttrMeta == null) continue;
+
             currentMeta.attributes[curKey] = newAttrMeta;
 
-            if (newMeta == null || newAttrMeta.value === values.currentValue) continue;
+            if (newAttrMeta == null || newAttrMeta.value === values.currentValue) continue;
 
             targetNode.setAttribute(curKey, newAttrMeta.value);
         }
@@ -5711,6 +5714,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var key = attributes.key;
         var name = attributes.templateName;
         var src = attributes.src;
+        var elementTemplate = attributes.elementTemplateName;
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === false)
         {
@@ -5758,6 +5762,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             attributeTemplate.templateName = name;
         }
 
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(elementTemplate) === false && parentHandle != null && EVUI.Modules.Core.Utils.isArray(parentHandle.currentState.source))
+        {
+            attributeTemplate.templateName = elementTemplate;
+        }
+
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(src) === false)
         {
             if (typeof attributeTemplate.htmlContent === "string")
@@ -5790,18 +5799,19 @@ EVUI.Modules.Binding.BindingController = function (services)
     };
 
     /**Gets all the attribute values needed to make a child binding based off of the markup of an Element's attributes.
-    @param {Element} element The element to extract the elements from.
+    @param {Element} element The element to extract the attributes from.
     @returns {BindingElementAttributes} */
     var getBindingAttributes = function (element)
     {
         if (element == null) return null;
-        var attrs = EVUI.Modules.Core.Utils.getElementAttributes(element);
+
         var bindingAttributes = new BindingElementAttributes();
-        bindingAttributes.key = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
-        bindingAttributes.mode = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_Mode);
-        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
-        bindingAttributes.sourcePath = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BoundObj);
-        bindingAttributes.src = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
+        bindingAttributes.key = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
+        bindingAttributes.mode = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_Mode);
+        bindingAttributes.templateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
+        bindingAttributes.sourcePath = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BoundObj);
+        bindingAttributes.src = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
+        bindingAttributes.elementTemplateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
 
         return bindingAttributes;
     };
@@ -6958,6 +6968,10 @@ EVUI.Modules.Binding.BindingController = function (services)
         /**String. A combination of BindingMode and Insertion mode to give the Binding.
         @type {String}*/
         this.mode = null;
+
+        /**String. The name of the BindingTemplate to use if the item being bound is an array of elements.
+        @type {String}*/
+        this.elementTemplateName = null;
     };
 
     /**Represents the bare minimum amount of information needed to make a child Binding.
@@ -7619,14 +7633,14 @@ EVUI.Modules.Binding.Binding = function (handle)
     Object.defineProperty(this, "boundContentFragment", {
         get: function ()
         {
-            if (_handle.currentState.boundTemplateFragment != null) return _handle.currentState.boundTemplateFragment;
+            if (_handle.currentState.boundContentFragment != null) return _handle.currentState.boundContentFragment;
 
             if (_handle.currentState.boundContentTree != null && _handle.newStateBound === false)
             {
-                _handle.currentState.boundTemplateFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
+                _handle.currentState.boundContentFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
             }
 
-            return _handle.currentState.boundTemplateFragment;
+            return _handle.currentState.boundContentFragment;
         },
         configurable: false,
         enumerable: true
