@@ -1241,19 +1241,28 @@ EVUI.Modules.Binding.BindingController = function (services)
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    onBindJob(session, jobArgs);
+                    onBindJob(session, true, jobArgs);
                 }
             });
         }
         else
         {
+            var setState = false;
             session.eventStream.addStep({
                 name: onBindJobName,
                 key: EVUI.Modules.Binding.Constants.Job_BeginBind,
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    onBindJob(session, jobArgs);
+                    if (session.bindingHandle.currentState.boundContent == null)
+                    {
+                        onBindJob(session, true, jobArgs);
+                        setState = true;
+                    }
+                    else
+                    {
+                        jobArgs.resolve();
+                    }
                 }
             });
 
@@ -1299,13 +1308,24 @@ EVUI.Modules.Binding.BindingController = function (services)
                     }
                 }
             }); 
+
+            session.eventStream.addStep({
+                name: onBindJobName,
+                key: EVUI.Modules.Binding.Constants.Job_BeginBind,
+                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+                handler: function (jobArgs)
+                {
+                    onBindJob(session, !setState, jobArgs);                   
+                }
+            });
         }
     };
 
     /**Job that executes after the onBind events have been executed. Swaps out the current state and turns it into the old state while generating a new state to hold the data for the binding process going forward.
     @param {BindingSession} session The BindingSession being executed.
+    @param {Boolean} swapCurrentState Whether or not the job should execute the state swap.
     @param {EVUI.Modules.EventStream.EventStreamJobArgs} jobArgs The JobArgs for the operation.*/
-    var onBindJob = function (session, jobArgs)
+    var onBindJob = function (session, swapCurrentState, jobArgs)
     {
         if (session.cancel === true || session.bindingHandle.disposing === true) return jobArgs.cancel();
 
@@ -1316,8 +1336,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             return jobArgs.cancel();
         }
 
-        //flip the states so that we have a new state to populate and that the current state becomes the old state.
-        swapStates(session);
+        if (swapCurrentState === true)
+        {
+            //flip the states so that we have a new state to populate and that the current state becomes the old state.
+            swapStates(session);
+        }
 
         jobArgs.resolve();
     };
