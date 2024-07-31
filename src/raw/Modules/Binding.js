@@ -1247,22 +1247,13 @@ EVUI.Modules.Binding.BindingController = function (services)
         }
         else
         {
-            var setState = false;
             session.eventStream.addStep({
                 name: onBindJobName,
                 key: EVUI.Modules.Binding.Constants.Job_BeginBind,
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    if (session.bindingHandle.currentState.boundContent == null)
-                    {
-                        onBindJob(session, true, jobArgs);
-                        setState = true;
-                    }
-                    else
-                    {
-                        jobArgs.resolve();
-                    }
+                    onBindJob(session, true, jobArgs);
                 }
             });
 
@@ -1275,13 +1266,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     if (validateSession(session, eventArgs) === false) return;
                     if (typeof session.bindingHandle.binding.onBind === "function")
                     {
-                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                        if (eventArgs.reBinding === true)
-                        {
-                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                        }
-
+                        eventArgs.reBinding = session.bindingHandle.oldStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
                         return session.bindingHandle.binding.onBind.call(this, eventArgs);
                     }
                 }
@@ -1297,27 +1282,13 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                     if (typeof _self.onBind === "function")
                     {
-                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                        if (eventArgs.reBinding === true)
-                        {
-                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                        }
-
+                        eventArgs.reBinding = session.bindingHandle.oldStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
                         return _self.onBind.call(_self, eventArgs);
                     }
                 }
             }); 
 
-            session.eventStream.addStep({
-                name: onBindJobName,
-                key: EVUI.Modules.Binding.Constants.Job_BeginBind,
-                type: EVUI.Modules.EventStream.EventStreamStepType.Job,
-                handler: function (jobArgs)
-                {
-                    onBindJob(session, !setState, jobArgs);                   
-                }
-            });
+
         }
     };
 
