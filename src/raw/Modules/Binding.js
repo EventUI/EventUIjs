@@ -3248,6 +3248,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numCurrent; x++)
         {
             var attrVal = currentValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3264,6 +3266,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numOld; x++)
         {
             var attrVal = oldValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3280,6 +3284,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numNew; x++)
         {
             var attrVal = newValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3328,7 +3334,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (existingBoundVal == null) continue;
             if (mappings[existingBoundVal.value] != null) continue;
 
-            var newBoundVal = newTokenDic[curVal.tokenizedString];
+            var newBoundVal = currentTokenDic[curVal.tokenizedString];
             mappings[existingBoundVal.value] = newBoundVal;
         }
 
@@ -3342,7 +3348,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (existingBoundVal == null) continue;
             if (mappings[existingBoundVal.value] != null) continue;
 
-            var newBoundVal = currentTokenDic[curVal.tokenizedString];
+            var newBoundVal = newTokenDic[curVal.tokenizedString];
             mappings[existingBoundVal.value] = newBoundVal;
         }
 
@@ -8283,7 +8289,7 @@ EVUI.Modules.Binding.Binder = null;
 })();
 
 /**Constructor reference for the BidningController.*/
-//EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
+EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
 
 Object.freeze(EVUI.Modules.Binding)
 
