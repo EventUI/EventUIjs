@@ -170,7 +170,8 @@ EVUI.Modules.Enums.EnumValueGetter = function ()
             }
         }
 
-        if (moduleEntry == null || constValueName == null) return undefined;
+        if (moduleEntry == null) return undefined;
+        if (typeof constValueName !== "string") return moduleEntry.constants.enumObj;
         return moduleEntry.constants.values[constValueName.toLowerCase()];
     };
 
