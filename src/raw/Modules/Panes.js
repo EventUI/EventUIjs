@@ -1913,6 +1913,25 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return null;
     }; 
 
+    var resolveResizeMoveSettings = function (defaultResizeMove, userResizeMove)
+    {
+        var finalArgs = new EVUI.Modules.Panes.PaneResizeMoveSettings();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, defaultResizeMove);
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userResizeMove);
+
+        if (EVUI.Modules.Core.Utils.isObject(finalArgs.moveTransition) === true)
+        {
+            finalArgs.moveTransition = resolvePaneTransition(defaultResizeMove.moveTransition, userResizeMove.moveTransition);
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(finalArgs.resizeTransition) === true)
+        {
+            finalArgs.moveTransition = resolvePaneTransition(defaultResizeMove.resizeTransition, userResizeMove.resizeTransition);
+        }
+
+        return finalArgs;
+    };
+
     /**Creates a graph of all the properties we can determine about a Pane based on the currentTarget's attributes.
     @param {Event} event The event arguments used to trigger the action of showing or hiding the pane.
     @returns {PaneEventArgsIntepretationResult} */
@@ -6037,8 +6056,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
 
         if (moved === false && resized === false) return false;
+        var transition = (resized === true) ? resizeArgs.resizeTransition : resizeArgs.moveTransition
 
-        applyTransition(entry, resizeArgs.resizeTransition, EVUI.Modules.Panes.Constants.CSS_Transition_Adjust, helper)
+        applyTransition(entry, transition, EVUI.Modules.Panes.Constants.CSS_Transition_Adjust, helper)
 
         return true;
     };
@@ -6366,7 +6386,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     resizeArgs.width = (startPos.right - startPos.left);
                     resizeArgs.top = startPos.top + yDelta;
                     resizeArgs.left = startPos.left + xDelta;
-                    resizeArgs.resizeTransition = (entry.link.pane.showSettings.reclacSettings != null) ? entry.link.pane.showSettings.reclacSettings.recalcTransition : null;
+                    resizeArgs.moveTransition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
 
                     resizePane(entry, resizeArgs, paneRoot, false, true, null, bounds);
                 };
@@ -6443,7 +6463,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 resizeArgs.width = (startPos.right - startPos.left);
                 resizeArgs.top = startPos.top;
                 resizeArgs.left = startPos.left;
-                resizeArgs.resizeTransition = (entry.link.pane.showSettings.reclacSettings != null) ? entry.link.pane.showSettings.reclacSettings.recalcTransition : null;
+                resizeArgs.resizeTransition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.resizeTransition : null;
 
                 if (dragHandles.growX === "right")
                 {
@@ -6993,10 +7013,6 @@ EVUI.Modules.Panes.Pane = function (entry)
     /**Object. Settings for how the Pane's element will be positioned and displayed.
     @type {EVUI.Modules.Panes.PaneShowSettings}*/
     this.showSettings = new EVUI.Modules.Panes.PaneShowSettings();
-
-    /**Object. Rules for controlling what will cause the Pane to recalculate its position.
-    @type {EVUI.Modules.Panes.PaneRecalcSettings}*/
-    this.reclacSettings = new EVUI.Modules.Panes.PaneRecalcSettings();
 
     /**Object. Settings for controlling how the Pane can be resized in response to user action.
     @type {EVUI.Modules.Panes.PaneResizeMoveSettings}*/
@@ -7856,6 +7872,14 @@ EVUI.Modules.Panes.PaneResizeMoveSettings = function ()
     /**Boolean. Whether or not the dimensions of any resized elements in a Pane will be restored to their original size when the Pane is hidden. True by default.
     @type {Boolean}*/
     this.restoreDefaultOnHide = true;
+
+    /**Object. The CSS transition that will be used when the pane is resized.
+    @type {EVUI.Modules.Panes.PaneTransition}*/
+    this.resizeTransition = null;
+
+    /**Object. The CSS transition that will be used when the pane is resmovedized.
+    @type {EVUI.Modules.Panes.PaneTransition}*/
+    this.moveTransition = null;
 };
 
 /**Object for configuring a full-screen backdrop to be placed behind a Pane.
