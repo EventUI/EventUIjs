@@ -1872,17 +1872,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         if (EVUI.Modules.Core.Utils.isObject(defaultAutoClose) === true)
         {
-            if (EVUI.Modules.Core.Utils.isArray(defaultAutoClose.autoCloseKeys) === true)
+            if (EVUI.Modules.Core.Utils.isArray(defaultAutoClose.autoHideKeys) === true)
             {
-                finalArgs.autoCloseKeys = defaultAutoClose.autoCloseKeys.slice();
+                finalArgs.autoHideKeys = defaultAutoClose.autoHideKeys.slice();
             }
         }
 
         if (EVUI.Modules.Core.Utils.isObject(userArgs) === true)
         {
-            if (EVUI.Modules.Core.Utils.isArray(userArgs.autoCloseKeys) === true)
+            if (EVUI.Modules.Core.Utils.isArray(userArgs.autoHideKeys) === true)
             {
-                finalArgs.autoCloseKeys = userArgs.autoCloseKeys.slice();
+                finalArgs.autoHideKeys = userArgs.autoHideKeys.slice();
             }
         }
 
@@ -2479,17 +2479,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             return {
                 autoHideSettings:
                 {
-                    closeMode: EVUI.Modules.Panes.PaneCloseMode.Explicit,
-                    autoCloseKeys: ["Escape", "Enter"],
+                    hideMode: EVUI.Modules.Panes.PaneHideMode.Explicit,
+                    autoHideKeys: ["Escape", "Enter"],
                 },
                 showSettings:
                 {
                     center: true,
-                },
-                clipSettings:
-                {
-                    clipMode: EVUI.Modules.Panes.PaneClipMode.Shift,
-                    clipBounds: document.documentElement
+                    clipSettings:
+                    {
+                        clipMode: EVUI.Modules.Panes.PaneClipMode.Shift,
+                        clipBounds: document.documentElement
+                    },
                 },
                 resizeMoveSettings:
                 {
@@ -2507,8 +2507,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             return {
                 autoHideSettings:
                 {
-                    closeMode: EVUI.Modules.Panes.PaneCloseMode.GlobalClick,
-                    autoCloseKeys: ["Escape"],
+                    hideMode: EVUI.Modules.Panes.PaneHideMode.GlobalClick,
+                    autoHideKeys: ["Escape"],
                     allowChaining: true
                 },
                 showSettings:
@@ -2531,8 +2531,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             return {
                 autoHideSettings:
                 {
-                    closeMode: EVUI.Modules.Panes.PaneCloseMode.Explicit,
-                    autoCloseKeys: ["Escape", "Enter"],
+                    hideMode: EVUI.Modules.Panes.PaneHideMode.Explicit,
+                    autoHideKeys: ["Escape", "Enter"],
                 },
                 showSettings:
                 {
@@ -2628,7 +2628,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var shouldAutoHideChainedPaneOnKeydown = function (autoCloseArgs)
     {
         //if we have no auto-close keys, this doesn't apply
-        if (autoCloseArgs.pane.autoHideSettings == null && EVUI.Modules.Core.Utils.isArray(autoCloseArgs.pane.autoHideSettings.autoCloseKeys) === false || autoCloseArgs.pane.autoHideSettings.autoCloseKeys.indexOf(autoCloseArgs.event.key) < 0) return false;
+        if (autoCloseArgs.pane.autoHideSettings == null && EVUI.Modules.Core.Utils.isArray(autoCloseArgs.pane.autoHideSettings.autoHideKeys) === false || autoCloseArgs.pane.autoHideSettings.autoHideKeys.indexOf(autoCloseArgs.event.key) < 0) return false;
 
         var visiblePanes = getPaneEntry(function (entry) { return entry.link.pane.isVisible === true }, true);
         if (visiblePanes == null) return true;
@@ -6124,7 +6124,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(attributeName, "click", closeZones.elements[x], function (event)
             {
-                if (entry.link.pane.autoHideSettings == null || (typeof entry.link.pane.autoHideSettings.autoCloseFilter === "function" && entry.link.pane.autoHideSettings.autoCloseFilter(context) === false)) return;
+                if (entry.link.pane.autoHideSettings == null || (typeof entry.link.pane.autoHideSettings.autoHideFilter === "function" && entry.link.pane.autoHideSettings.autoHideFilter(context) === false)) return;
 
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.Click;
@@ -6150,9 +6150,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
         var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
-        if (autoHideSettings.closeMode === EVUI.Modules.Panes.PaneCloseMode.Click) //a click anywhere will close the Pane
+        if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.Click) //a click anywhere will close the Pane
         {
-            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneCloseMode.Click, "click contextmenu", document, function (event)
+            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.Click, "click contextmenu", document, function (event)
             {
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.Click;
@@ -6184,9 +6184,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             handler.attach();
             entry.link.eventBindings.push(handler);
         }
-        else if (autoHideSettings.closeMode === EVUI.Modules.Panes.PaneCloseMode.ExteriorClick) //only a click outside the Pane's root element will close the Pane
+        else if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.ExteriorClick) //only a click outside the Pane's root element will close the Pane
         {
-            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneCloseMode.ExteriorClick, "click contextmenu", document, function (event)
+            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.ExteriorClick, "click contextmenu", document, function (event)
             {
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.ExteriorClick;
@@ -6194,7 +6194,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 context.pane = entry.link.pane;
 
                 //make sure the click comes from outside the Pane
-                if ((typeof entry.link.pane.autoHideSettings.autoCloseFilter === "function" && entry.link.pane.autoHideSettings.autoCloseFilter(context) === true) || //if the filter says it shouldn't be closed, don't hide it
+                if ((typeof entry.link.pane.autoHideSettings.autoHideFilter === "function" && entry.link.pane.autoHideSettings.autoHideFilter(context) === true) || //if the filter says it shouldn't be closed, don't hide it
                     EVUI.Modules.Core.Utils.containsElement(event.target, entry.link.pane.element) === true || //or if the element target is contained by the element, don't hide it
                     event.target === entry.link.pane.element) return; //or if the element target is the Pane itself, don't hide it
 
@@ -6223,9 +6223,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             handler.attach();
             entry.link.eventBindings.push(handler);
         }
-        else if (autoHideSettings.closeMode === EVUI.Modules.Panes.PaneCloseMode.GlobalClick) //only a click outside the Pane's root element will close the Pane
+        else if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.GlobalClick) //only a click outside the Pane's root element will close the Pane
         {
-            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneCloseMode.GlobalClick, "click contextmenu", document, function (event)
+            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.GlobalClick, "click contextmenu", document, function (event)
             {
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.GlobalClick;
@@ -6266,12 +6266,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
         var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
-        if (autoHideSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoCloseKeys) === false) return;
+        if (autoHideSettings.autoHideKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoHideKeys) === false) return;
 
-        var handler = new EVUI.Modules.Panes.PaneEventBinding("autoCloseKey", "keydown", document, function (event)
+        var handler = new EVUI.Modules.Panes.PaneEventBinding("autoHideKey", "keydown", document, function (event)
         {
-            if (autoHideSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoCloseKeys) === false) return;
-            if (autoHideSettings.autoCloseKeys.indexOf(event.key) === -1) return;
+            if (autoHideSettings.autoHideKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoHideKeys) === false) return;
+            if (autoHideSettings.autoHideKeys.indexOf(event.key) === -1) return;
 
             var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
             context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.KeyDown;
@@ -6319,9 +6319,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
 
-        if (typeof resolvedAutoHideSettings.autoCloseFilter !== "function") return callback(true);
+        if (typeof resolvedAutoHideSettings.autoHideFilter !== "function") return callback(true);
 
-        var value = resolvedAutoHideSettings.autoCloseFilter(context);
+        var value = resolvedAutoHideSettings.autoHideFilter(context);
         if (EVUI.Modules.Core.Utils.isPromise(value) === true)
         {
             value.then(function (result)
@@ -7241,44 +7241,44 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 };
 
-/**Settings for controlling how the Pane will automatically close itself in response to user events.
+/**Settings for controlling how the Pane will automatically hide itself in response to user events.
 @class*/
 EVUI.Modules.Panes.PaneAutoHideSettings = function ()
 {
-    /**String. The trigger for what should close the Pane.
+    /**String. The trigger for what should hide the Pane. Must be a value from PaneHideMode.
     @type {String}*/
-    this.closeMode = EVUI.Modules.Panes.PaneCloseMode.Explicit;
+    this.hideMode = EVUI.Modules.Panes.PaneHideMode.Explicit;
 
     /**Array. An array of characters/key names ("a", "b", "Escape", "Enter", etc.) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
     @type {String[]}*/
-    this.autoCloseKeys = [];
+    this.autoHideKeys = [];
 
-    /**Boolean. Controls whether or not a click-based closeMode will close the Pane that invoked show on the current Pane.
+    /**Boolean. Controls whether or not a click-based hideMode will hide the Pane that invoked show on the current Pane.
     @type {Boolean}*/
     this.allowChaining = false;
 
-    /**An optional function to use to determine if an auto-close event should hide the Pane. Return false to prevent the Pane from being hidden.
+    /**An optional function to use to determine if an auto-hide event should hide the Pane. Return false to prevent the Pane from being hidden.
     @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoTriggerContext The context object generated by the event handler.
     @returns {Boolean}*/
-    this.autoCloseFilter = function (autoTriggerContext)
+    this.autoHideFilter = function (autoTriggerContext)
     {
         return true;
     };
 };
 
-/**Enum for describing the way the Pane should automatically close.
+/**Enum for describing the way the Pane should automatically hide itself.
 @enum*/
-EVUI.Modules.Panes.PaneCloseMode =
+EVUI.Modules.Panes.PaneHideMode =
 {
-    /**The Pane should close on the next click.*/
+    /**The Pane should hide on the next click.*/
     GlobalClick: "globalclick",
-    /**The Pane should close on any click outside its bounds.*/
+    /**The Pane should hide on any click outside its bounds.*/
     ExteriorClick: "exteriorclick",
-    /**The pane should only close when explicitly closed.*/
+    /**The pane should only hide when explicitly closed.*/
     Explicit: "explicit"
 };
 
-Object.freeze(EVUI.Modules.Panes.PaneCloseMode);
+Object.freeze(EVUI.Modules.Panes.PaneHideMode);
 
 /**Object for containing mutually exclusive options for how to load the Pane. A Element reference takes precedent over a CSS selector (where only the first result will be used), which takes precedent over a set of Http load arguments which takes precedence over placeholder load arguments.
 @class*/
