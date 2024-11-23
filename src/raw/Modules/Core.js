@@ -27,22 +27,6 @@ EVUI.Modules.Core.Settings.loggingEnabled = true;
 @param {String} message The message to log.*/
 EVUI.Modules.Core.Settings.alternateLoggingFunction = function (message) { };
 
-/**Boolean. Whether or not EventUI can emit debug messages. True by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.debug = true;
-
-/**Boolean. Whether or not to trace events triggered by the EventManager. False by default.
- @type {Boolean}*/
-EVUI.Modules.Core.Settings.traceEvents = false;
-
-/**Boolean. Whether or not to trace iframe message sends and responses by the IFrameMessenger. False by default.
- @type {Boolean}*/
-EVUI.Modules.Core.Settings.traceIFrames = false;
-
-/**Boolean. If a message comes from an iframe with a white-listed origin, it will automatically be added as a child of the iframeManager. True by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.autoAddIncomingIFrames = true;
-
 /**Number. When an EventStream is running, this is the number of sequential steps that can be executed by an instance of an EventStream before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 50 by default.
 @type {Number}*/
 EVUI.Modules.Core.Settings.stepsBetweenWaits = 250;
@@ -314,6 +298,7 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
     var initEx = null;
     var initDone = false;
     var initLoadDone = false;
+    var initEventsSet = false;
 
     if (typeof (window) !== "undefined")
     {
@@ -353,6 +338,8 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
                     //detach event handlers before doing anything
                     document.removeEventListener("DOMContentLoaded", go);
                     window.removeEventListener("load", go);
+
+                    initEventsSet = false;
                 }
 
                 initLoadDone = true;
@@ -406,10 +393,12 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
             }
             else
             {
-                if (isDOM === true)
+                if (isDOM === true && initEventsSet === false)
                 {
                     document.addEventListener("DOMContentLoaded", go);
                     window.addEventListener("load", go);
+
+                    initEventsSet = true;
                 }
                 else
                 {

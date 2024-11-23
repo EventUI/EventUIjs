@@ -793,14 +793,6 @@ EVUI.Modules.IFrames.IFrameManager = function ()
                 var incomingIFrame = getIFrameFromContentWindow(messageEvent.source); //go find the iframe element on the page that sent the message
                 if (incomingIFrame == null) return; //couldn't find it, bail
 
-                if (EVUI.Modules.Core.Settings.autoAddIncomingIFrames === true) //if we're auto-adding iframes, register the new iframe with the manager.
-                {
-                    var addResult = _self.addIFrame(targetIframe);
-                    if (addResult == null) return; //adding failed, bail
-
-                    entry = getEntryFromContentWindow(messageEvent.source); //go find the "real" object we just added and use it
-                }
-
                 if (entry == null) //if we STILL don't have an entry, make a dummy one just so the event arguments object we make later has everything it needs to work properly
                 {
                     entry = makePlaceholderEntry(incomingIFrame);
