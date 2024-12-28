@@ -2930,7 +2930,7 @@ EVUITest.ValueResultType =
 
 /**The result of comparing two values.
 @class*/
-EVUITest.7g7 = function (parent)
+EVUITest.ValueCompareResult = function (parent)
 {
     var _parent = parent;
 

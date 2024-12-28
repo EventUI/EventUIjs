@@ -5762,7 +5762,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             attributeTemplate.templateName = name;
         }
 
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(elementTemplate) === false && parentHandle != null && EVUI.Modules.Core.Utils.isArray(parentHandle.currentState.source))
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(elementTemplate) === false && parentHandle != null && EVUI.Modules.Core.Utils.isArray(parentHandle.currentState.source[path]))
         {
             attributeTemplate.templateName = elementTemplate;
         }
