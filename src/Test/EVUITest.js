@@ -2099,7 +2099,7 @@ EVUITest.ValueComparer = function ()
                 var bEquals = bComparer(comparisonContext);
 
                 if (typeof aEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + aEquals + " instead.");
-                if (typeof bEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + bEquals + " instead.");
+                if (typeof bEquals !== "boolean") throw Error("b's custom comparer at " + comparison.path + " did not return a boolean. Returned " + bEquals + " instead.");
                 if (aEquals !== bEquals) throw Error("Custom equality disagreement: both values at " + comparison.path + " had custom value comparers that disagreed on equality. a's comparer returned " + aEquals + " and b's comparer returned " + bEquals + ".");
 
                 comparison.valuesEqual = aEquals;
@@ -2930,7 +2930,7 @@ EVUITest.ValueResultType =
 
 /**The result of comparing two values.
 @class*/
-EVUITest.ValueCompareResult = function (parent)
+EVUITest.7g7 = function (parent)
 {
     var _parent = parent;
 
