@@ -5811,7 +5811,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         bindingAttributes.templateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
         bindingAttributes.sourcePath = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BoundObj);
         bindingAttributes.src = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
-        bindingAttributes.elementTemplateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
+        bindingAttributes.elementTemplateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_ElementBindingTemplate);
 
         return bindingAttributes;
     };

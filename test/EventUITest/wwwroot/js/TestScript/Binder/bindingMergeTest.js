@@ -12,12 +12,12 @@
             prop2: "<br />"
         }
 
-        var tempalte = "<span>{{prop}}</span>{{prop2}}";
+        var template = "<span>{{prop}}</span>{{prop2}}";
         var ele = document.getElementById("insertion");
 
         if (binding == null)
         {
-            binding = await $evui.bindAsync({ element: ele, htmlContent: tempalte, source: source });
+            binding = await $evui.bindAsync({ element: ele, htmlContent: template, source: source });
         }
         else
         {
