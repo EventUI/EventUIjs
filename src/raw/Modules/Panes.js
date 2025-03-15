@@ -90,11 +90,15 @@ EVUI.Modules.Panes.Constants.Event_OnShow = "show";
 EVUI.Modules.Panes.Constants.Event_OnHide = "hide";
 EVUI.Modules.Panes.Constants.Event_OnUnload = "unload";
 EVUI.Modules.Panes.Constants.Event_OnLoad = "load";
+EVUI.Modules.Panes.Constants.Event_OnMove = "move";
+EVUI.Modules.Panes.Constants.Event_OnResize = "resize";
 
 EVUI.Modules.Panes.Constants.Event_OnShown = "shown";
 EVUI.Modules.Panes.Constants.Event_OnHidden = "hidden";
 EVUI.Modules.Panes.Constants.Event_OnLoaded = "loaded";
 EVUI.Modules.Panes.Constants.Event_OnUnloaded = "unloaded";
+EVUI.Modules.Panes.Constants.Event_OnMoved = "moved";
+EVUI.Modules.Panes.Constants.Event_OnResized = "resized";
 
 EVUI.Modules.Panes.Constants.Event_OnInitialize = "init";
 EVUI.Modules.Panes.Constants.Event_OnPosition = "position";
@@ -107,6 +111,8 @@ EVUI.Modules.Panes.Constants.Job_Hide = "job.hide";
 EVUI.Modules.Panes.Constants.Job_InitialPosition = "job.initialposition";
 EVUI.Modules.Panes.Constants.Job_FinalPosition = "job.finalposition";
 EVUI.Modules.Panes.Constants.Job_Unload = "job.unload";
+EVUI.Modules.Panes.Constants.Job_Move = "job.move";
+EVUI.Modules.Panes.Constants.Job_Resize = "job.resize";
 
 EVUI.Modules.Panes.Constants.CssPrefix = "evui-pane";
 EVUI.Modules.Panes.Constants.StepPrefix = "evui.pane";
@@ -1392,6 +1398,34 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     /**Global event that fires after any Pane has been (potentially) removed from the DOM and had its element property reset to null. From this point on the Pane's element property is now settable to a new Element.
     @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
     this.onUnloaded = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires before any Pane is moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMove = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires after any Pane has been moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMoved = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires before any Pane is resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResize = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires after any Pane has been resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResized = function (paneEventArgs)
     {
 
     };
@@ -5883,178 +5917,192 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Resizes the pane by adding new CSS classes to it that override the default positioning CSS classes.
     @param {InternalPaneEntry} entry The Pane being resized or moved.
-    @param {EVUI.Modules.Panes.PaneResizeMoveArgs} resizeArgs The arguments about how it will be resized.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} resizeArgs The arguments about how it will be resized.
     @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
     @param {Boolean} resized Whether or not the pane was only resized.
     @param {Boolean} moved Whether or not the pane was only moved.
     @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
     @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
-    var resizePane = function (entry, resizeArgs, helper, resized, moved, dragHandles, clipBounds)
+    var resizePane = function (entry, resizeArgs, helper, dragHandles, clipBounds)
     {
-        if (moved === true)
+
+        var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
+        var style = getComputedStyle(entry.link.pane.element);
+        var minWidth = style.minWidth;
+        var minHeight = style.minHeight;
+
+        if (minWidth != null)
         {
-            if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
-            {
-                var clippedBounds = shiftMovedPaneToBounds(entry, resizeArgs, clipBounds);
-                if (clippedBounds != null)
-                {
-                    if (clippedBounds.left === resizeArgs.left && clippedBounds.top === resizeArgs.top) return;
-
-                    resizeArgs.left = clippedBounds.left;
-                    resizeArgs.top = clippedBounds.top;
-                }
-            }
-
-            var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
-
-            var rules =
-            {
-                position: "absolute",
-                top: resizeArgs.top + "px",
-                left: resizeArgs.left + "px"
-            }
-
-            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
-            helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);
-            entry.link.lastResizeArgs = resizeArgs;
+            minWidth = parseFloat(minWidth.replace("px", ""));
+            if (isNaN(minWidth) === true) minWidth = null;
         }
 
-        if (resized === true)
+        if (minHeight != null)
         {
-            var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
-            var style = getComputedStyle(entry.link.pane.element);
-            var minWidth = style.minWidth;
-            var minHeight = style.minHeight;
+            minHeight = parseFloat(minHeight.replace("px", ""));
+            if (isNaN(minHeight) === true) minHeight = null;
+        }
 
-            if (minWidth != null)
+        var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
+        if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
+        if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
+
+        var shrankX = false;
+        var shrankY = false;
+
+        if (clipBounds != null) //if we're clipping, make sure the resized bounds are within the clip zone 
+        {
+            var position = new EVUI.Modules.Panes.PanePosition();
+            position.bottom = resizeArgs.top + resizeArgs.height;
+            position.left = resizeArgs.left;
+            position.right = resizeArgs.left + resizeArgs.width;
+            position.top = resizeArgs.top;
+
+            if (isOutOfBounds(position, clipBounds, "left") === true)
             {
-                minWidth = parseFloat(minWidth.replace("px", ""));
-                if (isNaN(minWidth) === true) minWidth = null;
+                resizeArgs.left = clipBounds.left;
+                resizeArgs.width = position.right - clipBounds.left;
             }
 
-            if (minHeight != null)
+            if (isOutOfBounds(position, clipBounds, "right") === true)
             {
-                minHeight = parseFloat(minHeight.replace("px", ""));
-                if (isNaN(minHeight) === true) minHeight = null;
+                resizeArgs.width = clipBounds.right - position.left;
             }
 
-            var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
-            if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
-            if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
-
-            var shrankX = false;
-            var shrankY = false;
-
-            if (clipBounds != null) //if we're clipping, make sure the resized bounds are within the clip zone 
+            if (isOutOfBounds(position, clipBounds, "top") === true)
             {
-                var position = new EVUI.Modules.Panes.PanePosition();
-                position.bottom = resizeArgs.top + resizeArgs.height;
-                position.left = resizeArgs.left;
-                position.right = resizeArgs.left + resizeArgs.width;
-                position.top = resizeArgs.top;
-
-                if (isOutOfBounds(position, clipBounds, "left") === true)
-                {
-                    resizeArgs.left = clipBounds.left;
-                    resizeArgs.width = position.right - clipBounds.left;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "right") === true)
-                {
-                    resizeArgs.width = clipBounds.right - position.left;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "top") === true)
-                {
-                    resizeArgs.top = clipBounds.top;
-                    resizeArgs.height = position.bottom - clipBounds.top;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "bottom") === true)
-                {
-                    resizeArgs.height = clipBounds.bottom - position.top;
-                }
+                resizeArgs.top = clipBounds.top;
+                resizeArgs.height = position.bottom - clipBounds.top;
             }
 
-            //ensure that we don't shrink beyond the minimum allowable size. If there's one in CSS we use that, if not we use 2.5 times the drag buffer zone so that the drag zones for all sized never overlap.
-            //there is an issue here where it can cause a jittering effect on the bottom or right side, we have code below to correct that issue. The problem is the mouse is moving so fast that it gets into
-            //a bad state where neither the left nor the width is correct.
-            if (minHeight > resizeArgs.height || minWidth > resizeArgs.width)
+            if (isOutOfBounds(position, clipBounds, "bottom") === true)
             {
-                if (entry.link.lastResizeArgs != null)
-                {
-                    if (minHeight > resizeArgs.height)
-                    {
-                        resizeArgs.height = minHeight;
-                        resizeArgs.top = (dragHandles != null) ? dragHandles.originalBounds.top : entry.link.lastResizeArgs.top;
-                        shrankY = true;
-                    }
+                resizeArgs.height = clipBounds.bottom - position.top;
+            }
+        }
 
-                    if (minWidth > resizeArgs.width)
+        //ensure that we don't shrink beyond the minimum allowable size. If there's one in CSS we use that, if not we use 2.5 times the drag buffer zone so that the drag zones for all sized never overlap.
+        //there is an issue here where it can cause a jittering effect on the bottom or right side, we have code below to correct that issue. The problem is the mouse is moving so fast that it gets into
+        //a bad state where neither the left nor the width is correct.
+        if (minHeight > resizeArgs.height || minWidth > resizeArgs.width)
+        {
+            if (entry.link.lastResizeArgs != null)
+            {
+                if (minHeight > resizeArgs.height)
+                {
+                    resizeArgs.height = minHeight;
+                    resizeArgs.top = (dragHandles != null) ? dragHandles.originalBounds.top : entry.link.lastResizeArgs.top;
+                    shrankY = true;
+                }
+
+                if (minWidth > resizeArgs.width)
+                {
+                    resizeArgs.width = minWidth;
+                    resizeArgs.left = (dragHandles != null) ? dragHandles.originalBounds.left : entry.link.lastResizeArgs.left;
+                    shrankX = true;
+                }
+            }
+        }
+
+        //sometimes the above logic gets it "wrong" when the mouse moves very, very fast, so we have to restore the size of the element to be its original size and position to stop the displacement jitter that happens otherwise.
+        //it only happens when dragging the top or left hand side of the pane, never the right or bottom. Because this is remembered on the next iteration, it only fires when the problem scenario occurs.
+        if (dragHandles != null && entry.link.lastResizeArgs != null)
+        {
+            if (dragHandles.growX === "left")
+            {
+                var right = resizeArgs.left + resizeArgs.width;
+                var oldRight = entry.link.lastResizeArgs.left + entry.link.lastResizeArgs.width;
+
+                if (right != oldRight) //see if the right shifted either direction to the right or left. If so, restore it to the original position. The left is in flux, but the right must stay the same.
+                {
+                    resizeArgs.left = dragHandles.originalBounds.left;
+                    resizeArgs.width = dragHandles.originalBounds.right - dragHandles.originalBounds.left;
+
+                    if (shrankX === true) //if it shrank back to the minimum size, don't reset the width
                     {
                         resizeArgs.width = minWidth;
-                        resizeArgs.left = (dragHandles != null) ? dragHandles.originalBounds.left : entry.link.lastResizeArgs.left;
-                        shrankX = true;
+                        resizeArgs.left = dragHandles.originalBounds.right - minWidth;
                     }
                 }
             }
 
-            //sometimes the above logic gets it "wrong" when the mouse moves very, very fast, so we have to restore the size of the element to be its original size and position to stop the displacement jitter that happens otherwise.
-            //it only happens when dragging the top or left hand side of the pane, never the right or bottom. Because this is remembered on the next iteration, it only fires when the problem scenario occurs.
-            if (dragHandles != null && entry.link.lastResizeArgs != null)
+            if (dragHandles.growY === "top") 
             {
-                if (dragHandles.growX === "left")
+                var bottom = resizeArgs.top + resizeArgs.height;
+                var oldBottom = entry.link.lastResizeArgs.top + entry.link.lastResizeArgs.height;
+
+                if (bottom != oldBottom) //see if the bottom shifted up or down. If so, restore it to its original position. The top is in flux, but the bottom should never move.
                 {
-                    var right = resizeArgs.left + resizeArgs.width;
-                    var oldRight = entry.link.lastResizeArgs.left + entry.link.lastResizeArgs.width;
+                    resizeArgs.top = dragHandles.originalBounds.top;
+                    resizeArgs.height = dragHandles.originalBounds.top - dragHandles.originalBounds.bottom;
 
-                    if (right != oldRight) //see if the right shifted either direction to the right or left. If so, restore it to the original position. The left is in flux, but the right must stay the same.
+                    if (shrankY === true)  //if it shrank back to the minimum size, don't reset the height
                     {
-                        resizeArgs.left = dragHandles.originalBounds.left;
-                        resizeArgs.width = dragHandles.originalBounds.right - dragHandles.originalBounds.left;
-
-                        if (shrankX === true) //if it shrank back to the minimum size, don't reset the width
-                        {
-                            resizeArgs.width = minWidth;
-                            resizeArgs.left = dragHandles.originalBounds.right - minWidth;
-                        }
+                        resizeArgs.height = minHeight;
+                        resizeArgs.top = dragHandles.originalBounds.bottom - minHeight;
                     }
                 }
-
-                if (dragHandles.growY === "top") 
-                {
-                    var bottom = resizeArgs.top + resizeArgs.height;
-                    var oldBottom = entry.link.lastResizeArgs.top + entry.link.lastResizeArgs.height;
-
-                    if (bottom != oldBottom) //see if the bottom shifted up or down. If so, restore it to its original position. The top is in flux, but the bottom should never move.
-                    {
-                        resizeArgs.top = dragHandles.originalBounds.top;
-                        resizeArgs.height = dragHandles.originalBounds.top - dragHandles.originalBounds.bottom;
-
-                        if (shrankY === true)  //if it shrank back to the minimum size, don't reset the height
-                        {
-                            resizeArgs.height = minHeight;
-                            resizeArgs.top = dragHandles.originalBounds.bottom - minHeight;
-                        }
-                    }
-                }
-            }          
-
-            var rules = {};
-
-            rules.position = "absolute";
-            rules.height = resizeArgs.height + "px";
-            rules.width = resizeArgs.width + "px";
-            rules.top = resizeArgs.top + "px";
-            rules.left = resizeArgs.left + "px";
-
-            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
-            helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
-
-            entry.link.lastResizeArgs = resizeArgs;
+            }
         }
+
+        var rules = {};
+
+        rules.position = "absolute";
+        rules.height = resizeArgs.height + "px";
+        rules.width = resizeArgs.width + "px";
+        rules.top = resizeArgs.top + "px";
+        rules.left = resizeArgs.left + "px";
+
+        _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
+        helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
+
+        entry.link.lastResizeArgs = resizeArgs;
+
+
+        if (moved === false && resized === false) return false;
+        var transition = (resized === true) ? resizeArgs.resizeTransition : resizeArgs.moveTransition
+
+        applyTransition(entry, transition, EVUI.Modules.Panes.Constants.CSS_Transition_Adjust, helper)
+
+        return true;
+    };
+
+    /**Resizes the pane by adding new CSS classes to it that override the default positioning CSS classes.
+    @param {InternalPaneEntry} entry The Pane being resized or moved.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} resizeArgs The arguments about how it will be resized.
+    @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
+    @param {Boolean} resized Whether or not the pane was only resized.
+    @param {Boolean} moved Whether or not the pane was only moved.
+    @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
+    @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
+    var movePane = function (entry, resizeArgs, helper, dragHandles, clipBounds)
+    {
+        if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
+        {
+            var clippedBounds = shiftMovedPaneToBounds(entry, resizeArgs, clipBounds);
+            if (clippedBounds != null)
+            {
+                if (clippedBounds.left === resizeArgs.left && clippedBounds.top === resizeArgs.top) return;
+
+                resizeArgs.left = clippedBounds.left;
+                resizeArgs.top = clippedBounds.top;
+            }
+        }
+
+        var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
+
+        var rules =
+        {
+            position: "absolute",
+            top: resizeArgs.top + "px",
+            left: resizeArgs.left + "px"
+        }
+
+        _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
+        helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);
+        entry.link.lastResizeArgs = resizeArgs;        
 
         if (moved === false && resized === false) return false;
         var transition = (resized === true) ? resizeArgs.resizeTransition : resizeArgs.moveTransition
@@ -6382,14 +6430,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     var xDelta = dragEvent.clientX - startX;
                     var yDelta = dragEvent.clientY - startY;
 
-                    var resizeArgs = new EVUI.Modules.Panes.PaneResizeMoveArgs();
-                    resizeArgs.height = (startPos.bottom - startPos.top);
-                    resizeArgs.width = (startPos.right - startPos.left);
+                    var resizeArgs = new EVUI.Modules.Panes.PaneMoveArgs();
                     resizeArgs.top = startPos.top + yDelta;
                     resizeArgs.left = startPos.left + xDelta;
-                    resizeArgs.moveTransition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
+                    resizeArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
 
-                    resizePane(entry, resizeArgs, paneRoot, false, true, null, bounds);
+                    movePane(entry, resizeArgs, paneRoot, null, bounds);
                 };
 
                 document.addEventListener("mousemove", dragHandler);
@@ -6459,12 +6505,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 var xDelta = dragEvent.clientX - startX;
                 var yDelta = dragEvent.clientY - startY;
 
-                var resizeArgs = new EVUI.Modules.Panes.PaneResizeMoveArgs();
+                var resizeArgs = new EVUI.Modules.Panes.PaneResizeArgs();
                 resizeArgs.height = (startPos.bottom - startPos.top);
                 resizeArgs.width = (startPos.right - startPos.left);
                 resizeArgs.top = startPos.top;
                 resizeArgs.left = startPos.left;
-                resizeArgs.resizeTransition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.resizeTransition : null;
+                resizeArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.resizeTransition : null;
 
                 if (dragHandles.growX === "right")
                 {
@@ -6486,7 +6532,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     resizeArgs.top += yDelta;
                 }
 
-                resizePane(entry, resizeArgs, paneRoot, true, false, dragHandles, bounds);
+                resizePane(entry, resizeArgs, paneRoot, dragHandles, bounds);
             };
 
             document.addEventListener("mousemove", dragHandler); //add the drag handler to the document
@@ -6734,7 +6780,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 return callback(false);
             }
-            else if (contents.elements.length > 1) //too many elements, but be exactly one
+            else if (contents.elements.length > 1) //too many elements, must be exactly one
             {
                 return callback(false);
             }
@@ -7118,6 +7164,34 @@ EVUI.Modules.Panes.Pane = function (entry)
     /**Event that fires after the Pane has been (potentially) removed from the DOM and had its element property reset to null. From this point on the Pane's element property is now settable to a new Element.
     @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
     this.onUnloaded = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires before any Pane is moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMove = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires after any Pane has been moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMoved = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires before any Pane is resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResize = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires after any Pane has been resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResized = function (paneEventArgs)
     {
 
     };
@@ -8000,9 +8074,13 @@ EVUI.Modules.Panes.PaneEventArgs = function (entry)
     @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
     this.unloadArgs = null;
 
-    /**Object. The arguments being used to move or resize this pane.
-    @type {EVUI.Modules.Panes.PaneResizeMoveArgs}*/
-    this.resizeMoveArgs = null;
+    /**Object. The arguments being used to move this pane.
+    @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+    this.moveArgs = null;
+
+    /**Object. The arguments being used to resize this pane.
+    @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+    this.resizeArgs = null;
 };
 
 /**Flags for describing the current state of a Pane.
@@ -8035,7 +8113,11 @@ EVUI.Modules.Panes.PaneAction =
     /**Pane is in the process of being loaded.*/
     Load: "load",
     /**Pane is in the process of being unloaded.*/
-    Unload: "unload"    
+    Unload: "unload",
+    /**The Pane is in the process of being moved.*/
+    Move: "move",
+    /**The pane is in the process of being resized.*/
+    Resize: "resize"
 };
 Object.freeze(EVUI.Modules.Panes.PaneAction);
 
@@ -8158,7 +8240,7 @@ EVUI.Modules.Panes.PaneUnloadArgs = function ()
 
 /**Arguments for resizing or moving a Pane.
 @class*/
-EVUI.Modules.Panes.PaneResizeMoveArgs = function ()
+EVUI.Modules.Panes.PaneResizeArgs = function ()
 {
     /**Number. The height of the Pane.
     @type {Number}*/
@@ -8178,11 +8260,32 @@ EVUI.Modules.Panes.PaneResizeMoveArgs = function ()
 
     /**Number. The transition to apply to the Pane when it is resized.
     @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.resizeTransition = undefined;
+    this.transition = undefined;
+};
+
+EVUI.Modules.Panes.PaneResizeArgs.prototype.getDelta = function ()
+{
+    var bounds = new EVUI.Modules.Dom.ElementBounds();
+
+
+    return bounds;
+}
+
+/**Arguments for moving a Pane.
+@class*/
+EVUI.Modules.Panes.PaneMoveArgs = function ()
+{
+    /**Number. The new top position of the Pane.
+    @type {Number}*/
+    this.top = undefined;
+
+    /**Number. The new left position of the Pane.
+    @type {Number}*/
+    this.left = undefined;
 
     /**Number. The transition to apply to the Pane when it is moved.
     @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.moveTransition = undefined;
+    this.transition = undefined;
 };
 
 /**Enum for indicating what type of arguments object the PaneEventArgs.currentArguments property is.
@@ -8198,7 +8301,9 @@ EVUI.Modules.Panes.PaneArgumentType =
     /**Arguments are PaneUnloadArgs.*/
     Unload: "unload",
     /**Arguments are PaneMoveResizeArgs.*/
-    MoveResize: "moveResize"
+    Move: "move",
+    /**Arguments are PaneMoveResizeArgs.*/
+    Resize: "resize"
 };
 Object.freeze(EVUI.Modules.Panes.PaneArgumentType);
 
