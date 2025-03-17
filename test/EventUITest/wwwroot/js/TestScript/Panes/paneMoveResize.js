@@ -25,8 +25,8 @@
         },
         resizeMoveSettings:
         {
-            canResizeBottom: false,
-            canResizeTop: false,
+            canResizeBottom: true,
+            canResizeTop: true,
             canDragMove: true
         },
         autoHideSettings:
