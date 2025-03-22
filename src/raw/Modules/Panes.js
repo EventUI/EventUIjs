@@ -26,18 +26,20 @@ EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback = function (success) { };
 @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The Pane's event args.*/
 EVUI.Modules.Panes.Constants.Fn_PaneEventHandler = function (paneEventArgs) { };
 
-EVUI.Modules.Panes.Constants.CSS_Position = "evui-position";
-EVUI.Modules.Panes.Constants.CSS_ClippedX = "evui-clipped-x";
-EVUI.Modules.Panes.Constants.CSS_ClippedY = "evui-clipped-y";
-EVUI.Modules.Panes.Constants.CSS_ScrollX = "evui-scroll-x";
-EVUI.Modules.Panes.Constants.CSS_ScrollY = "evui-scroll-y"
-EVUI.Modules.Panes.Constants.CSS_Flipped = "evui-flipped";
-EVUI.Modules.Panes.Constants.CSS_Moved = "evui-moved";
-EVUI.Modules.Panes.Constants.CSS_Resized = "evui-resized";
-EVUI.Modules.Panes.Constants.CSS_Backdrop = "evui-backdrop";
-EVUI.Modules.Panes.Constants.CSS_Transition_Show = "evui-transition-show";
-EVUI.Modules.Panes.Constants.CSS_Transition_Hide = "evui-transition-hide";
-EVUI.Modules.Panes.Constants.CSS_Transition_Adjust = "evui-transition-adjust";
+EVUI.Modules.Panes.Constants.CSS_Pane_Style = "evui-pane-style";
+EVUI.Modules.Panes.Constants.CSS_Position = "evui-pane-position";
+EVUI.Modules.Panes.Constants.CSS_ClippedX = "evui-pane-clipped-x";
+EVUI.Modules.Panes.Constants.CSS_ClippedY = "evui-pane-clipped-y";
+EVUI.Modules.Panes.Constants.CSS_ScrollX = "evui-pane-scroll-x";
+EVUI.Modules.Panes.Constants.CSS_ScrollY = "evui-pane-scroll-y"
+EVUI.Modules.Panes.Constants.CSS_Flipped = "evui-pane-flipped";
+EVUI.Modules.Panes.Constants.CSS_Moved = "evui-pane-moved";
+EVUI.Modules.Panes.Constants.CSS_Resized = "evui-pane-resized";
+EVUI.Modules.Panes.Constants.CSS_Backdrop = "evui-pane-backdrop";
+EVUI.Modules.Panes.Constants.CSS_Transition_Show = "evui-pane-transition-show";
+EVUI.Modules.Panes.Constants.CSS_Transition_Hide = "evui-pane-transition-hide";
+EVUI.Modules.Panes.Constants.CSS_Transition_Move = "evui-pane-transition-move";
+EVUI.Modules.Panes.Constants.CSS_Transition_Resize = "evui-pane-transition-resize";
 
 /**String. The name of the "template" attribute for the Pane, used to define the initial behavior for a Pane if it is being created and shown from markup.
 @type {String}*/
@@ -90,11 +92,15 @@ EVUI.Modules.Panes.Constants.Event_OnShow = "show";
 EVUI.Modules.Panes.Constants.Event_OnHide = "hide";
 EVUI.Modules.Panes.Constants.Event_OnUnload = "unload";
 EVUI.Modules.Panes.Constants.Event_OnLoad = "load";
+EVUI.Modules.Panes.Constants.Event_OnMove = "move";
+EVUI.Modules.Panes.Constants.Event_OnResize = "resize";
 
 EVUI.Modules.Panes.Constants.Event_OnShown = "shown";
 EVUI.Modules.Panes.Constants.Event_OnHidden = "hidden";
 EVUI.Modules.Panes.Constants.Event_OnLoaded = "loaded";
 EVUI.Modules.Panes.Constants.Event_OnUnloaded = "unloaded";
+EVUI.Modules.Panes.Constants.Event_OnMoved = "moved";
+EVUI.Modules.Panes.Constants.Event_OnResized = "resized";
 
 EVUI.Modules.Panes.Constants.Event_OnInitialize = "init";
 EVUI.Modules.Panes.Constants.Event_OnPosition = "position";
@@ -107,6 +113,8 @@ EVUI.Modules.Panes.Constants.Job_Hide = "job.hide";
 EVUI.Modules.Panes.Constants.Job_InitialPosition = "job.initialposition";
 EVUI.Modules.Panes.Constants.Job_FinalPosition = "job.finalposition";
 EVUI.Modules.Panes.Constants.Job_Unload = "job.unload";
+EVUI.Modules.Panes.Constants.Job_Move = "job.move";
+EVUI.Modules.Panes.Constants.Job_Resize = "job.resize";
 
 EVUI.Modules.Panes.Constants.CssPrefix = "evui-pane";
 EVUI.Modules.Panes.Constants.StepPrefix = "evui.pane";
@@ -319,7 +327,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         this.lastResolvedLoadArgs = null;
 
         /**Object. The last used set of resize settings used to position the Pane.
-        @type {EVUI.Modules.Panes.PaneResizeMoveArgs}*/
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
         this.lastResizeArgs = null;
 
         /**Number. The ID of the callback that is being used to toggle off a transition effect.
@@ -341,6 +349,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Object. Whether or not the Pane was removed from it's manager.
         @type {Boolean}*/
         this.removed = false;
+
+        /**String. The rules of the style tag that were inlined on the root element on the Pane.
+        @type {String}*/
+        this.inlinedStyle = null;
     };
 
 
@@ -421,6 +433,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.userUnloadArgs = null;
 
+        /**The user's arguments being used to move the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+        this.userMoveArgs = null;
+
+        /**The user's arguments being used to resize the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+        this.userResizeArgs = null;
+
         /**The arguments being used to show/load the Pane
         @type {EVUI.Modules.Panes.PaneShowArgs} */
         this.resolvedShowArgs = null;
@@ -436,6 +456,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**The arguments being used to hide the Pane.
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.resolvedUnloadArgs = null;
+
+        /**The arguments being used to move the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+        this.resolvedMoveArgs = null;
+
+        /**The arguments being used to resize the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+        this.resolvedResizeArgs = null;
 
         /**Boolean. Whether or not the EventStream should be canceled then restarted with a new chain of events.
         @type {Boolean}*/
@@ -457,7 +485,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {Number}*/
         this.callbackOrdinal = _callbackCounter++;
 
+        /**Any. The user's contextual information about the operation.
+        @type {Any}*/
         this.context = null;
+
+        /**Object. The PaneOperationSession that was queued to run after this one.
+        @type {PaneOperationSession}*/
+        this.queuedOpSession = null;
+
+        /**Whether or not this is a queued operation that is chaining off of a prior operation.
+        @type {Boolean}*/
+        this.isQueued = false;
     };
 
     var PaneEventArgsIntepretationResult = function ()
@@ -493,11 +531,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Signals that a new EventStream should follow the first and have an aggregate callback sequence of both events.*/
         Continue: "continue",
         /**Signals that the callback has been queued (which is automatic) and nothing else should happen.*/
-        Queue: "queue",
+        QueueCallback: "queuecallback",
         /**Signals that the move steps should be added.*/
         Move: "move",
         /**Signals that the resize steps should be added.*/
-        Resize: "resize"
+        Resize: "resize",
+        /**Signals that the operation should be chained to start when the current operation ends.*/
+        Queue: "queue"
     };
 
     /**Object for managing the backdrop used by Panes.
@@ -1303,6 +1343,150 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
+    /**Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.movePane = function (paneID, paneMoveArgs, callback)
+    {
+        var paneEntry = null;
+
+        if (EVUI.Modules.Core.Utils.isObject(paneMoveArgs) === false)
+        {
+            throw Error("No move destination set.");
+        }
+        else
+        {
+            var hasTop = (typeof paneMoveArgs.top === "number");
+            var hasLeft = (typeof paneMoveArgs.left === "number");
+
+            if (hasTop === false && hasLeft === false) throw Error("Invalid move destination.");
+        }
+
+        if (typeof paneID === "string") //showing based on ID
+        {
+            paneEntry = getInternalPaneEntry(paneID);
+            if (paneEntry == null) throw Error("No pane exists with an id of \"" + paneID + "\"");
+        }       
+        else if (EVUI.Modules.Core.Utils.isObject(paneID) === true) //we have either a new pane to add or a reference to an existing pane
+        {
+            paneEntry = makeOrGetPane(paneID);
+        }
+        else
+        {
+            throw Error("String or object expected.")
+        }
+
+        if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
+        if (paneEntry.link.pane.isVisible === false) throw Error("Pane must be visible to be moved.");
+        if (paneEntry.link.currentOperation != null)
+        {
+            if (paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Unload || paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Hide)
+            {
+                throw Error("Pane is currently being hidden or unloaded and cannot be moved.");
+            }
+        }
+
+        var opSession = new PaneOperationSession();
+        opSession.entry = paneEntry;
+        opSession.action = EVUI.Modules.Panes.PaneAction.Move;
+        opSession.currentAction = EVUI.Modules.Panes.PaneAction.Move;
+        opSession.callback = (typeof callback === "function") ? callback : function (success) { };
+        opSession.userMoveArgs = paneMoveArgs;
+        opSession.resolvedMoveArgs = resolvePaneMoveArgs(paneEntry, paneMoveArgs);
+        performOperation(opSession);
+    };
+
+    /**Awaitable. Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @returns {Promise<Boolean>}*/
+    this.movePaneAsync = function (paneID, paneMoveArgs)
+    {
+        return new Promise(function (resolve)
+        {
+            _self.movePane(paneID, paneMoveArgs, function (success)
+            {
+                resolve(success);
+            });
+        });
+    };
+
+    /**Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.resizePane = function (paneID, paneResizeArgs, callback)
+    {
+        var paneEntry = null;
+
+        if (EVUI.Modules.Core.Utils.isObject(paneResizeArgs) === false)
+        {
+            throw Error("Object expected - no resize dimensions set.");
+        }
+        else
+        {
+            var hasTop = (typeof paneResizeArgs.top === "number");
+            var hasLeft = (typeof paneResizeArgs.left === "number");
+            var hasBottom = typeof paneResizeArgs.bottom === "number";
+            var hasRight = typeof paneResizeArgs.right === "number";
+
+            if (hasTop === false && hasLeft === false && hasBottom === false && hasRight === false) throw Error("Invalid resize dimensions.");
+        }
+
+        if (typeof paneID === "string") //showing based on ID
+        {
+            paneEntry = getInternalPaneEntry(paneID);
+            if (paneEntry == null) throw Error("No pane exists with an id of \"" + paneID + "\"");
+        }
+        else if (EVUI.Modules.Core.Utils.isObject(paneID) === true) //we have either a new pane to add or a reference to an existing pane
+        {
+            paneEntry = makeOrGetPane(paneID);
+        }
+        else
+        {
+            throw Error("String or object expected.")
+        }
+
+        if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
+        if (paneEntry.link.pane.isVisible === false) throw Error("Pane must be visible to be resized.");
+        if (paneEntry.link.currentOperation != null)
+        {
+            if (paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Unload || paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Hide)
+            {
+                throw Error("Pane is currently being hidden or unloaded and cannot be resized.");
+            }
+        }
+
+        if (paneResizeArgs == null) //if we had no show args, make blank ones
+        {
+            paneResizeArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+        }
+
+        var opSession = new PaneOperationSession();
+        opSession.entry = paneEntry;
+        opSession.action = EVUI.Modules.Panes.PaneAction.Resize;
+        opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resize;
+        opSession.callback = (typeof callback === "function") ? callback : function (success) { };
+        opSession.userResizeArgs = paneResizeArgs;
+        opSession.resolvedResizeArgs = resolvePaneResizeArgs(paneEntry, paneResizeArgs);
+        performOperation(opSession);
+    };
+
+    /**Awaitable. Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
+    this.resizePaneAsync = function (paneID, paneResizeArgs)
+    {
+        return new Promise(function (resolve)
+        {
+            _self.resizePane(paneID, paneResizeArgs, function (success)
+            {
+                resolve(success);
+            });
+        });
+    };
+
     /**Add an event listener to fire after an event with the same key has been executed.
     @param {String} eventkey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
@@ -1392,6 +1576,34 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     /**Global event that fires after any Pane has been (potentially) removed from the DOM and had its element property reset to null. From this point on the Pane's element property is now settable to a new Element.
     @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
     this.onUnloaded = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires before any Pane is moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMove = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires after any Pane has been moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMoved = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires before any Pane is resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResize = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires after any Pane has been resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResized = function (paneEventArgs)
     {
 
     };
@@ -1763,6 +1975,62 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     }
 
+    /**Joins the user's move args with the Pane's move settings to create a usable PaneMoveArgs object.
+    @param {InternalPaneEntry} paneEntry
+    @param {EVUI.Modules.Panes.PaneMoveArgs} userMoveArgs
+    @returns {EVUI.Panes.Pane.PaneMoveArgs}*/
+    var resolvePaneMoveArgs = function (paneEntry, userMoveArgs)
+    {
+        var finalArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userMoveArgs);
+
+        var resizeMoveSettings = paneEntry.link.pane.resizeMoveSettings == null ? {} : paneEntry.link.pane.resizeMoveSettings;
+        finalArgs.transition = resolvePaneTransition(resizeMoveSettings.moveTransition, userMoveArgs.transition);
+
+        var noTop = typeof finalArgs.top !== "number";
+        var noLeft = typeof finalArgs.left !== "number";    
+
+        if (noTop || noLeft)
+        {
+            var position = paneEntry.link.pane.getCurrentPosition();
+
+            if (noTop) finalArgs.top = position.top;
+            if (noLeft) finalArgs.left = position.left;
+        }
+
+        return finalArgs;
+    };
+
+    /**Joins the user's Resize args with the Pane's Resize settings to create a usable PaneResizeArgs object.
+    @param {InternalPaneEntry} paneEntry
+    @param {EVUI.Modules.Panes.PaneResizeArgs} userResizeArgs
+    @returns {EVUI.Panes.Pane.PaneResizeArgs}*/
+    var resolvePaneResizeArgs = function (paneEntry, userResizeArgs)
+    {
+        var finalArgs = new EVUI.Modules.Panes.PaneResizeArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userResizeArgs);
+
+        var resizeMoveSettings = paneEntry.link.pane.resizeMoveSettings == null ? {} : paneEntry.link.pane.resizeMoveSettings;
+        finalArgs.transition = resolvePaneTransition(resizeMoveSettings.resizeTransition, userResizeArgs.transition);
+
+        var noTop = typeof finalArgs.top !== "number";
+        var noLeft = typeof finalArgs.left !== "number";  
+        var noBottom = typeof finalArgs.bottom !== "number";
+        var noRight = typeof finalArgs.right !== "number";
+
+        if (noTop || noLeft || noBottom || noRight)
+        {
+            var position = paneEntry.link.pane.getCurrentPosition();
+
+            if (noBottom) finalArgs.bottom = position.bottom;
+            if (noRight) finalArgs.right = position.right;
+            if (noTop) finalArgs.top = position.top;
+            if (noLeft) finalArgs.left = position.left;
+        }
+
+        return finalArgs;
+    };
+
     /**Resolves a transition from a graph found in the Pane object and one provided by the user.
     @param {EVUI.Modules.Panes.PaneTransition} defaultTransition The transition's default settings.
     @param {EVUI.Modules.Panes.PaneTransition} userArgsTransition The user provided arugments for the transition.
@@ -1892,7 +2160,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     /**Takes an ambiguous representation of an Element (a CSS selector, jQuery object, DomHelper object or a regular Element) and returns the corresponding Element reference.
     @param {String|jQuery|EVUI.Modules.Dom.DomHelper|Element|DocumentFragment} userElementValue
     @param {Boolean} allowFragments Whether or not DocumentFragments count as valid elements.
-    @returns*/
+    @returns {Element}*/
     var resolveElement = function (userElementValue, allowFragments)
     {
         if (typeof userElementValue === "string")
@@ -1913,6 +2181,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return null;
     }; 
 
+    /**Resolves the Pane's resize/move settings with the user's resize/move settings passed in by a user.
+    @param {EVUI.Modules.Panes.PaneResizeMoveSettings} defaultAutoClose The Pane's resize/move settings.
+    @param {EVUI.Modules.Panes.PaneResizeMoveSettings} userArgs The user resize/move settings.
+    @returns {EVUI.Modules.Panes.PaneResizeMoveSettings} */
     var resolveResizeMoveSettings = function (defaultResizeMove, userResizeMove)
     {
         var finalArgs = new EVUI.Modules.Panes.PaneResizeMoveSettings();
@@ -2621,7 +2893,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return true;
     };
 
-
     /**Makes it so Panes close in descending order of Z-Index when the keydown auto-close command is issued. Every Pane has their own listener, so this function fires once per visible Pane.
     @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoCloseArgs The auto-close args generated by the handler.
     @returns {Boolean} */
@@ -2650,7 +2921,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         autoCloseArgs.event.preventDefault();
         return true;
     };
-
 
     /** Gets a PaneEntry object based on its ID or a selector function.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneEntrySelector|String} paneIDOrSelector A selector function to select a PaneEntry object (or multiple PaneEntry objects) or the ID of the Pane to get the PaneEntry for.
@@ -2702,7 +2972,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Performs the operation described in the PaneOperationSession. Takes into account the current state of the pane being executed and will cancel, ignore, or continue operations depending on the combination of current action and requested action. 
     All execution begins asynchronously so that multiple calls in the same stack frame behave correctly.
-    @param {PaneOperationSession} opSession The operation session to execute on. */
+    @param {PaneOperationSession} opSession The operation session to execute on.*/
     var performOperation = function (opSession)
     {
         var callbackStack = getCallbackStack(opSession.entry.link, opSession.action); //add the callback to the stack of callbacks for the current operation.
@@ -2722,8 +2992,27 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             return callCallbackStack(opSession.entry.link, opSession.action, true);
         }
-        else if (actionSequence[0] === ActionSequence.Queue) //queue the callback for a duplicate operation without setting up a new event stream
+        else if (actionSequence[0] === ActionSequence.QueueCallback) //queue the callback for a duplicate operation without setting up a new event stream
         {
+            return;
+        }
+        else if (actionSequence[0] === ActionSequence.Queue && opSession.isQueued === false)
+        {
+            var lastInSequence = callbackStack.opSessions[0];
+            while (lastInSequence != null)
+            {
+                if (lastInSequence.queuedOpSession != null)
+                {
+                    lastInSequence = lastInSequence.queuedOpSession;
+                }
+                else
+                {
+                    lastInSequence.queuedOpSession = opSession;
+                    opSession.isQueued = true;
+                    break;
+                }
+            }
+
             return;
         }
 
@@ -2950,6 +3239,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 addUnloadSteps(eventStream, opSession);
             }
+            else if (curStep === ActionSequence.Move)
+            {
+                addMoveSteps(eventStream, opSession);
+            }
+            else if (curStep === ActionSequence.Resize)
+            {
+                addResizeSteps(eventStream, opSession);
+            }
         }
 
         //finally, add the complete step that will call the operations callbacks.
@@ -2999,6 +3296,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 {
                     if (opSession.resolvedUnloadArgs != null) opSession.context = opSession.resolvedUnloadArgs.context;
                 }
+                else if (opSession.action === EVUI.Modules.Panes.PaneAction.Move)
+                {
+                    if (opSession.resolvedMoveArgs != null) opSession.context = opSession.resolvedMoveArgs.context;
+                }
+                else if (opSession.action === EVUI.Modules.Panes.PaneAction.Resize)
+                {
+                    if (opSession.resolvedResizeArgs != null) opSession.context = opSession.resolvedResizeArgs.context;
+                }
             }
 
 
@@ -3007,7 +3312,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             paneArgs.loadArgs = opSession.userLoadArgs;
             paneArgs.showArgs = opSession.userShowArgs;
             paneArgs.unloadArgs = opSession.unloadArgs;
-            paneArgs.resizeMoveArgs = opSession.userResizeMoveArgs;
+            paneArgs.moveArgs = opSession.userMoveArgs;
+            paneArgs.resizeArgs = opSession.userResizeArgs;
             paneArgs.action = opSession.action;
             paneArgs.currentAction = opSession.currentAction;
             paneArgs.paneShowMode = opSession.showMode;
@@ -3024,7 +3330,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             opSession.userLoadArgs = eventStreamArgs.loadArgs;
             opSession.userShowArgs = eventStreamArgs.showArgs;
             opSession.userUnloadArgs = eventStreamArgs.unloadArgs;
-            opSession.resizeMoveArgs = eventStreamArgs.resizeMoveArgs;
+            opSession.userResizeArgs = eventStreamArgs.resizeArgs;
+            opSession.userMoveArgs = eventStreamArgs.moveArgs;
         };
 
         eventStream.onCancel = function ()
@@ -3366,6 +3673,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible);
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Positioned);
 
+                    var resizeMoveSettings = resolveResizeMoveSettings(opSession.entry);
+                    if (resizeMoveSettings.restoreDefaultOnHide === true)
+                    {
+                        toggleInlinedStyle(opSession.entry, true);
+                    }
 
                     jobArgs.resolve();                    
                 }
@@ -3526,6 +3838,184 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
+    /**Adds the initialize sequence steps to the EventStream.
+    @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+    @param {PaneOperationSession} opSession The operation session driving the events.*/
+    var addMoveSteps = function (eventStream, opSession)
+    {
+            eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMove,
+            key: EVUI.Modules.Panes.Constants.Event_OnMove,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Move;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onMove === "function")
+                {
+                    return opSession.entry.link.pane.onMove.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMove,
+            key: EVUI.Modules.Panes.Constants.Event_OnMove,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onMove === "function")
+                {
+                    return _self.onMove.call(_self, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Move,
+            key: EVUI.Modules.Panes.Constants.Job_Move,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                var bounds = (opSession.entry.link.lastResolvedShowArgs.clipSettings != null && opSession.entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(opSession.entry.link.lastResolvedShowArgs.clipSettings) : null;
+                var helper = new EVUI.Modules.Dom.DomHelper(opSession.entry.link.pane.element);
+
+                movePane(opSession.entry, opSession.userMoveArgs, helper, null, bounds, function ()
+                {
+                    jobArgs.resolve();
+                });
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMoved,
+            key: EVUI.Modules.Panes.Constants.Event_OnMoved,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Moved;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onMoved === "function")
+                {
+                    return opSession.entry.link.pane.onMoved.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMoved,
+            key: EVUI.Modules.Panes.Constants.Event_OnMoved,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onMoved === "function")
+                {
+                    return _self.onMoved.call(_self, eventArgs);
+                }
+            }
+        });
+    };
+
+    /**Adds the initialize sequence steps to the EventStream.
+@param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+@param {PaneOperationSession} opSession The operation session driving the events.*/
+    var addResizeSteps = function (eventStream, opSession)
+    {
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResize,
+            key: EVUI.Modules.Panes.Constants.Event_OnResize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resize;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onResize === "function")
+                {
+                    return opSession.entry.link.pane.onResize.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResize,
+            key: EVUI.Modules.Panes.Constants.Event_OnResize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onResize === "function")
+                {
+                    return _self.onResize.call(_self, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Resize,
+            key: EVUI.Modules.Panes.Constants.Job_Resize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                var bounds = (opSession.entry.link.lastResolvedShowArgs.clipSettings != null && opSession.entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(opSession.entry.link.lastResolvedShowArgs.clipSettings) : null;
+                var helper = new EVUI.Modules.Dom.DomHelper(opSession.entry.link.pane.element);
+
+                resizePane(opSession.entry, opSession.userResizeArgs, helper, null, bounds, function ()
+                {
+                    jobArgs.resolve();
+                });
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResized,
+            key: EVUI.Modules.Panes.Constants.Event_OnResized,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resized;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onResized === "function")
+                {
+                    return opSession.entry.link.pane.onResized.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResized,
+            key: EVUI.Modules.Panes.Constants.Event_OnResized,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onResized === "function")
+                {
+                    return _self.onResized.call(_self, eventArgs);
+                }
+            }
+        });
+    };
+
     /**Adds the final, onComplete step to the EventStream that calls all the callbacks for the operation.
     @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
     @param {PaneOperationSession} opSession The operation session driving the events.*/
@@ -3550,6 +4040,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneAction = EVUI.Modules.Panes.PaneAction.None;
                     opSession.entry.link.lastCalculatedPosition = null;
                     opSession.entry.link.currentOperation = null;
+
+                    if (opSession.queuedOpSession != null) //if we have a queued action waiting on this one to finish, we start it after all the previous callbacks have been invoked
+                    {
+                        performOperation(opSession.queuedOpSession);
+                        opSession.queuedOpSession.isQueued = false;
+                    }
+
                     args.resolve();
                 });
             }
@@ -3685,7 +4182,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 }
                 else if (currentAction === EVUI.Modules.Panes.PaneAction.Load)
                 {
-                    return [ActionSequence.Queue];
+                    return [ActionSequence.QueueCallback];
                 }
                 else if (currentAction === EVUI.Modules.Panes.PaneAction.Hide
                     || currentAction === EVUI.Modules.Panes.PaneAction.Unload
@@ -3707,7 +4204,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
             else if (currentAction === opAction)
             {
-                return [ActionSequence.Queue];
+                return [ActionSequence.QueueCallback];
             }
             else
             {
@@ -3715,10 +4212,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
         else
-        {
+        {            
             if (currentAction === opAction)
             {
-                return [ActionSequence.Queue];
+                if (opAction === EVUI.Modules.Panes.PaneAction.Move || opAction === EVUI.Modules.Panes.PaneAction.Resize)
+                {
+                    return actionSequence;
+                }
+                
+                return [ActionSequence.QueueCallback];
             }
             else
             {
@@ -3749,6 +4251,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         else if (opSession.action === EVUI.Modules.Panes.PaneAction.Unload)
         {
             sequence = getUnloadSequence(opSession);
+        }
+        else if (opSession.action === EVUI.Modules.Panes.PaneAction.Move)
+        {
+            sequence = getMoveSequence(opSession);
+        }
+        else if (opSession.action === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence = getResizeSequence(opSession);
         }
 
         return sequence;
@@ -3825,7 +4335,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var sequence = [];
 
-        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Unload) //if it's being loaded or shown (which also loads it), cancel that operation
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Unload ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize) //if it's being loaded or shown (which also loads it), cancel that operation
         {
             sequence.push(ActionSequence.CancelCurrent);
         }
@@ -3845,7 +4359,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var sequence = [];
 
-        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Hide) //cancel if anything is happening already
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Hide ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize) //cancel if anything is happening already
         {
             sequence.push(ActionSequence.CancelCurrent);
         }
@@ -3857,6 +4375,42 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         return sequence;
     };
+
+    /**
+     * 
+     * @param {PaneOperationSession} opSession
+     */
+    var getMoveSequence = function (opSession)
+    {
+        var sequence = [];
+
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence.push(ActionSequence.Queue);
+        }
+
+        sequence.push(ActionSequence.Move);
+
+        return sequence;
+    }
+
+    /**
+     * 
+     * @param {PaneOperationSession} opSession
+     */
+    var getResizeSequence = function (opSession)
+    {
+        var sequence = [];
+
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence.push(ActionSequence.Queue);
+        }
+
+        sequence.push(ActionSequence.Resize);
+
+        return sequence;
+    }
 
     /** Gets a CallbackStack object representing all of the queued callbacks for a given pane action.
     @param {PaneLink} link The link to the pane being executed.
@@ -3896,6 +4450,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         for (var x = 0; x < numSession; x++) //check and see if we have any linked continued steps, we need to call both lists of callbacks in one go
         {
             var curSession = callbackStack.opSessions[x];
+
+            if (curSession.isQueued === true) continue;
             if (curSession.continuedTo != null) //we have a link
             {
                 var linkedCallbackStack = getCallbackStack(link, curSession.continuedTo.action);
@@ -3970,6 +4526,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         if (typeof callback !== "function") callback = function () { };
 
+        toggleInlinedStyle(entry, false); //remove the inlined style so we can calculate the position correctly
+
         if (position == null)
         {
             entry.link.lastResolvedShowArgs = resolvedShowArgs
@@ -3977,9 +4535,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
 
         entry.link.lastCalculatedPosition = position;
-
-        removePaneCSS(entry); //remove the CSS from the stylesheet
-        removePaneClasses(entry); //remove all the existing classes from the Pane
+        
+        removePaneCSS(entry, true); //remove the CSS from the stylesheet
+        removePaneClasses(entry, true); //remove all the existing classes from the Pane
 
         if (position == null)
         {
@@ -4145,15 +4703,76 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return setDims;
     };
 
+    /**Removes or adds the in-lined style of the Pane's root element.
+    @param {InternalPaneEntry} entry The entry being manipulated.
+    @param {Boolean} remove Whether or not to remove the inlined style classes and restore the inlined style tag.*/
+    var toggleInlinedStyle = function (entry, remove)
+    {
+        var selector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+
+        if (remove === true)
+        {
+            if (restoreInlinedStyle(entry) === true)
+            {
+                _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector);
+                entry.link.pane.element.classList.remove(EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+            }
+        }
+        else
+        {
+            if (removeInlinedStyle(entry) === true)
+            {
+                _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, entry.link.inlinedStyle);
+                entry.link.pane.element.classList.add(EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+            }
+        }
+    };
+
+    /**Removes the in-lined style from the Pane and stores it in the PaneLink.
+    @param {InternalPaneEntry} entry The entry to strip the in-lined style from.
+    @returns {Boolean}*/
+    var removeInlinedStyle = function (entry)
+    {
+        var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+        var style = ele.attr("style");
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === true || style === "display: inline-block;") return false;
+
+        entry.link.inlinedStyle = style;
+        ele.attr("style", "");
+
+        return true;
+    };
+
+    /**Restores the in-lined style to the Pane from the PaneLink.
+    @param {InternalPaneEntry} entry The entry to restore the in-lined style to.
+    @returns {Boolean}*/
+    var restoreInlinedStyle = function (entry)
+    {
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(entry.link.inlinedStyle) === true) return false;
+
+        var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+
+        var style = ele.attr("style");
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === false && style !== "display: inline-block;" && style !== entry.link.inlinedStyle) return true;
+
+        var style = ele.attr("style", entry.link.inlinedStyle);
+
+        return true;
+    }
+
     /**Removes all the CSS rules from the managed sheet that pertain to a particular Pane.
-    @param {InternalPaneEntry} entry The entry representing the Pane to remove the CSS of.*/
-    var removePaneCSS = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the Pane to remove the CSS of.
+    @param {Boolean} keepInlinedDefaultStyle Whether or not to remove the inlined style extracted from the element.*/
+    var removePaneCSS = function (entry, keepInlinedDefaultStyle)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
 
         for (var x = 0; x < numClasses; x++)
         {
+            if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+
             var selector = getSelector(entry, allClasses[x]);
             if (selector == null) continue;
 
@@ -4162,8 +4781,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
     /**Removes all the auto-generated CSS classes from the Pane without removing the rules from the sheet.
-    @param {InternalPaneEntry} entry The entry representing the BantmWindo to remove the classes from.*/
-    var removePaneClasses = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the BantmWindo to remove the classes from.
+    @param {Boolean} keepInlinedDefaultStyle Whether or not to remove the inlined style extracted from the element.*/
+    var removePaneClasses = function (entry, keepInlinedDefaultStyle)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
@@ -4172,6 +4792,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var eh = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
         for (var x = 0; x < numClasses; x++)
         {
+            if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+
             var curClass = allClasses[x];
             if (eh.hasClass(curClass) === true)
             {
@@ -4213,7 +4835,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var getAllClassNames = function ()
     {
         var allBaseClasses =
-            [EVUI.Modules.Panes.Constants.CSS_Position,
+            [EVUI.Modules.Panes.Constants.CSS_Pane_Style,
+            EVUI.Modules.Panes.Constants.CSS_Position,
             EVUI.Modules.Panes.Constants.CSS_ScrollX,
             EVUI.Modules.Panes.Constants.CSS_ScrollY,
             EVUI.Modules.Panes.Constants.CSS_ClippedX,
@@ -5883,185 +6506,207 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Resizes the pane by adding new CSS classes to it that override the default positioning CSS classes.
     @param {InternalPaneEntry} entry The Pane being resized or moved.
-    @param {EVUI.Modules.Panes.PaneResizeMoveArgs} resizeArgs The arguments about how it will be resized.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} resizeArgs The arguments about how it will be resized.
     @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
-    @param {Boolean} resized Whether or not the pane was only resized.
-    @param {Boolean} moved Whether or not the pane was only moved.
     @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
     @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
-    var resizePane = function (entry, resizeArgs, helper, resized, moved, dragHandles, clipBounds)
+    var resizePane = function (entry, resizeArgs, helper, dragHandles, clipBounds, callback)
     {
-        if (moved === true)
+        if (typeof callback !== "function") callback = function () { };
+
+        resizeArgs = resolvePaneResizeArgs(entry, resizeArgs);
+
+        var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
+        var style = getComputedStyle(entry.link.pane.element);
+        var minWidth = style.minWidth;
+        var minHeight = style.minHeight;
+
+        if (minWidth != null)
         {
-            if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
-            {
-                var clippedBounds = shiftMovedPaneToBounds(entry, resizeArgs, clipBounds);
-                if (clippedBounds != null)
-                {
-                    if (clippedBounds.left === resizeArgs.left && clippedBounds.top === resizeArgs.top) return;
-
-                    resizeArgs.left = clippedBounds.left;
-                    resizeArgs.top = clippedBounds.top;
-                }
-            }
-
-            var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
-
-            var rules =
-            {
-                position: "absolute",
-                top: resizeArgs.top + "px",
-                left: resizeArgs.left + "px"
-            }
-
-            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
-            helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);
-            entry.link.lastResizeArgs = resizeArgs;
+            minWidth = parseFloat(minWidth.replace("px", ""));
+            if (isNaN(minWidth) === true) minWidth = null;
         }
 
-        if (resized === true)
+        if (minHeight != null)
         {
-            var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
-            var style = getComputedStyle(entry.link.pane.element);
-            var minWidth = style.minWidth;
-            var minHeight = style.minHeight;
-
-            if (minWidth != null)
-            {
-                minWidth = parseFloat(minWidth.replace("px", ""));
-                if (isNaN(minWidth) === true) minWidth = null;
-            }
-
-            if (minHeight != null)
-            {
-                minHeight = parseFloat(minHeight.replace("px", ""));
-                if (isNaN(minHeight) === true) minHeight = null;
-            }
-
-            var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
-            if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
-            if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
-
-            var shrankX = false;
-            var shrankY = false;
-
-            if (clipBounds != null) //if we're clipping, make sure the resized bounds are within the clip zone 
-            {
-                var position = new EVUI.Modules.Panes.PanePosition();
-                position.bottom = resizeArgs.top + resizeArgs.height;
-                position.left = resizeArgs.left;
-                position.right = resizeArgs.left + resizeArgs.width;
-                position.top = resizeArgs.top;
-
-                if (isOutOfBounds(position, clipBounds, "left") === true)
-                {
-                    resizeArgs.left = clipBounds.left;
-                    resizeArgs.width = position.right - clipBounds.left;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "right") === true)
-                {
-                    resizeArgs.width = clipBounds.right - position.left;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "top") === true)
-                {
-                    resizeArgs.top = clipBounds.top;
-                    resizeArgs.height = position.bottom - clipBounds.top;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "bottom") === true)
-                {
-                    resizeArgs.height = clipBounds.bottom - position.top;
-                }
-            }
-
-            //ensure that we don't shrink beyond the minimum allowable size. If there's one in CSS we use that, if not we use 2.5 times the drag buffer zone so that the drag zones for all sized never overlap.
-            //there is an issue here where it can cause a jittering effect on the bottom or right side, we have code below to correct that issue. The problem is the mouse is moving so fast that it gets into
-            //a bad state where neither the left nor the width is correct.
-            if (minHeight > resizeArgs.height || minWidth > resizeArgs.width)
-            {
-                if (entry.link.lastResizeArgs != null)
-                {
-                    if (minHeight > resizeArgs.height)
-                    {
-                        resizeArgs.height = minHeight;
-                        resizeArgs.top = (dragHandles != null) ? dragHandles.originalBounds.top : entry.link.lastResizeArgs.top;
-                        shrankY = true;
-                    }
-
-                    if (minWidth > resizeArgs.width)
-                    {
-                        resizeArgs.width = minWidth;
-                        resizeArgs.left = (dragHandles != null) ? dragHandles.originalBounds.left : entry.link.lastResizeArgs.left;
-                        shrankX = true;
-                    }
-                }
-            }
-
-            //sometimes the above logic gets it "wrong" when the mouse moves very, very fast, so we have to restore the size of the element to be its original size and position to stop the displacement jitter that happens otherwise.
-            //it only happens when dragging the top or left hand side of the pane, never the right or bottom. Because this is remembered on the next iteration, it only fires when the problem scenario occurs.
-            if (dragHandles != null && entry.link.lastResizeArgs != null)
-            {
-                if (dragHandles.growX === "left")
-                {
-                    var right = resizeArgs.left + resizeArgs.width;
-                    var oldRight = entry.link.lastResizeArgs.left + entry.link.lastResizeArgs.width;
-
-                    if (right != oldRight) //see if the right shifted either direction to the right or left. If so, restore it to the original position. The left is in flux, but the right must stay the same.
-                    {
-                        resizeArgs.left = dragHandles.originalBounds.left;
-                        resizeArgs.width = dragHandles.originalBounds.right - dragHandles.originalBounds.left;
-
-                        if (shrankX === true) //if it shrank back to the minimum size, don't reset the width
-                        {
-                            resizeArgs.width = minWidth;
-                            resizeArgs.left = dragHandles.originalBounds.right - minWidth;
-                        }
-                    }
-                }
-
-                if (dragHandles.growY === "top") 
-                {
-                    var bottom = resizeArgs.top + resizeArgs.height;
-                    var oldBottom = entry.link.lastResizeArgs.top + entry.link.lastResizeArgs.height;
-
-                    if (bottom != oldBottom) //see if the bottom shifted up or down. If so, restore it to its original position. The top is in flux, but the bottom should never move.
-                    {
-                        resizeArgs.top = dragHandles.originalBounds.top;
-                        resizeArgs.height = dragHandles.originalBounds.top - dragHandles.originalBounds.bottom;
-
-                        if (shrankY === true)  //if it shrank back to the minimum size, don't reset the height
-                        {
-                            resizeArgs.height = minHeight;
-                            resizeArgs.top = dragHandles.originalBounds.bottom - minHeight;
-                        }
-                    }
-                }
-            }          
-
-            var rules = {};
-
-            rules.position = "absolute";
-            rules.height = resizeArgs.height + "px";
-            rules.width = resizeArgs.width + "px";
-            rules.top = resizeArgs.top + "px";
-            rules.left = resizeArgs.left + "px";
-
-            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
-            helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
-
-            entry.link.lastResizeArgs = resizeArgs;
+            minHeight = parseFloat(minHeight.replace("px", ""));
+            if (isNaN(minHeight) === true) minHeight = null;
         }
 
-        if (moved === false && resized === false) return false;
-        var transition = (resized === true) ? resizeArgs.resizeTransition : resizeArgs.moveTransition
+        var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
+        if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
+        if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
 
-        applyTransition(entry, transition, EVUI.Modules.Panes.Constants.CSS_Transition_Adjust, helper)
+        var shrankX = false;
+        var shrankY = false;
 
-        return true;
+        if (clipBounds != null) //if we're clipping, make sure the resized bounds are within the clip zone 
+        {
+            var position = new EVUI.Modules.Panes.PanePosition();
+            //position.bottom = resizeArgs.top + resizeArgs.height;
+            position.bottom = resizeArgs.bottom;
+            position.left = resizeArgs.left;
+            //position.right = resizeArgs.left + resizeArgs.width;
+            position.right = resizeArgs.right;
+            position.top = resizeArgs.top;
+
+            if (isOutOfBounds(position, clipBounds, "left") === true)
+            {
+                resizeArgs.left = clipBounds.left;
+                //resizeArgs.width = position.right - clipBounds.left;
+            }
+
+            if (isOutOfBounds(position, clipBounds, "right") === true)
+            {
+                //resizeArgs.width = clipBounds.right - position.left;
+                resizeArgs.right = clipBounds.right;
+            }
+
+            if (isOutOfBounds(position, clipBounds, "top") === true)
+            {
+                resizeArgs.top = clipBounds.top;
+                //resizeArgs.height = position.bottom - clipBounds.top;
+            }
+
+            if (isOutOfBounds(position, clipBounds, "bottom") === true)
+            {
+                resizeArgs.bottom = clipBounds.bottom;
+                //resizeArgs.height = clipBounds.bottom - position.top;
+            }
+        }
+
+        var height = resizeArgs.getResizedHeight();
+        var width = resizeArgs.getResizedWidth();
+
+        //ensure that we don't shrink beyond the minimum allowable size. If there's one in CSS we use that, if not we use 2.5 times the drag buffer zone so that the drag zones for all sized never overlap.
+        //there is an issue here where it can cause a jittering effect on the bottom or right side, we have code below to correct that issue. The problem is the mouse is moving so fast that it gets into
+        //a bad state where neither the left nor the width is correct.
+        if (minHeight > height || minWidth > width)
+        {
+            if (entry.link.lastResizeArgs != null)
+            {
+                if (minHeight > height)
+                {
+                    //resizeArgs.height = minHeight;                    
+                    resizeArgs.top = (dragHandles != null) ? dragHandles.originalBounds.top : entry.link.lastResizeArgs.top;
+                    resizeArgs.bottom = resizeArgs.top + minHeight;
+                    shrankY = true;
+                }
+
+                if (minWidth > width)
+                {
+                    //resizeArgs.width = minWidth;
+                    resizeArgs.left = (dragHandles != null) ? dragHandles.originalBounds.left : entry.link.lastResizeArgs.left;
+                    resizeArgs.right = resizeArgs.left + minWidth;
+                    shrankX = true;
+                }
+            }
+        }
+
+        //sometimes the above logic gets it "wrong" when the mouse moves very, very fast, so we have to restore the size of the element to be its original size and position to stop the displacement jitter that happens otherwise.
+        //it only happens when dragging the top or left hand side of the pane, never the right or bottom. Because this is remembered on the next iteration, it only fires when the problem scenario occurs.
+        if (dragHandles != null && entry.link.lastResizeArgs != null)
+        {
+            if (dragHandles.growX === "left")
+            {
+                var right = resizeArgs.right; //resizeArgs.left + resizeArgs.width;
+                var oldRight = entry.link.lastResizeArgs.right; //entry.link.lastResizeArgs.left + entry.link.lastResizeArgs.width;
+
+                if (right != oldRight) //see if the right shifted either direction to the right or left. If so, restore it to the original position. The left is in flux, but the right must stay the same.
+                {
+                    resizeArgs.left = dragHandles.originalBounds.left;
+                    resizeArgs.right = dragHandles.originalBounds.right;
+                    //resizeArgs.width = dragHandles.originalBounds.right - dragHandles.originalBounds.left;
+
+                    if (shrankX === true) //if it shrank back to the minimum size, don't reset the width
+                    {
+                        //resizeArgs.width = minWidth;                        
+                        resizeArgs.left = dragHandles.originalBounds.right - minWidth;
+                        resizeArgs.right = resizeArgs.left + minWidth;
+                    }
+                }
+            }
+
+            if (dragHandles.growY === "top") 
+            {
+                var bottom = resizeArgs.bottom; //resizeArgs.top + resizeArgs.height;
+                var oldBottom = entry.link.lastResizeArgs.bottom; //entry.link.lastResizeArgs.top + entry.link.lastResizeArgs.height;
+
+                if (bottom != oldBottom) //see if the bottom shifted up or down. If so, restore it to its original position. The top is in flux, but the bottom should never move.
+                {
+                    resizeArgs.top = dragHandles.originalBounds.top;
+                    resizeArgs.bottom = dragHandles.originalBounds.bottom;
+                    //resizeArgs.height = dragHandles.originalBounds.top - dragHandles.originalBounds.bottom;
+
+                    if (shrankY === true)  //if it shrank back to the minimum size, don't reset the height
+                    {
+                        //resizeArgs.height = minHeight;                        
+                        resizeArgs.top = dragHandles.originalBounds.bottom - minHeight;
+                        resizeArgs.bottom = resizeArgs.top + minHeight;
+                    }
+                }
+            }
+        }
+
+        var rules = {};
+
+        rules.position = "absolute";
+        rules.height = resizeArgs.getResizedHeight() + "px";
+        rules.width = resizeArgs.getResizedWidth() + "px";
+        rules.top = resizeArgs.top + "px";
+        rules.left = resizeArgs.left + "px";
+
+        _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
+        helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
+
+        entry.link.lastResizeArgs = resolvePaneResizeArgs(entry, resizeArgs);
+        applyTransition(entry, resizeArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Resize, helper, function ()
+        {
+            callback();
+        });
+    };
+
+    /**Moves the pane by adding new CSS classes to it that override the default positioning CSS classes.
+    @param {InternalPaneEntry} entry The Pane being resized or moved.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} moveArgs The arguments about how it will be resized.
+    @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
+    @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
+    @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
+    var movePane = function (entry, moveArgs, helper, dragHandles, clipBounds, callback)
+    {
+        if (typeof callback !== "function") callback = function () { };
+        moveArgs = resolvePaneMoveArgs(entry, moveArgs);    
+
+        if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
+        {
+            var clippedBounds = shiftMovedPaneToBounds(entry, moveArgs, clipBounds);
+            if (clippedBounds != null)
+            {
+                if (clippedBounds.left === moveArgs.left && clippedBounds.top === moveArgs.top) return;
+
+                moveArgs.left = clippedBounds.left;
+                moveArgs.top = clippedBounds.top;
+            }
+        }
+
+        var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
+
+        var rules =
+        {
+            position: "absolute",
+            top: moveArgs.top + "px",
+            left: moveArgs.left + "px"
+        }
+
+        _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
+        helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);      
+
+        applyTransition(entry, moveArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Move, helper, function ()
+        {
+            callback();
+        });
     };
 
     var shiftMovedPaneToBounds = function (entry, resizeArgs, clipBounds)
@@ -6106,9 +6751,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         hookUpExplicitCloseZones(entry, resolvedShowArgs);
         hookUpAutoCloseMode(entry, resolvedShowArgs);
         hookUpKeydownClose(entry, resolvedShowArgs);
-        hookUpDrag(entry, resolvedShowArgs);
-        hookUpResize(entry, resolvedShowArgs);
         hookUpSetHighestZOrder(entry, resolvedShowArgs);
+
+        var resolvedResizeMoveSettings = resolveResizeMoveSettings(entry.link.pane.resizeMoveSettings);
+        hookUpDrag(entry, resolvedResizeMoveSettings);
+        hookUpResize(entry, resolvedResizeMoveSettings);
     };
 
     /**Hooks up any child elements of the Pane with the appropriate attribute on them to be auto-close zones for the Pane.
@@ -6341,10 +6988,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
     /**Hooks up the drag event handler to a child element of the root Pane element.
-    @param {InternalPaneEntry} entry The entry representing the Pane that is having its drag handlers attached.*/
-    var hookUpDrag = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the Pane that is having its drag handlers attached.
+    @param {EVUI.Modules.Panes.PaneResizeMoveSettings} resolveResizeMoveSettings The settings for resizing or moving the pane.*/
+    var hookUpDrag = function (entry, resolveResizeMoveSettings)
     {
-        if (entry.link.pane.element == null || (entry.link.pane.resizeMoveSettings != null && entry.link.pane.resizeMoveSettings.canDragMove !== true)) return;
+        if (entry.link.pane.element == null || (resolveResizeMoveSettings.canDragMove !== true)) return;
         var attributeName = getAttributeName(EVUI.Modules.Panes.Constants.Attribute_Drag);
 
         var paneRoot = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
@@ -6382,14 +7030,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     var xDelta = dragEvent.clientX - startX;
                     var yDelta = dragEvent.clientY - startY;
 
-                    var resizeArgs = new EVUI.Modules.Panes.PaneResizeMoveArgs();
-                    resizeArgs.height = (startPos.bottom - startPos.top);
-                    resizeArgs.width = (startPos.right - startPos.left);
-                    resizeArgs.top = startPos.top + yDelta;
-                    resizeArgs.left = startPos.left + xDelta;
-                    resizeArgs.moveTransition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
+                    var moveArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+                    moveArgs.top = startPos.top + yDelta;
+                    moveArgs.left = startPos.left + xDelta;
+                    moveArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
 
-                    resizePane(entry, resizeArgs, paneRoot, false, true, null, bounds);
+                    _self.movePane(entry.link.pane, moveArgs);
+                    //movePane(entry, resizeArgs, paneRoot, null, bounds);
                 };
 
                 document.addEventListener("mousemove", dragHandler);
@@ -6459,34 +7106,39 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 var xDelta = dragEvent.clientX - startX;
                 var yDelta = dragEvent.clientY - startY;
 
-                var resizeArgs = new EVUI.Modules.Panes.PaneResizeMoveArgs();
-                resizeArgs.height = (startPos.bottom - startPos.top);
-                resizeArgs.width = (startPos.right - startPos.left);
+                var resizeArgs = new EVUI.Modules.Panes.PaneResizeArgs();
+                //resizeArgs.height = (startPos.bottom - startPos.top);
+                //resizeArgs.width = (startPos.right - startPos.left);
+                resizeArgs.right = startPos.right;
+                resizeArgs.bottom = startPos.bottom;
                 resizeArgs.top = startPos.top;
                 resizeArgs.left = startPos.left;
-                resizeArgs.resizeTransition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.resizeTransition : null;
+                resizeArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.resizeTransition : null;
 
                 if (dragHandles.growX === "right")
                 {
-                    resizeArgs.width += xDelta;
+                    //resizeArgs.width += xDelta;
+                    resizeArgs.right += xDelta;
                 }
                 else if (dragHandles.growX === "left")
                 {
-                    resizeArgs.width -= xDelta;
+                    //resizeArgs.width -= xDelta;
                     resizeArgs.left += xDelta;
                 }
 
                 if (dragHandles.growY === "bottom")
                 {
-                    resizeArgs.height += yDelta;
+                    //resizeArgs.height += yDelta;
+                    resizeArgs.bottom += yDelta;
                 }
                 else if (dragHandles.growY === "top")
                 {
-                    resizeArgs.height -= yDelta; 
+                    //resizeArgs.height -= yDelta; 
                     resizeArgs.top += yDelta;
                 }
 
-                resizePane(entry, resizeArgs, paneRoot, true, false, dragHandles, bounds);
+                _self.resizePane(entry.link.pane, resizeArgs);
+                //resizePane(entry, resizeArgs, paneRoot, dragHandles, bounds);
             };
 
             document.addEventListener("mousemove", dragHandler); //add the drag handler to the document
@@ -6734,7 +7386,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 return callback(false);
             }
-            else if (contents.elements.length > 1) //too many elements, but be exactly one
+            else if (contents.elements.length > 1) //too many elements, must be exactly one
             {
                 return callback(false);
             }
@@ -7122,6 +7774,34 @@ EVUI.Modules.Panes.Pane = function (entry)
 
     };
 
+    /**Event that fires before any Pane is moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMove = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires after any Pane has been moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMoved = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires before any Pane is resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResize = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires after any Pane has been resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResized = function (paneEventArgs)
+    {
+
+    };
+
     /**Shows a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
     @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} showArgs Optional. A PaneShowArgs object graph or the callback. If omitted or passed a function, the Pane's existing show/load settings are used instead.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
@@ -7193,6 +7873,41 @@ EVUI.Modules.Panes.Pane = function (entry)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
         return options.link.manager.unloadPaneAsync(_entry.paneId, unloadArgs);
+    };
+
+    /**Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.movePane = function (paneMoveArgs, callback)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.movePane(_entry.paneId, paneMoveArgs, callback);
+    };
+
+    /**Awaitable. Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @returns {Promise<Boolean>}*/
+    this.movePaneAsync = function (paneMoveArgs)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.movePaneAsync(_entry.paneId, paneMoveArgs);
+    };
+
+    /**Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.resizePane = function (paneResizeArgs, callback)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.resizePane(_entry.paneId, paneResizeArgs, callback);
+    };
+
+    /**Awaitable. Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
+    this.resizePaneAsync = function (paneResizeArgs)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs, callback);
     };
 
     /**Calculates and gets the absolute position of the Pane.
@@ -7410,7 +8125,8 @@ EVUI.Modules.Panes.PaneShowSettings = function ()
     this.alwaysOnTop = true;
 };
 
-/**Arguments for showing a Pane. Contains a set of mutually exclusive directives for describing how to display and position the Pane.Goes in the following order: position class > absolute position > relative position > anchored position > document flow > full screen > centered.*/
+/**Arguments for showing a Pane. Contains a set of mutually exclusive directives for describing how to display and position the Pane.Goes in the following order: position class > absolute position > relative position > anchored position > document flow > full screen > centered.
+@class */
 EVUI.Modules.Panes.PaneShowArgs = function ()
 {
     /**Any. Any contextual information to pass into the Pane show logic.
@@ -8000,9 +8716,13 @@ EVUI.Modules.Panes.PaneEventArgs = function (entry)
     @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
     this.unloadArgs = null;
 
-    /**Object. The arguments being used to move or resize this pane.
-    @type {EVUI.Modules.Panes.PaneResizeMoveArgs}*/
-    this.resizeMoveArgs = null;
+    /**Object. The arguments being used to move this pane.
+    @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+    this.moveArgs = null;
+
+    /**Object. The arguments being used to resize this pane.
+    @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+    this.resizeArgs = null;
 };
 
 /**Flags for describing the current state of a Pane.
@@ -8035,7 +8755,11 @@ EVUI.Modules.Panes.PaneAction =
     /**Pane is in the process of being loaded.*/
     Load: "load",
     /**Pane is in the process of being unloaded.*/
-    Unload: "unload"    
+    Unload: "unload",
+    /**The Pane is in the process of being moved.*/
+    Move: "move",
+    /**The pane is in the process of being resized.*/
+    Resize: "resize"
 };
 Object.freeze(EVUI.Modules.Panes.PaneAction);
 
@@ -8158,15 +8882,54 @@ EVUI.Modules.Panes.PaneUnloadArgs = function ()
 
 /**Arguments for resizing or moving a Pane.
 @class*/
-EVUI.Modules.Panes.PaneResizeMoveArgs = function ()
+EVUI.Modules.Panes.PaneResizeArgs = function ()
 {
-    /**Number. The height of the Pane.
-    @type {Number}*/
-    this.height = undefined;
+    /**Any. Any contextual information to pass into the Pane resize logic.
+    @type {Any}*/
+    this.context = undefined;
 
-    /**Number. The width of the Pane.
+    /**Number. The distance to grow the top of the Pane, in pixels.
     @type {Number}*/
-    this.width = undefined;
+    this.top = undefined;
+
+    /**Number. The distance to grow the left of the Pane, in pixels.
+    @type {Number}*/
+    this.left = undefined;
+
+    /**Number. The distance to grow the right of the Pane, in pixels. 
+    @type {Number}*/
+    this.right = undefined;
+
+    /**Number. The distance to grow the bottom of the Pane, in pixels.
+    @type {Number}*/
+    this.bottom = undefined;
+
+    /**Number. The transition to apply to the Pane when it is resized.
+    @type {EVUI.Modules.Panes.PaneTransition}*/
+    this.transition = undefined;
+};
+
+/**Gets the height of the resized Pane.
+@returns {Number}*/
+EVUI.Modules.Panes.PaneResizeArgs.prototype.getResizedHeight = function ()
+{
+    return this.bottom - this.top;
+};
+
+/**Gets the width of the resized Pane.
+@returns {Number}*/
+EVUI.Modules.Panes.PaneResizeArgs.prototype.getResizedWidth = function ()
+{
+    return this.right - this.left;
+};
+
+/**Arguments for moving a Pane.
+@class*/
+EVUI.Modules.Panes.PaneMoveArgs = function ()
+{
+    /**Any. Any contextual information to pass into the Pane move logic.
+    @type {Any}*/
+    this.context = undefined;
 
     /**Number. The new top position of the Pane.
     @type {Number}*/
@@ -8176,13 +8939,9 @@ EVUI.Modules.Panes.PaneResizeMoveArgs = function ()
     @type {Number}*/
     this.left = undefined;
 
-    /**Number. The transition to apply to the Pane when it is resized.
-    @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.resizeTransition = undefined;
-
     /**Number. The transition to apply to the Pane when it is moved.
     @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.moveTransition = undefined;
+    this.transition = undefined;
 };
 
 /**Enum for indicating what type of arguments object the PaneEventArgs.currentArguments property is.
@@ -8198,10 +8957,14 @@ EVUI.Modules.Panes.PaneArgumentType =
     /**Arguments are PaneUnloadArgs.*/
     Unload: "unload",
     /**Arguments are PaneMoveResizeArgs.*/
-    MoveResize: "moveResize"
+    Move: "move",
+    /**Arguments are PaneMoveResizeArgs.*/
+    Resize: "resize"
 };
 Object.freeze(EVUI.Modules.Panes.PaneArgumentType);
 
+/**Dependencies used by the PaneManager.
+@class */
 EVUI.Modules.Panes.PaneManagerServices = function ()
 {
     /**Object. The HttpManager used to make web requests from the PaneManager.
