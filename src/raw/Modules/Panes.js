@@ -350,9 +350,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {Boolean}*/
         this.removed = false;
 
-        /**
-        @type {PaneOperationSession[]}*/
-        this.queuedResizeMoveOperations = [];
+        /**String. The rules of the style tag that were inlined on the root element on the Pane.
+        @type {String}*/
+        this.inlinedStyle = null;
     };
 
 
@@ -433,8 +433,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.userUnloadArgs = null;
 
+        /**The user's arguments being used to move the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
         this.userMoveArgs = null;
 
+        /**The user's arguments being used to resize the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
         this.userResizeArgs = null;
 
         /**The arguments being used to show/load the Pane
@@ -453,8 +457,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.resolvedUnloadArgs = null;
 
+        /**The arguments being used to move the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
         this.resolvedMoveArgs = null;
 
+        /**The arguments being used to resize the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
         this.resolvedResizeArgs = null;
 
         /**Boolean. Whether or not the EventStream should be canceled then restarted with a new chain of events.
@@ -477,7 +485,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {Number}*/
         this.callbackOrdinal = _callbackCounter++;
 
+        /**Any. The user's contextual information about the operation.
+        @type {Any}*/
         this.context = null;
+
+        /**Object. The PaneOperationSession that was queued to run after this one.
+        @type {PaneOperationSession}*/
+        this.queuedOpSession = null;
+
+        /**Whether or not this is a queued operation that is chaining off of a prior operation.
+        @type {Boolean}*/
+        this.isQueued = false;
     };
 
     var PaneEventArgsIntepretationResult = function ()
@@ -513,11 +531,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Signals that a new EventStream should follow the first and have an aggregate callback sequence of both events.*/
         Continue: "continue",
         /**Signals that the callback has been queued (which is automatic) and nothing else should happen.*/
-        Queue: "queue",
+        QueueCallback: "queuecallback",
         /**Signals that the move steps should be added.*/
         Move: "move",
         /**Signals that the resize steps should be added.*/
-        Resize: "resize"
+        Resize: "resize",
+        /**Signals that the operation should be chained to start when the current operation ends.*/
+        Queue: "queue"
     };
 
     /**Object for managing the backdrop used by Panes.
@@ -1323,7 +1343,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
-    /**Moves a currently visible pane to a new location.
+    /**Asynchronously moves a currently visible pane to a new location.
     @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
     @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
@@ -1377,7 +1397,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         performOperation(opSession);
     };
 
-    /**Moves a currently visible pane to a new location.
+    /**Awaitable. Asynchronously moves a currently visible pane to a new location.
     @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
     @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
     @returns {Promise<Boolean>}*/
@@ -1392,9 +1412,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
-    /**Moves a currently visible pane to a new location.
-    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
-    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    /**Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.resizePane = function (paneID, paneResizeArgs, callback)
     {
@@ -1445,14 +1465,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         var opSession = new PaneOperationSession();
         opSession.entry = paneEntry;
-        opSession.action = EVUI.Modules.Panes.PaneAction.Move;
-        opSession.currentAction = EVUI.Modules.Panes.PaneAction.Move;
+        opSession.action = EVUI.Modules.Panes.PaneAction.Resize;
+        opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resize;
         opSession.callback = (typeof callback === "function") ? callback : function (success) { };
         opSession.userResizeArgs = paneResizeArgs;
-        opSession.resolvedMoveArgs = resolvePaneMoveArgs(paneEntry, paneResizeArgs);
+        opSession.resolvedResizeArgs = resolvePaneResizeArgs(paneEntry, paneResizeArgs);
         performOperation(opSession);
     };
 
+    /**Awaitable. Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
     this.resizePaneAsync = function (paneID, paneResizeArgs)
     {
         return new Promise(function (resolve)
@@ -1964,6 +1987,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var resizeMoveSettings = paneEntry.link.pane.resizeMoveSettings == null ? {} : paneEntry.link.pane.resizeMoveSettings;
         finalArgs.transition = resolvePaneTransition(resizeMoveSettings.moveTransition, userMoveArgs.transition);
 
+        var noTop = typeof finalArgs.top !== "number";
+        var noLeft = typeof finalArgs.left !== "number";    
+
+        if (noTop || noLeft)
+        {
+            var position = paneEntry.link.pane.getCurrentPosition();
+
+            if (noTop) finalArgs.top = position.top;
+            if (noLeft) finalArgs.left = position.left;
+        }
+
         return finalArgs;
     };
 
@@ -1978,6 +2012,21 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         var resizeMoveSettings = paneEntry.link.pane.resizeMoveSettings == null ? {} : paneEntry.link.pane.resizeMoveSettings;
         finalArgs.transition = resolvePaneTransition(resizeMoveSettings.resizeTransition, userResizeArgs.transition);
+
+        var noTop = typeof finalArgs.top !== "number";
+        var noLeft = typeof finalArgs.left !== "number";  
+        var noBottom = typeof finalArgs.bottom !== "number";
+        var noRight = typeof finalArgs.right !== "number";
+
+        if (noTop || noLeft || noBottom || noRight)
+        {
+            var position = paneEntry.link.pane.getCurrentPosition();
+
+            if (noBottom) finalArgs.bottom = position.bottom;
+            if (noRight) finalArgs.right = position.right;
+            if (noTop) finalArgs.top = position.top;
+            if (noLeft) finalArgs.left = position.left;
+        }
 
         return finalArgs;
     };
@@ -2923,7 +2972,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Performs the operation described in the PaneOperationSession. Takes into account the current state of the pane being executed and will cancel, ignore, or continue operations depending on the combination of current action and requested action. 
     All execution begins asynchronously so that multiple calls in the same stack frame behave correctly.
-    @param {PaneOperationSession} opSession The operation session to execute on. */
+    @param {PaneOperationSession} opSession The operation session to execute on.*/
     var performOperation = function (opSession)
     {
         var callbackStack = getCallbackStack(opSession.entry.link, opSession.action); //add the callback to the stack of callbacks for the current operation.
@@ -2943,8 +2992,27 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             return callCallbackStack(opSession.entry.link, opSession.action, true);
         }
-        else if (actionSequence[0] === ActionSequence.Queue) //queue the callback for a duplicate operation without setting up a new event stream
+        else if (actionSequence[0] === ActionSequence.QueueCallback) //queue the callback for a duplicate operation without setting up a new event stream
         {
+            return;
+        }
+        else if (actionSequence[0] === ActionSequence.Queue && opSession.isQueued === false)
+        {
+            var lastInSequence = callbackStack.opSessions[0];
+            while (lastInSequence != null)
+            {
+                if (lastInSequence.queuedOpSession != null)
+                {
+                    lastInSequence = lastInSequence.queuedOpSession;
+                }
+                else
+                {
+                    lastInSequence.queuedOpSession = opSession;
+                    opSession.isQueued = true;
+                    break;
+                }
+            }
+
             return;
         }
 
@@ -3171,6 +3239,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 addUnloadSteps(eventStream, opSession);
             }
+            else if (curStep === ActionSequence.Move)
+            {
+                addMoveSteps(eventStream, opSession);
+            }
+            else if (curStep === ActionSequence.Resize)
+            {
+                addResizeSteps(eventStream, opSession);
+            }
         }
 
         //finally, add the complete step that will call the operations callbacks.
@@ -3220,6 +3296,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 {
                     if (opSession.resolvedUnloadArgs != null) opSession.context = opSession.resolvedUnloadArgs.context;
                 }
+                else if (opSession.action === EVUI.Modules.Panes.PaneAction.Move)
+                {
+                    if (opSession.resolvedMoveArgs != null) opSession.context = opSession.resolvedMoveArgs.context;
+                }
+                else if (opSession.action === EVUI.Modules.Panes.PaneAction.Resize)
+                {
+                    if (opSession.resolvedResizeArgs != null) opSession.context = opSession.resolvedResizeArgs.context;
+                }
             }
 
 
@@ -3228,7 +3312,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             paneArgs.loadArgs = opSession.userLoadArgs;
             paneArgs.showArgs = opSession.userShowArgs;
             paneArgs.unloadArgs = opSession.unloadArgs;
-            paneArgs.resizeMoveArgs = opSession.userResizeMoveArgs;
+            paneArgs.moveArgs = opSession.userMoveArgs;
+            paneArgs.resizeArgs = opSession.userResizeArgs;
             paneArgs.action = opSession.action;
             paneArgs.currentAction = opSession.currentAction;
             paneArgs.paneShowMode = opSession.showMode;
@@ -3245,7 +3330,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             opSession.userLoadArgs = eventStreamArgs.loadArgs;
             opSession.userShowArgs = eventStreamArgs.showArgs;
             opSession.userUnloadArgs = eventStreamArgs.unloadArgs;
-            opSession.resizeMoveArgs = eventStreamArgs.resizeMoveArgs;
+            opSession.userResizeArgs = eventStreamArgs.resizeArgs;
+            opSession.userMoveArgs = eventStreamArgs.moveArgs;
         };
 
         eventStream.onCancel = function ()
@@ -3587,6 +3673,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible);
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Positioned);
 
+                    var resizeMoveSettings = resolveResizeMoveSettings(opSession.entry);
+                    if (resizeMoveSettings.restoreDefaultOnHide === true)
+                    {
+                        toggleInlinedStyle(opSession.entry, true);
+                    }
 
                     jobArgs.resolve();                    
                 }
@@ -3747,6 +3838,184 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
+    /**Adds the initialize sequence steps to the EventStream.
+    @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+    @param {PaneOperationSession} opSession The operation session driving the events.*/
+    var addMoveSteps = function (eventStream, opSession)
+    {
+            eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMove,
+            key: EVUI.Modules.Panes.Constants.Event_OnMove,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Move;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onMove === "function")
+                {
+                    return opSession.entry.link.pane.onMove.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMove,
+            key: EVUI.Modules.Panes.Constants.Event_OnMove,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onMove === "function")
+                {
+                    return _self.onMove.call(_self, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Move,
+            key: EVUI.Modules.Panes.Constants.Job_Move,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                var bounds = (opSession.entry.link.lastResolvedShowArgs.clipSettings != null && opSession.entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(opSession.entry.link.lastResolvedShowArgs.clipSettings) : null;
+                var helper = new EVUI.Modules.Dom.DomHelper(opSession.entry.link.pane.element);
+
+                movePane(opSession.entry, opSession.userMoveArgs, helper, null, bounds, function ()
+                {
+                    jobArgs.resolve();
+                });
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMoved,
+            key: EVUI.Modules.Panes.Constants.Event_OnMoved,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Moved;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onMoved === "function")
+                {
+                    return opSession.entry.link.pane.onMoved.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMoved,
+            key: EVUI.Modules.Panes.Constants.Event_OnMoved,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onMoved === "function")
+                {
+                    return _self.onMoved.call(_self, eventArgs);
+                }
+            }
+        });
+    };
+
+    /**Adds the initialize sequence steps to the EventStream.
+@param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+@param {PaneOperationSession} opSession The operation session driving the events.*/
+    var addResizeSteps = function (eventStream, opSession)
+    {
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResize,
+            key: EVUI.Modules.Panes.Constants.Event_OnResize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resize;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onResize === "function")
+                {
+                    return opSession.entry.link.pane.onResize.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResize,
+            key: EVUI.Modules.Panes.Constants.Event_OnResize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onResize === "function")
+                {
+                    return _self.onResize.call(_self, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Resize,
+            key: EVUI.Modules.Panes.Constants.Job_Resize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                var bounds = (opSession.entry.link.lastResolvedShowArgs.clipSettings != null && opSession.entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(opSession.entry.link.lastResolvedShowArgs.clipSettings) : null;
+                var helper = new EVUI.Modules.Dom.DomHelper(opSession.entry.link.pane.element);
+
+                resizePane(opSession.entry, opSession.userResizeArgs, helper, null, bounds, function ()
+                {
+                    jobArgs.resolve();
+                });
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResized,
+            key: EVUI.Modules.Panes.Constants.Event_OnResized,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resized;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onResized === "function")
+                {
+                    return opSession.entry.link.pane.onResized.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResized,
+            key: EVUI.Modules.Panes.Constants.Event_OnResized,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onResized === "function")
+                {
+                    return _self.onResized.call(_self, eventArgs);
+                }
+            }
+        });
+    };
+
     /**Adds the final, onComplete step to the EventStream that calls all the callbacks for the operation.
     @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
     @param {PaneOperationSession} opSession The operation session driving the events.*/
@@ -3771,6 +4040,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneAction = EVUI.Modules.Panes.PaneAction.None;
                     opSession.entry.link.lastCalculatedPosition = null;
                     opSession.entry.link.currentOperation = null;
+
+                    if (opSession.queuedOpSession != null) //if we have a queued action waiting on this one to finish, we start it after all the previous callbacks have been invoked
+                    {
+                        performOperation(opSession.queuedOpSession);
+                        opSession.queuedOpSession.isQueued = false;
+                    }
+
                     args.resolve();
                 });
             }
@@ -3906,7 +4182,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 }
                 else if (currentAction === EVUI.Modules.Panes.PaneAction.Load)
                 {
-                    return [ActionSequence.Queue];
+                    return [ActionSequence.QueueCallback];
                 }
                 else if (currentAction === EVUI.Modules.Panes.PaneAction.Hide
                     || currentAction === EVUI.Modules.Panes.PaneAction.Unload
@@ -3928,7 +4204,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
             else if (currentAction === opAction)
             {
-                return [ActionSequence.Queue];
+                return [ActionSequence.QueueCallback];
             }
             else
             {
@@ -3936,10 +4212,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
         else
-        {
+        {            
             if (currentAction === opAction)
             {
-                return [ActionSequence.Queue];
+                if (opAction === EVUI.Modules.Panes.PaneAction.Move || opAction === EVUI.Modules.Panes.PaneAction.Resize)
+                {
+                    return actionSequence;
+                }
+                
+                return [ActionSequence.QueueCallback];
             }
             else
             {
@@ -3970,6 +4251,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         else if (opSession.action === EVUI.Modules.Panes.PaneAction.Unload)
         {
             sequence = getUnloadSequence(opSession);
+        }
+        else if (opSession.action === EVUI.Modules.Panes.PaneAction.Move)
+        {
+            sequence = getMoveSequence(opSession);
+        }
+        else if (opSession.action === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence = getResizeSequence(opSession);
         }
 
         return sequence;
@@ -4046,7 +4335,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var sequence = [];
 
-        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Unload) //if it's being loaded or shown (which also loads it), cancel that operation
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Unload ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize) //if it's being loaded or shown (which also loads it), cancel that operation
         {
             sequence.push(ActionSequence.CancelCurrent);
         }
@@ -4066,7 +4359,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var sequence = [];
 
-        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Hide) //cancel if anything is happening already
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Hide ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize) //cancel if anything is happening already
         {
             sequence.push(ActionSequence.CancelCurrent);
         }
@@ -4078,6 +4375,42 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         return sequence;
     };
+
+    /**
+     * 
+     * @param {PaneOperationSession} opSession
+     */
+    var getMoveSequence = function (opSession)
+    {
+        var sequence = [];
+
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence.push(ActionSequence.Queue);
+        }
+
+        sequence.push(ActionSequence.Move);
+
+        return sequence;
+    }
+
+    /**
+     * 
+     * @param {PaneOperationSession} opSession
+     */
+    var getResizeSequence = function (opSession)
+    {
+        var sequence = [];
+
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence.push(ActionSequence.Queue);
+        }
+
+        sequence.push(ActionSequence.Resize);
+
+        return sequence;
+    }
 
     /** Gets a CallbackStack object representing all of the queued callbacks for a given pane action.
     @param {PaneLink} link The link to the pane being executed.
@@ -4117,6 +4450,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         for (var x = 0; x < numSession; x++) //check and see if we have any linked continued steps, we need to call both lists of callbacks in one go
         {
             var curSession = callbackStack.opSessions[x];
+
+            if (curSession.isQueued === true) continue;
             if (curSession.continuedTo != null) //we have a link
             {
                 var linkedCallbackStack = getCallbackStack(link, curSession.continuedTo.action);
@@ -4191,6 +4526,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         if (typeof callback !== "function") callback = function () { };
 
+        toggleInlinedStyle(entry, false); //remove the inlined style so we can calculate the position correctly
+
         if (position == null)
         {
             entry.link.lastResolvedShowArgs = resolvedShowArgs
@@ -4198,9 +4535,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
 
         entry.link.lastCalculatedPosition = position;
-
-        removePaneCSS(entry); //remove the CSS from the stylesheet
-        removePaneClasses(entry); //remove all the existing classes from the Pane
+        
+        removePaneCSS(entry, true); //remove the CSS from the stylesheet
+        removePaneClasses(entry, true); //remove all the existing classes from the Pane
 
         if (position == null)
         {
@@ -4366,15 +4703,76 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return setDims;
     };
 
+    /**Removes or adds the in-lined style of the Pane's root element.
+    @param {InternalPaneEntry} entry The entry being manipulated.
+    @param {Boolean} remove Whether or not to remove the inlined style classes and restore the inlined style tag.*/
+    var toggleInlinedStyle = function (entry, remove)
+    {
+        var selector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+
+        if (remove === true)
+        {
+            if (restoreInlinedStyle(entry) === true)
+            {
+                _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector);
+                entry.link.pane.element.classList.remove(EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+            }
+        }
+        else
+        {
+            if (removeInlinedStyle(entry) === true)
+            {
+                _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, entry.link.inlinedStyle);
+                entry.link.pane.element.classList.add(EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+            }
+        }
+    };
+
+    /**Removes the in-lined style from the Pane and stores it in the PaneLink.
+    @param {InternalPaneEntry} entry The entry to strip the in-lined style from.
+    @returns {Boolean}*/
+    var removeInlinedStyle = function (entry)
+    {
+        var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+        var style = ele.attr("style");
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === true || style === "display: inline-block;") return false;
+
+        entry.link.inlinedStyle = style;
+        ele.attr("style", "");
+
+        return true;
+    };
+
+    /**Restores the in-lined style to the Pane from the PaneLink.
+    @param {InternalPaneEntry} entry The entry to restore the in-lined style to.
+    @returns {Boolean}*/
+    var restoreInlinedStyle = function (entry)
+    {
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(entry.link.inlinedStyle) === true) return false;
+
+        var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+
+        var style = ele.attr("style");
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === false && style !== "display: inline-block;" && style !== entry.link.inlinedStyle) return true;
+
+        var style = ele.attr("style", entry.link.inlinedStyle);
+
+        return true;
+    }
+
     /**Removes all the CSS rules from the managed sheet that pertain to a particular Pane.
-    @param {InternalPaneEntry} entry The entry representing the Pane to remove the CSS of.*/
-    var removePaneCSS = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the Pane to remove the CSS of.
+    @param {Boolean} keepInlinedDefaultStyle Whether or not to remove the inlined style extracted from the element.*/
+    var removePaneCSS = function (entry, keepInlinedDefaultStyle)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
 
         for (var x = 0; x < numClasses; x++)
         {
+            if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+
             var selector = getSelector(entry, allClasses[x]);
             if (selector == null) continue;
 
@@ -4383,8 +4781,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
     /**Removes all the auto-generated CSS classes from the Pane without removing the rules from the sheet.
-    @param {InternalPaneEntry} entry The entry representing the BantmWindo to remove the classes from.*/
-    var removePaneClasses = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the BantmWindo to remove the classes from.
+    @param {Boolean} keepInlinedDefaultStyle Whether or not to remove the inlined style extracted from the element.*/
+    var removePaneClasses = function (entry, keepInlinedDefaultStyle)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
@@ -4393,6 +4792,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var eh = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
         for (var x = 0; x < numClasses; x++)
         {
+            if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+
             var curClass = allClasses[x];
             if (eh.hasClass(curClass) === true)
             {
@@ -4434,7 +4835,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var getAllClassNames = function ()
     {
         var allBaseClasses =
-            [EVUI.Modules.Panes.Constants.CSS_Position,
+            [EVUI.Modules.Panes.Constants.CSS_Pane_Style,
+            EVUI.Modules.Panes.Constants.CSS_Position,
             EVUI.Modules.Panes.Constants.CSS_ScrollX,
             EVUI.Modules.Panes.Constants.CSS_ScrollY,
             EVUI.Modules.Panes.Constants.CSS_ClippedX,
@@ -6106,12 +6508,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {InternalPaneEntry} entry The Pane being resized or moved.
     @param {EVUI.Modules.Panes.PaneResizeArgs} resizeArgs The arguments about how it will be resized.
     @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
-    @param {Boolean} resized Whether or not the pane was only resized.
-    @param {Boolean} moved Whether or not the pane was only moved.
     @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
     @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
-    var resizePane = function (entry, resizeArgs, helper, dragHandles, clipBounds)
+    var resizePane = function (entry, resizeArgs, helper, dragHandles, clipBounds, callback)
     {
+        if (typeof callback !== "function") callback = function () { };
+
+        resizeArgs = resolvePaneResizeArgs(entry, resizeArgs);
 
         var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
         var style = getComputedStyle(entry.link.pane.element);
@@ -6258,21 +6661,23 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
 
         entry.link.lastResizeArgs = resolvePaneResizeArgs(entry, resizeArgs);
-        applyTransition(entry, resizeArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Resize, helper)
-
-        return true;
+        applyTransition(entry, resizeArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Resize, helper, function ()
+        {
+            callback();
+        });
     };
 
-    /**Resizes the pane by adding new CSS classes to it that override the default positioning CSS classes.
+    /**Moves the pane by adding new CSS classes to it that override the default positioning CSS classes.
     @param {InternalPaneEntry} entry The Pane being resized or moved.
     @param {EVUI.Modules.Panes.PaneMoveArgs} moveArgs The arguments about how it will be resized.
     @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
-    @param {Boolean} resized Whether or not the pane was only resized.
-    @param {Boolean} moved Whether or not the pane was only moved.
     @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
     @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
-    var movePane = function (entry, moveArgs, helper, dragHandles, clipBounds)
+    var movePane = function (entry, moveArgs, helper, dragHandles, clipBounds, callback)
     {
+        if (typeof callback !== "function") callback = function () { };
+        moveArgs = resolvePaneMoveArgs(entry, moveArgs);    
+
         if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
         {
             var clippedBounds = shiftMovedPaneToBounds(entry, moveArgs, clipBounds);
@@ -6298,8 +6703,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
         helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);      
 
-        applyTransition(entry, moveArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Move, helper);
-        return true;
+        applyTransition(entry, moveArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Move, helper, function ()
+        {
+            callback();
+        });
     };
 
     var shiftMovedPaneToBounds = function (entry, resizeArgs, clipBounds)
@@ -6623,14 +7030,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     var xDelta = dragEvent.clientX - startX;
                     var yDelta = dragEvent.clientY - startY;
 
-                    var resolved
+                    var moveArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+                    moveArgs.top = startPos.top + yDelta;
+                    moveArgs.left = startPos.left + xDelta;
+                    moveArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
 
-                    var resizeArgs = new EVUI.Modules.Panes.PaneMoveArgs();
-                    resizeArgs.top = startPos.top + yDelta;
-                    resizeArgs.left = startPos.left + xDelta;
-                    resizeArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
-
-                    movePane(entry, resizeArgs, paneRoot, null, bounds);
+                    _self.movePane(entry.link.pane, moveArgs);
+                    //movePane(entry, resizeArgs, paneRoot, null, bounds);
                 };
 
                 document.addEventListener("mousemove", dragHandler);
@@ -6731,7 +7137,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     resizeArgs.top += yDelta;
                 }
 
-                resizePane(entry, resizeArgs, paneRoot, dragHandles, bounds);
+                _self.resizePane(entry.link.pane, resizeArgs);
+                //resizePane(entry, resizeArgs, paneRoot, dragHandles, bounds);
             };
 
             document.addEventListener("mousemove", dragHandler); //add the drag handler to the document
@@ -7466,6 +7873,41 @@ EVUI.Modules.Panes.Pane = function (entry)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
         return options.link.manager.unloadPaneAsync(_entry.paneId, unloadArgs);
+    };
+
+    /**Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.movePane = function (paneMoveArgs, callback)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.movePane(_entry.paneId, paneMoveArgs, callback);
+    };
+
+    /**Awaitable. Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @returns {Promise<Boolean>}*/
+    this.movePaneAsync = function (paneMoveArgs)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.movePaneAsync(_entry.paneId, paneMoveArgs);
+    };
+
+    /**Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.resizePane = function (paneResizeArgs, callback)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.resizePane(_entry.paneId, paneResizeArgs, callback);
+    };
+
+    /**Awaitable. Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
+    this.resizePaneAsync = function (paneResizeArgs)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs, callback);
     };
 
     /**Calculates and gets the absolute position of the Pane.
@@ -8521,6 +8963,8 @@ EVUI.Modules.Panes.PaneArgumentType =
 };
 Object.freeze(EVUI.Modules.Panes.PaneArgumentType);
 
+/**Dependencies used by the PaneManager.
+@class */
 EVUI.Modules.Panes.PaneManagerServices = function ()
 {
     /**Object. The HttpManager used to make web requests from the PaneManager.
