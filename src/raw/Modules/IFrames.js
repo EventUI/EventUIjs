@@ -1,24 +1,16 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.IFrames|IFrames)#*/
-/*#REPLACE(EVUI.Modules.IFrames|IFrames)#*/
 
 /**Module containing utilities for managing cross-window communication with child iframes and/or when running as a child to another window.
 @module*/
 EVUI.Modules.IFrames = {};
 
-/*#MODULEDEF(IFrames|"1.0";|"IFrames")#*/
-/*#VERSIONCHECK(EVUI.Modules.IFrames|IFrames)#*/
-
 EVUI.Modules.IFrames.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
     Dom: Object.freeze({version: "1.0", required: true})
 };
 
@@ -111,6 +103,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     @type {Number}*/
     var _defaultAskTimeout = 5000;
 
+    /**Object. Manager for adding additional bubbling events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Represents the union of all the objects required for the IFrameManager to manage parent and child Windows.
     @class*/
     var IFrameEntry = function ()
@@ -151,6 +147,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         /**An array of the message listeners attached to this IFrame.
         @type {EVUI.Modules.IFrames.IFrameMessageListener[]}*/
         this.messageHandlers = [];
+
+        /**The bubbling event manager used to add additional events to an Iframe.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**The origin of the URL associated with either the parent window or the iframe.
         @type {String}*/
@@ -525,6 +525,28 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         return entry.iFrame;
     };
 
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
+
     /**Creates an IFrameHandle that contains the injectable functionality for the IFrame object.
     @param {EVUI.Modules.IFrames.IFrameAddRequest} addRequest The IFrameAddRequest used as the basis for the handle.
     @returns {IFrameHandle}*/
@@ -771,14 +793,6 @@ EVUI.Modules.IFrames.IFrameManager = function ()
                 var incomingIFrame = getIFrameFromContentWindow(messageEvent.source); //go find the iframe element on the page that sent the message
                 if (incomingIFrame == null) return; //couldn't find it, bail
 
-                if (EVUI.Modules.Core.Utils.isSettingTrue("autoAddIncomingIFrames") === true) //if we're auto-adding iframes, register the new iframe with the manager.
-                {
-                    var addResult = _self.addIFrame(targetIframe);
-                    if (addResult == null) return; //adding failed, bail
-
-                    entry = getEntryFromContentWindow(messageEvent.source); //go find the "real" object we just added and use it
-                }
-
                 if (entry == null) //if we STILL don't have an entry, make a dummy one just so the event arguments object we make later has everything it needs to work properly
                 {
                     entry = makePlaceholderEntry(incomingIFrame);
@@ -850,7 +864,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
                 {
                     if (typeof _self.onMessage === "function")
                     {
-                        return _self.onMessage(eventArgs);
+                        return _self.onMessage.call(_self, eventArgs);
                     }
                 }
             });
@@ -903,7 +917,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
             {
                 if (typeof _self.onSend === "function")
                 {
-                    return _self.onSend(eventArgs);
+                    return _self.onSend.call(_self, eventArgs);
                 }
             }
         });
@@ -1017,6 +1031,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     {
         var es = new EVUI.Modules.EventStream.EventStream();
         es.context = messageSession.entry.iFrame;
+        es.bubblingEvents = [messageSession.entry.handle.bubblingEvents, _bubblingEvents];
 
         es.processInjectedEventArgs = function (eventArgs)
         {
@@ -1418,6 +1433,28 @@ EVUI.Modules.IFrames.IFrame = function (iframeHandle)
     {
         return _handle.remove();
     };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**The event arguments for when a message is sent or received.
@@ -1618,5 +1655,3 @@ $evui.addIFrame = function (addRequestOrIFrame)
 };
 
 Object.freeze(EVUI.Modules.IFrames);
-
-/*#ENDWRAP(IFrames)#*/

@@ -1,24 +1,16 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Events|Event)#*/
-/*#REPLACE(EVUI.Modules.Events|Event)#*/
 
 /**Module for custom events that are not attached to the DOM.
 @module*/
 EVUI.Modules.Events = {};
 
-/*#MODULEDEF(Event|"1.0";|"Events")#*/
-/*#VERSIONCHECK(EVUI.Modules.Events|Event)#*/
-
 EVUI.Modules.Events.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
+    Core: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
 };
 
 (function ()
@@ -363,21 +355,6 @@ EVUI.Modules.Events.EventManager = function ()
         return session;
     };
 
-    /**Logs a tracing message about the triggering and handling of an event.
-    @param {EVUI.Modules.Events.EventTriggerArgs} triggerArgs The arguments used to trigger the event.
-    @param {InternalEventListener} eventListener An instance of InternalEventListener.*/
-    var trace = function (triggerArgs, eventListener)
-    {
-        if (EVUI.Modules.Core.Utils.isSettingTrue("traceEvents") === false) return;
-
-        var handlerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventListener.handlerName) ? "unknown" : eventListener.handlerName;
-        var triggerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(triggerArgs.triggerName) ? "unknown" : triggerArgs.triggerName;
-
-        var traceMessage = "BTMTRACE: Event \"" + triggerArgs.eventName + "\": (\"" + triggerName + "\") => \"" + handlerName + "\"";
-
-        EVUI.Modules.Core.Utils.log(traceMessage);
-    };
-
     /**Queues the EventSession and dispatches a new event to trigger the new EventStream.
     @param {EventSession} session The session to execute.*/
     var launchEvent = function (session)
@@ -457,9 +434,9 @@ EVUI.Modules.Events.EventManager = function ()
 
                         EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
                         {
-                            if (error != null)
+                            if (error != null && error.length > 0)
                             {
-                                throw error;
+                                throw error[0];
                             }
 
                             args.resolve();
@@ -491,7 +468,6 @@ EVUI.Modules.Events.EventManager = function ()
             handler: function (eventManagerArgs)
             {
                 if (typeof curListener.eventListener.handler !== "function" || curListener.mode === EventListenerMode.Removed) return;
-                trace(session.triggerArgs, eventManagerArgs.listener);
 
                 return eventManagerArgs.listener.handler(eventManagerArgs);
             }
@@ -847,5 +823,3 @@ $evui.askAsync = function (eventNameOrTriggerArgs, data, triggerName)
 };
 
 Object.freeze(EVUI.Modules.Events);
-
-/*#ENDWRAP(Event)#*/

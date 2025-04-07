@@ -254,6 +254,6 @@ $evui.init(function ()
         };
     };
 
-    var controller = new BindingBenchmarkController();
-    controller.init();
+    window.controller = new BindingBenchmarkController();
+    window.controller.init();
 });

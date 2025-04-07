@@ -45,7 +45,7 @@
     $evui.dom("#add").on("click", function (args)
     {
         var newClassValue = $evui.dom("#addClass").val();
-        if ($evui.strIsValid(newClassValue) === false) return;
+        if ($evui.isStringValid(newClassValue) === false) return;
 
         addClass(newClassValue);
     });
@@ -53,7 +53,7 @@
     $evui.dom("#remove").on("click", function (args)
     {
         var newClassValue = $evui.dom("#removeClass").val();
-        if ($evui.strIsValid(newClassValue) === false) return;
+        if ($evui.isStringValid(newClassValue) === false) return;
 
         removeClass(newClassValue);
     });

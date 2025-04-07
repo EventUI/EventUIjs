@@ -1,27 +1,20 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
-
+﻿/**Copyright (c) 2025 Richard H Stannard
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.TreeView|TreeView)#*/
-/*#REPLACE(EVUI.Modules.TreeView|TreeView)#*/
 
 /**Module for data-driven TreeViews.
 @module*/
 EVUI.Modules.TreeView = {};
 
-/*#MODULEDEF(TreeView|"1.0";|"TreeView")#*/
-/*#VERSIONCHECK(EVUI.Modules.TreeView|TreeView)#*/
-
 EVUI.Modules.TreeView.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    Binding: Object.freeze({ version: "1.0", required: true }),
-    Styles: Object.freeze({version: "1.0", required: true}),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
-    Dom: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ required: true }),
+    Binding: Object.freeze({ required: true }),
+    Styles: Object.freeze({ required: true}),
+    EventStream: Object.freeze({ required: true }),
+    Dom: Object.freeze({ required: true })
 };
 
 (function ()
@@ -383,8 +376,6 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
             throw Error("Invalid action.");
         }
     };
-
-
 
     /**Issues the command to build a node (or the entire tree view) from a TreeView object.
     @param {TreeViewEntry} treeViewEntry The TreeView invoking the command.
@@ -815,6 +806,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
         opSession.eventStream = new EVUI.Modules.EventStream.EventStream();
         opSession.eventStream.context = opSession.nodeEntry.node;
         opSession.eventStream.extendSteps = false;
+        opSession.eventStream.bubblingEvents = [opSession.nodeEntry.bubblingEvents, opSession.nodeEntry.treeViewEntry.bubblingEvents];
 
         opSession.eventStream.onCancel = function ()
         {
@@ -899,7 +891,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onBuild === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onBuild(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onBuild.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -961,7 +953,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onBuildChildren === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onBuildChildren(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onBuildChildren.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1035,7 +1027,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onChildrenBuilt === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onChildrenBuilt(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onChildrenBuilt.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1049,7 +1041,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.node.onBuilt === "function")
                 {
-                    return opSession.nodeEntry.node.onBuilt(eventArgs);
+                    return opSession.nodeEntry.node.onBuilt.call(this, eventArgs);
                 }
             }
         });
@@ -1063,7 +1055,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onBuilt === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onBuilt(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onBuilt.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1227,7 +1219,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onExpand === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onExpand(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onExpand.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1273,7 +1265,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onExpanded === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onExpanded(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onExpanded.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1472,7 +1464,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
                 if (canContinue(opSession) === false) return;
                 if (typeof opSession.nodeEntry.treeViewEntry.treeView.onCollapse === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapse(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapse.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -1513,9 +1505,9 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
             handler: function (eventArgs)
             {
                 if (canContinue(opSession) === false) return;
-                if (typeof opSession.nodeEntry.treeViewEntry.treeView.onCollapseed === "function")
+                if (typeof opSession.nodeEntry.treeViewEntry.treeView.onCollapsed === "function")
                 {
-                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapseed(eventArgs);
+                    return opSession.nodeEntry.treeViewEntry.treeView.onCollapsed.call(opSession.nodeEntry.treeViewEntry.treeView, eventArgs);
                 }
             }
         });
@@ -2659,6 +2651,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         /**Gets a valid element for the root node of the TreeView based on ambiguous user input.*/
         this.getValidElement = getValidRootElement;
+
+        /**The event manager used to attach more events to the TreeView.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
     };
 
     /**Object that is injected into a TreeViewNode and is used internally to perform all operations on TreeViewNodes.
@@ -2803,6 +2799,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         /**Triggers the disposal of this node.*/
         this.dispose = disposeTreeViewNode;
+
+        /**The event manager used to attach additional events to the node.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
     };
 
     /**Represents one of the objects used by the internal Binding to stamp out a tree view child node list for each child source object in the user's source object
@@ -2952,7 +2952,7 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
         enumerable: true
     });
 
-    /**Object. The HTMLElement under which the TreeView will be appended under.
+    /**Object. The HTMLElement under which the TreeView will be appended.
     @type {Element}*/
     this.element = null;
     Object.defineProperty(this, "element", {
@@ -3181,6 +3181,28 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
     /**Event that fires after a collapse operation completes.
     @type {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler}*/
     this.onCollapsed = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _treeViewEntry.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _treeViewEntry.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Expands all the TreeViewNodes in the TreeView.
@@ -3639,6 +3661,28 @@ EVUI.Modules.TreeView.TreeViewNode = function (nodeEntry)
     /**Event that fires after a collapse operation completes.
     @type {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler}*/
     this.onCollapsed = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _nodeEntry.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _nodeEntry.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Object for containing configuration options for a TreeView and its TreeViewNodes.
@@ -4081,4 +4125,4 @@ $evui.removeTreeView = function (treeViewId, dispose)
     return $evui.treeViews.removeTreeView(treeViewId, dispose)
 };
 
-/*#ENDWRAP(TreeView)#*/
+Object.freeze(EVUI.Modules.TreeView);

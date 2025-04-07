@@ -1,24 +1,16 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Dom|Dom)#*/
-/*#REPLACE(EVUI.Modules.Dom|Dom)#*/
 
 /**Module for containing a DOM helper utility for simple DOM manipulation.
 @module*/
 EVUI.Modules.Dom = {};
 
-/*#MODULEDEF(Dom|"1.0";|"DomHelper")#*/
-/*#VERSIONCHECK(EVUI.Modules.Dom|Dom)#*/;
-
 EVUI.Modules.Dom.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    DomTree: Object.freeze({ version: "1.0", required: false})
+    Core: Object.freeze({ required: true }),
+    DomTree: Object.freeze({ required: false})
 };
 
 (function ()
@@ -104,7 +96,7 @@ EVUI.Modules.Dom.ControlInfo = function (id, attributes)
     {
         if (reQuery !== true && _control != null) return _control;
 
-        if (EVUI.Modules.Core.Utils.stringStartsWith("#", _id) === true)
+        if (_id.startsWith("#") === true)
         {
             _control = document.getElementById(_id.substring(1));
         }
@@ -135,9 +127,10 @@ EVUI.Modules.Dom.ControlInfo = function (id, attributes)
 @param {HTMLElement|HTMLElement[]|String|JQuery} elementsOrCssSelector Either an array of HTMLElements, a single HTMLElement, a jQuery object, a CSS selector, or a string of HTML.
 @param {HTMLElement|JQuery} context A context node used to limit the scope of the search.
 @class*/
-EVUI.Modules.Dom.DomHelper = function ()
+EVUI.Modules.Dom.DomHelper = (function ()
 {
     var _domMetadataPropName = null;
+    var _snakeCaseRegex = /-[A-Za-z]{1}/gi;
 
     /** Utility object for common DOM manipulation.
     @param {HTMLElement|HTMLElement[]|String|JQuery} elementsOrCssSelector Either an array of HTMLElements, a single HTMLElement, a jQuery object, a CSS selector, or a string of HTML.
@@ -173,7 +166,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     @returns {DomMetadata}*/
     var getDomMetadata = function (element)
     {
-        if (_domMetadataPropName == null) _domMetadataPropName = EVUI.Modules.Core.Utils.getHashCode("@BTMDom:" + EVUI.Modules.Core.Utils.makeGuid()).toString(36);
+        if (_domMetadataPropName == null) _domMetadataPropName = EVUI.Modules.Core.Utils.getHashCode("@EVUIDom:" + EVUI.Modules.Core.Utils.makeGuid()).toString(36);
 
         var metadata = element[_domMetadataPropName];
         if (metadata == null)
@@ -343,7 +336,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     };
 
     /**Appends content to the elements referenced by the DomHelper. Returns a new DomHelper with the new content.
-    @param {String|Element} htmlOrElement Either a string of HTML or an Element to inserrt after each element in the DomHelper.
+    @param {String|Element} htmlOrElement Either a string of HTML or an Element to insert after each element in the DomHelper.
     @returns {EVUI.Modules.Dom.DomHelper}*/
     DomHelper.prototype.insertAfter = function (htmlOrElement)
     {
@@ -365,7 +358,7 @@ EVUI.Modules.Dom.DomHelper = function ()
         return this;
     };
 
-    /**Removes all child nodes from the elememnts references by the DomHelper.
+    /**Removes all child nodes from the elements references by the DomHelper.
     @returns {EVUI.Modules.Dom.DomHelper}*/
     DomHelper.prototype.empty = function ()
     {
@@ -623,11 +616,83 @@ EVUI.Modules.Dom.DomHelper = function ()
         }
     };
 
+    /**Either gets the computed style value of the first matching element, or sets CSS properties on a variety 
+    @param {String|Object} propName Either the name of the CSS property to get or set, or an object containing the properties to set.
+    @param {String|Number} propValue The value to set a CSS property to.*/
+    DomHelper.prototype.css = function (propName, propValue)
+    {
+        if (this.elements.length === 0) return;
+        if (typeof propName === "string") //either getting or setting a CSS property value
+        {
+            propName = normalizeStylePropertyName(propName); //normalize snake-case to camelCase
+            if (propName == null) return;
+
+            if (typeof propValue === "undefined") //no value provided, we are getting a vaue
+            {
+                try
+                {
+                    return getComputedStyle(this.elements[0])[propName]
+                }
+                catch (ex)
+                {
+                    return;
+                }
+            }
+            else //value provided, set for all elements
+            {
+                applyToAll(this.elements, function (curEle)
+                {
+                    if (curEle.style == null) return;
+                    curEle.style[propName] = propValue;
+                });
+            }
+        }
+        else if (EVUI.Modules.Core.Utils.isObject(propName) === true) //we were passed an object of key-value pairs of CSS properties to populate
+        {
+            //build a dictionary and array list of camelCase properties and their respective values
+            var settingsObj = {};
+            var settingsProps = [];
+            var numProps = 0;
+            for (var prop in propName)
+            {
+                var camelCaseProp = normalizeStylePropertyName(prop);
+                if (prop == null) continue;
+
+                settingsObj[camelCaseProp] = propName[prop];
+                numProps = settingsProps.push(camelCaseProp);
+            }
+
+            //set all values for all elements
+            applyToAll(this.elements, function (ele)
+            {
+                if (ele.style == null) return;
+
+                for (var x = 0; x < numProps; x++)
+                {
+                    var curProp = settingsProps[x]
+                    ele.style[curProp] = settingsObj[curProp];
+                }
+            });
+        }
+    };
+
+    /**Turns a snake-case string into a camel case string. 
+    @param {String} propName The string to convert.
+    @returns {String}*/
+    var normalizeStylePropertyName = function (propName)
+    {
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(propName) === true) return null;
+        return propName.replace(_snakeCaseRegex, function (value)
+        {
+            return value.substring(1, value.length).toUpperCase();
+        })
+    };
+
     /**Performs an operation on the set of elements pertaining to a CSS class.
     @param {Element[]} elements The elements that are the target of the class operation.
     @param {String|String[]} cssClasses The CSS classes that are the subject of the operation.
     @param {String} op The operation to perform. Can be one of the following: add, remove, or toggle.
-    @param {Boolean} force In a "toggle" conext, and is true, forces the class to be added to the element. If false, forces the class to be removed from the element.*/
+    @param {Boolean} force In a "toggle" context, and is true, forces the class to be added to the element. If false, forces the class to be removed from the element.*/
     var classOp = function (elements, cssClasses, op, force)
     {
         if (cssClasses == null || elements == null) return;
@@ -675,7 +740,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
     /**Gets the outerHeight of an element.
     @param {Element|Document|Window} element The element to get the outer hight of.
-    @param {Bololean} includeMargin Whether or not to include the element's margins in the calcuation.
+    @param {Bololean} includeMargin Whether or not to include the element's margins in the calculation.
     @returns {Number}*/
     var outerHeight = function (element, includeMargin)
     {
@@ -712,7 +777,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
     /**Gets the outerWidth of an element.
     @param {Element|Document|Window} element The element to get the outer width of.
-    @param {Bololean} includeMargin Whether or not to include the element's margins in the calcuation.
+    @param {Bololean} includeMargin Whether or not to include the element's margins in the calculation.
     @returns {Number}*/
     var outerWidth = function (element, includeMargin, style)
     {
@@ -856,7 +921,7 @@ EVUI.Modules.Dom.DomHelper = function ()
 
     /**Injects HTML into the DOM and returns a DomHelper with the new content. 
      * @param {Element[]} elements The elements to have HTML content added to or around them.
-     * @param {String|Element} htmlOrElement The conent to add to or around the elements.
+     * @param {String|Element} htmlOrElement The content to add to or around the elements.
      * @param {String} action The action to perform. Can be one of: "append", "prepend", "after", or "before".
      */
     var injectHtml = function (elements, htmlOrElement, action) 
@@ -951,7 +1016,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     @returns {Element[]} */
     var processElements = function (elementsOrSelector, context)
     {
-        if (typeof elementsOrSelector === "string" && EVUI.Modules.Core.Utils.stringStartsWith("<", elementsOrSelector.trim()) === false)
+        if (typeof elementsOrSelector === "string" && elementsOrSelector.trim().startsWith("<") === false)
         {
             try //this will fail if we were handed a piece of HTML
             {
@@ -1013,9 +1078,9 @@ EVUI.Modules.Dom.DomHelper = function ()
     }
 
     return DomHelper;
-}();
+}());
 
-/**The current bounds of the element relative to the entire document using the curreent style and the outerWidth and outerHeight functions.
+/**The current bounds of the element relative to the entire document using the current style and the outerWidth and outerHeight functions.
 @class*/
 EVUI.Modules.Dom.ElementBounds = function ()
 {
@@ -1069,4 +1134,4 @@ $evui.dom = function (elementsOrCssSelector, context)
     return new EVUI.Modules.Dom.DomHelper(elementsOrCssSelector, context);
 };
 
-/*#ENDWRAP(Dom)#*/
+Object.freeze(EVUI.Modules.Dom);

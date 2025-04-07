@@ -1,22 +1,15 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.EventStream|ES)#*/
-/*#REPLACE(EVUI.Modules.EventStream|ES)#*/
 
 /**Module for containing the EventStream, an asynchronous Promise driven chain of arbitrary functions used to create event-driven interfaces.
 @module*/
 EVUI.Modules.EventStream = {};
 
-/*#MODULEDEF(ES|"1.0"|"EventStream")#*/
-/*#VERSIONCHECK(EVUI.Modules.EventStream|ES)#*/
-
 EVUI.Modules.EventStream.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ required: true })
 };
 
 (function ()
@@ -143,12 +136,12 @@ EVUI.Modules.EventStream.EventStream = function (config)
     this.context = null;
 
     /**Object. A BubblingEventsManager that bubbling events will be drawn from during the EventStream's execution.
-    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    @type {EVUI.Modules.EventStream.BubblingEventManager|EVUI.Modules.EventStream.BubblingEventManager[]}*/
     this.bubblingEvents = null;
 
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
     @type {Number}*/
-    this.skipInterval = EVUI.Modules.Core.Utils.getSetting("stepsBetweenWaits");
+    this.skipInterval = EVUI.Modules.Core.Settings.stepsBetweenWaits;
 
     /**Boolean. Whether or not the steps added to the EventStream should have their properties extended onto a fresh step object.
     @type {Boolean}*/
@@ -199,7 +192,10 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @returns {Boolean}*/
     this.clear = function ()
     {
-        if (isStable() === false) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Clear", "Cannot clear chain mid-execution.", false);
+        if (isStable() === false)
+        {
+            return false;
+        }
 
         _sequence = [];
         this.bubblingEvents = null;
@@ -234,16 +230,14 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @returns {Boolean}*/
     this.execute = function ()
     {
-        if (this.reset() === false) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Execute", "Failed to reset EventStream, cannot begin execution.", false);
+        if (this.reset() === false) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
-
-        //kick off the process
         triggerAsyncCall(function ()
         {
             _currentStep = _sequence[0];
             executeStep(_sequence, 0);
-        }, 0);
+        });        
 
         return true;
     };
@@ -274,7 +268,11 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @returns {Boolean}*/
     this.reset = function ()
     {
-        if (isStable() === false) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Reset", "Cannot reset chain mid-execution.", false);
+        if (isStable() === false)
+        {
+            return false;
+        }
+
         clearQueuedTimeout();
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.NotStarted;
@@ -364,14 +362,14 @@ EVUI.Modules.EventStream.EventStream = function (config)
             return true;
         }
 
-        return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Pause", "Chain is not currently executing, nothing to pause.", false);
+        return false;
     };
 
     /**Resumes the operation in progress if it has been paused.
     @returns {Boolean}*/
     this.resume = function ()
     {
-        if (_status !== EVUI.Modules.EventStream.EventStreamStatus.Paused) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Resume", "Chain is not paused, cannot resume.", false);
+        if (_status !== EVUI.Modules.EventStream.EventStreamStatus.Paused) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
 
@@ -383,14 +381,19 @@ EVUI.Modules.EventStream.EventStream = function (config)
         }
         else //we were likely paused by the event args, so the event handler was firing when we paused, so just start the next step
         {
-            if (_eventExecuting === false)
+            if (_eventExecuting === false) //if the event code has exited
             {
                 var index = _pausedStepIndex;
                 _pausedStepIndex = -1;
 
-                triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                //trigger the bubblinf events for the step that was paused (which will always be 1 less than the pausedStepIndex, which is the index of the paused step + 1)
+                triggerBubblingEvents(_sequence[index - 1], function ()
+                {
+                    //call the next step
+                    triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                });
             }
-            else
+            else //still executing an event handler
             {
                 _resumedWhileEventExecuting = true;
             }
@@ -424,7 +427,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             if (_sequence.indexOf(indexOrKey) !== -1) step = indexOrKey;
         }
 
-        if (step == null) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Seek", "Invalid parameters, could not find a step in the internal protected sequence to seek to.", false);
+        if (step == null) return false;
         var currentlyExecuting = _status === EVUI.Modules.EventStream.EventStreamStatus.Working;
         _status = EVUI.Modules.EventStream.EventStreamStatus.Seeking;
 
@@ -450,7 +453,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @param {String} message A message to display in the error.*/
     this.error = function (ex, message)
     {
-        if (isStable() === true) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "Error", "Chain is stopped, cannot trigger error.", false);
+        if (isStable() === true) return false;
 
         _error = new EVUI.Modules.EventStream.EventStreamError("A manual error was thrown" + ((typeof message === "string" && message.length > 0) ? ": " + message : "."), ex, EVUI.Modules.EventStream.EventStreamStage.ErrorCommand, ((_currentStep != null) ? _currentStep.key : null));
 
@@ -473,7 +476,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     this.stopPropagation = function ()
     {
         if (_currentStep == null) return false;
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(_currentStep.key) === true) return EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "StopPropagation", "Cannot stop the propagation of an event with no key.", false);
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(_currentStep.key) === true) return false;
 
         if (_nonPropagatedEvents.indexOf(_currentStep.key) === -1)
         {
@@ -519,7 +522,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
 
             if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.key) === true) streamStep.key = EVUI.Modules.Core.Utils.makeGuid();
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.EventKey + ")"
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.key + ")"
         }
         else
         {
@@ -576,6 +579,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (typeof handlerOrKey === "function")
         {
             handler = handlerOrKey;
+            handlerOrKey = null;
+
             handlerSet = true;
         }
         else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
@@ -586,16 +591,25 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (handlerSet === false && typeof handlerOrName === "function")
         {
             handler = handlerOrName;
+            handlerOrName = null;
+
             handlerSet = true;
         }
-        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
+        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === false)
         {
             name = handlerOrName;
+        }
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === true && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(key) === false)
+        {
+            name = key;
         }
 
         if (handlerSet === false && typeof handlerOrTimeout === "function")
         {
             handler = handlerOrTimeout;
+            handlerOrTimeout = null;
+
             handlerSet = true;
         }
         else if (typeof handlerOrTimeout === "number")
@@ -822,13 +836,34 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @param {Function} callback A callback function to call once the sub EventStream completes.*/
     var triggerBubblingEvents = function (step, callback)
     {
-        if (_self.bubblingEvents == null || typeof _self.bubblingEvents.getBubblingEvents !== "function") return callback();
+        if (_self.bubblingEvents == null || (typeof _self.bubblingEvents.getBubblingEvents !== "function" && EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === false)) return callback();
 
         var bubblingEvents = null;
 
         try
         {
-            bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            if (EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === true)
+            {
+                bubblingEvents = [];
+                var numBubblers = _self.bubblingEvents.length;
+                for (var x = 0; x < numBubblers; x++)
+                {
+                    var curBubbler = _self.bubblingEvents[x];
+                    if (EVUI.Modules.Core.Utils.isObject(curBubbler) === false) continue;
+                    if (typeof curBubbler.getBubblingEvents !== "function") continue;
+
+                    var curBubblingEvents = curBubbler.getBubblingEvents(step);
+                    var numEvents = (curBubblingEvents == null) ? 0 : curBubblingEvents.length;
+                    for (var y = 0; y < numEvents; y++)
+                    {
+                        bubblingEvents.push(curBubblingEvents[y]);
+                    }
+                }
+            }
+            else
+            {
+                bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            }           
         }
         catch (ex)
         {
@@ -841,52 +876,60 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var numEvents = bubblingEvents.length;
         if (numEvents === 0) return callback();
 
-        var config = new EVUI.Modules.EventStream.EventStreamConfig();
-        config.context = _self.context;
-        config.canSeek = _self.canSeek;
-        config.endExecutionOnEventHandlerCrash = true;
-        config.eventState = _self.eventState;
-        config.processReturnedEventArgs = _self.processReturnedEventArgs;
-        config.skipInterval = _self.skipInterval;
-        config.extendSteps = _self.extendSteps;
-        config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
-        config.onComplete = function () { callback(); } //call the callback in the complete handler, which will fire no matter what.
-
-        var subStream = new EVUI.Modules.EventStream.EventStream(config);
-
-        //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
-        subStream.processInjectedEventArgs = function (eventArgs)
+        var p = new Promise(function (resolve)
         {
-            var processedArgs = _self.processInjectedEventArgs(eventArgs);
-            if (_self.canSeek === true && processedArgs.seek != null)
+            var config = new EVUI.Modules.EventStream.EventStreamConfig();
+            config.context = _self.context;
+            config.canSeek = _self.canSeek;
+            config.endExecutionOnEventHandlerCrash = true;
+            config.eventState = _self.eventState;
+            config.processReturnedEventArgs = _self.processReturnedEventArgs;
+            config.skipInterval = _self.skipInterval;
+            config.extendSteps = _self.extendSteps;
+            config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
+            config.onComplete = function () { resolve(); } //call the callback in the complete handler, which will fire no matter what.
+
+            var subStream = new EVUI.Modules.EventStream.EventStream(config);
+
+            //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
+            subStream.processInjectedEventArgs = function (eventArgs)
             {
-                processedArgs.seek = function (indexOrKey, seekInParent)
+                var processedArgs = _self.processInjectedEventArgs(eventArgs);
+                if (_self.canSeek === true && processedArgs.seek != null)
                 {
-                    if (seekInParent === true)
+                    processedArgs.seek = function (indexOrKey, seekInParent)
                     {
-                        subStream.cancel();
-                        _self.seek(indexOrKey);
-                    }
-                    else
-                    {
-                        subStream.seek(indexOrKey);
-                    }
-                };
+                        if (seekInParent === true)
+                        {
+                            subStream.cancel();
+                            _self.seek(indexOrKey);
+                        }
+                        else
+                        {
+                            subStream.seek(indexOrKey);
+                        }
+                    };
+                }
+
+                return processedArgs;
+            };
+
+            for (var x = 0; x < numEvents; x++)
+            {
+                var curEvent = bubblingEvents[x];
+                if (curEvent == null) continue;
+
+                subStream.addStep(makeBubblingStep(step, curEvent));
             }
 
-            return processedArgs;
-        };
+            //execute the sub-stream
+            subStream.execute();
+        });
 
-        for (var x = 0; x < numEvents; x++)
+        p.then(function ()
         {
-            var curEvent = bubblingEvents[x];
-            if (curEvent == null) continue;
-
-            subStream.addStep(makeBubblingStep(step, curEvent));
-        }
-
-        //execute the sub-stream
-        subStream.execute();
+            callback();
+        });
     };
 
     /**Makes a EventStreamStep representing the "bubbling" events that come off of real events via being added by addEventListener.
@@ -984,10 +1027,13 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var eventArgs = new EVUI.Modules.EventStream.EventStreamEventArgs(_self.eventState);
         eventArgs.currentStep = sequence.indexOf(step);
         eventArgs.key = step.key;
+        eventArgs.name = step.name;
         eventArgs.stepType = step.type;
         eventArgs.totalSteps = sequence.length;
         eventArgs.status = _self.getStatus();
         eventArgs.error = error;
+        eventArgs.state = _self.eventState;
+
         attachEvents(eventArgs, step);
 
         if (typeof _self.processInjectedEventArgs == "function" && step.type !== EVUI.Modules.EventStream.EventStreamStepType.Job) //there is a "ProcessEventArgs" override function that is going to be used to make custom event args.
@@ -1186,7 +1232,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "finish", "OnComplete crashed: " + ex.stack);
+                EVUI.Modules.Core.Utils.log(ex);
             }
         }
 
@@ -1260,12 +1306,13 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "fail", "OnError crashed: " + ex.stack);
+                EVUI.Modules.Core.Utils.log(ex);
+                return false;
             }
         }
         else
         {
-            EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "fail", "An error was encountered executing the chain. Hook into OnError for more details.", false);
+            return false;
         }
     };
 
@@ -1293,7 +1340,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
             catch (ex)
             {
-                EVUI.Modules.Core.Utils.debugReturn("EVUI.Modules.EventStream.EventStream", "cancel", "OnCancel crashed: " + ex.stack);
+                EVUI.Modules.Core.Utils.log(ex);
             }
         }
     };
@@ -1908,30 +1955,29 @@ EVUI.Modules.EventStream.EventStreamEventListenerOptions = function ()
     @type {Number}*/
     this.priority = null;
 
-    /**Boolean. Whether or not this event should fire after a local or global event.
+    /**Boolean. The type of event that should cause this event to fire.
     @type {Boolean}*/
-    this.isGlobal = false;
+    this.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
 };
 
 /**Controller for managing a stack of secondary event handlers that "bubble" in order of addition after the primary event has executed by an EventStream. Assign to an EventStream's bubblingEvents property to use.
 @class*/
-EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
+EVUI.Modules.EventStream.BubblingEventManager = function ()
 {
-    var _eventsDictionary = {}; //the internal registry of events. The keys are event names, and the values are arrays of InternalEventListners.
-    var _forceGlobal = forceGlobal;
+    var _eventsDictionary = {}; //the internal registry of events. The keys are event keys, and the values are arrays of InternalEventListners.
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.EventStream.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
         var listener = new InternalEventListener();
 
-        if (EVUI.Modules.Core.Utils.instanceOf(eventName, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
+        if (EVUI.Modules.Core.Utils.instanceOf(eventKey, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
         {
-            listener.listener = eventName;
+            listener.listener = eventKey;
 
             if (handler != null && typeof handler === "object") //second parameter could be the options object
             {
@@ -1954,11 +2000,11 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 listener.options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
             }
 
-            listener.options.immutable = eventName.immutable;
+            listener.options.immutable = eventKey.immutable;
         }
         else //handed normal parameters, make the listener object
         {
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("eventName must be a non-whitespace string.");
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventKey) === true) throw Error("eventKey must be a non-whitespace string.");
             if (typeof handler !== "function") throw Error("Function expected.");
             if (options == null || typeof options !== "object")
             {
@@ -1969,12 +2015,21 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 options = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.EventStream.EventStreamEventListenerOptions(), options);
             }
 
-            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventName, handler, options.priority, options.immutable);
+            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventKey, handler, options.priority, options.immutable);
             listener.listener = eventListener;
             listener.options = options;
         }
 
-        if (_forceGlobal === true) options.isGlobal = true;
+        //set the type of event that should raise this event
+        var lowerEventType = typeof options.eventType === "string" ? options.eventType.toLowerCase() : options.eventType;
+        if (lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent && lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.Event)
+        {
+            options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+        }
+        else
+        {
+            options.eventType = lowerEventType;
+        }       
 
         //add the listener to the events dictionary
         var existingEvents = _eventsDictionary[listener.listener.eventName];
@@ -2018,12 +2073,12 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
             //sort the list into global and non-global events
             if (step.type === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent)
             {
-                if (curEvent.options.isGlobal === false) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent) continue;
                 eventsToFire.push(curEvent);
             }
             else 
             {
-                if (curEvent.options.isGlobal === true) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.Event) continue;
                 eventsToFire.push(curEvent);
             }
 
@@ -2065,13 +2120,13 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
         return listeners;
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an event listener based on its event name, its id, or its handling function.
+    @param {String} eventKeyOrId The name or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        var existingList = _eventsDictionary[eventNameOrId];
+        var existingList = _eventsDictionary[eventKeyOrId];
         if (existingList != null)
         {
             var removed = false;
@@ -2088,7 +2143,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
 
                     if (numInList === 0)
                     {
-                        delete _eventsDictionary[eventNameOrId];
+                        delete _eventsDictionary[eventKeyOrId];
                         break;
                     }
                 }
@@ -2107,14 +2162,14 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 for (var x = 0; x < numListeners; x++)
                 {
                     var curListener = curListeners[x];
-                    if (curListener.listener.immutable === false && (curListener.handlerId === eventNameOrId || curListener.listener.handler === handler))
+                    if (curListener.listener.immutable === false && (curListener.handlerId === eventKeyOrId || curListener.listener.handler === handler))
                     {
                         curListeners.splice(x, 1);
                         numListeners--;
 
                         if (numListeners === 0)
                         {
-                            delete _eventsDictionary[eventNameOrId];
+                            delete _eventsDictionary[eventKeyOrId];
                         }
 
                         removed = true;
@@ -2191,7 +2246,7 @@ EVUI.Modules.EventStream.EventStreamStepType =
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
     Event: "event",
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
-    GlobalEvent: "globalEvent",
+    GlobalEvent: "global",
 
     /**Takes a string and returns a correct EventStreamStepType.
     @method GetStepType
@@ -2208,37 +2263,19 @@ EVUI.Modules.EventStream.EventStreamStepType =
         return this.Job;
     }
 };
-Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
 
-/**Creates the beginning of an deferred stream of asynchronous of promises.
-@param {EVUI.Modules.EventStream.Constants.Fn_Job_Handler|EVUI.Modules.EventStream.EventStreamConfig} jobOrConfig Either a function to execute that takes a EventStreamJobArgs object as a parameter or the configuration options for the underlying EventStream.
-@param {EVUI.Modules.EventStream.Constants.Fn_Job_Handler} job A function to execute that takes a EventStreamJobArgs object as a parameter.
-@returns {EVUI.Modules.EventStream.EventStream}*/
-$evui.vow = function (jobOrConfig, job)
+/**Sets the behavior for the Handler function in a EventStreamStep.
+ @enum*/
+EVUI.Modules.EventStream.EventStreamEventType =
 {
-    var config = null;
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
+    Event: "event",
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
+    GlobalEvent: "global",
+}
 
-    if (typeof jobOrConfig === "function")
-    {
-        job = jobOrConfig;
-    }
-
-    if (jobOrConfig != null && typeof jobOrConfig === "object")
-    {
-        config = jobOrConfig;
-    }
-
-    var es = new EVUI.Modules.EventStream.EventStream(config);
-
-    if (typeof job === "function") es.addJob(job);
-    es.execute();
-
-    return es;
-};
-
+Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
 Object.freeze(EVUI.Modules.EventStream);
 
 /**Constructor reference for the EventStream.*/
 EVUI.Constructors.EventStream = EVUI.Modules.EventStream.EventStream;
-
-/*#ENDWRAP(ES)#*/

@@ -1,29 +1,21 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Binding|Binding)#*/
-/*#REPLACE(EVUI.Modules.Binding|Binding)#*/
 
 /**Module for data binding an object hierarchy to a set of DOM nodes.
 @module*/
 EVUI.Modules.Binding = {};
 
-/*#MODULEDEF(Binding|"1.0"|"Binding")#*/
-/*#VERSIONCHECK(EVUI.Modules.Binding|Binding)#*/
-
 EVUI.Modules.Binding.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true }),
-    DomTree: Object.freeze({ version: "1.0", required: true }),
-    Diff: Object.freeze({ version: "1.0", required: true }),
-    EventStream: Object.freeze({ version: "1.0", required: true }),
-    Dom: Object.freeze({ version: "1.0", required: true }),
-    Observers: Object.freeze({ version: "1.0", required: true }),
-    Http: Object.freeze({ version: "1.0", required: false })
+    Core: Object.freeze({ required: true }),
+    DomTree: Object.freeze({ required: true }),
+    Diff: Object.freeze({ required: true }),
+    EventStream: Object.freeze({ required: true }),
+    Dom: Object.freeze({ required: true }),
+    Observers: Object.freeze({ required: true }),
+    Http: Object.freeze({ required: false })
 };
 
 (function ()
@@ -49,7 +41,8 @@ EVUI.Modules.Binding.Constants.Attr_HtmlContentKey = "evui-binder-html-key";
 EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl = "evui-binder-html-src";
 EVUI.Modules.Binding.Constants.Attr_BoundObj = "evui-binder-source";
 EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
-EVUI.Modules.Binding.Constants.Attr_BindingTemplateName = "evui-binder-template-name";
+EVUI.Modules.Binding.Constants.Attr_BindingTemplate = "evui-binder-template";
+EVUI.Modules.Binding.Constants.Attr_ElementBindingTemplate = "evui-binder-element-template";
 
 EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
 EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "sethtmlcontent";
@@ -131,10 +124,6 @@ EVUI.Modules.Binding.BindingController = function (services)
     /**Array. All of the BindingTemplates that have been loaded into the BindingController.
     @type {EVUI.Modules.Binding.BindingTemplate[]}*/
     var _bindingTemplates = [];
-
-    /**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
-    @type {Object}*/
-    var _invocationDictionary = {};
 
     /**Object. Injected services into this controller to use custom 
     @type {EVUI.Modules.Binding.BindingControllerServices}*/
@@ -332,23 +321,26 @@ EVUI.Modules.Binding.BindingController = function (services)
         return null;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
-        return _bubblingEvents.addEventListener(eventName, handler, options);
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventKey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventKeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        return _bubblingEvents.removeEventListener(eventNameOrId, handler);
+        return _bubblingEvents.removeEventListener(eventKeyOrId, handler);
     };
 
     /**Event that fires immediately before the binding process begins.
@@ -359,11 +351,11 @@ EVUI.Modules.Binding.BindingController = function (services)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -1042,6 +1034,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     var rollBackStates = function (session)
     {
         if (EVUI.Modules.Core.Utils.hasFlag(session.bindingHandle.progressState, EVUI.Modules.Binding.BindingProgressStateFlags.Injected) === true) return; //can't roll back states after the binding operation is complete
+        if (session.cancel === true) return;
 
         if (session.bindingHandle.oldState != null)
         {
@@ -1076,7 +1069,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var curHandle = session.rollbackDispatchHandles[x];
 
                 //re-set the reference in the invocation dictionary so the old handler is called
-                _invocationDictionary[curHandle.hashKey] = curHandle;
+                EVUI.Modules.Binding.BindingController.BoundEvents[curHandle.hashKey] = curHandle;
 
                 //then go re-set the reference in the dispatch handles array
                 for (var y = 0; y < numCurHandles; y++)
@@ -1105,7 +1098,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             var eh = null;
             if (session.bindingHandle.binding.parentBinding != null && session.bindingHandle.options.scopedCSSSelectors !== false) //if we're a child binding and are using scoped selectors, look inside the parent for the element
             {
-                eh = new EVUI.Modules.Dom.DomHelper(session.bindingArgs.bindingTarget, session.bindingHandle.binding.parentBinding.boundContentFragment);
+                eh = new EVUI.Modules.Dom.DomHelper(session.bindingArgs.bindingTarget, session.bindingHandle.binding.parentBinding.element);
             }
             else //otherwise look in the whole document.
             {
@@ -1149,7 +1142,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         session.eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream.eventState = session.context;
-        session.eventStream.bubblingEvents = _bubblingEvents;
+        session.eventStream.bubblingEvents = [session.bindingHandle.wrapper.bubblingEvents, _bubblingEvents];
         session.eventStream.context = session.bindingHandle.binding;
         session.eventStream.extendSteps = false;
 
@@ -1248,7 +1241,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    onBindJob(session, jobArgs);
+                    onBindJob(session, true, jobArgs);
                 }
             });
         }
@@ -1260,7 +1253,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    onBindJob(session, jobArgs);
+                    onBindJob(session, true, jobArgs);
                 }
             });
 
@@ -1273,13 +1266,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     if (validateSession(session, eventArgs) === false) return;
                     if (typeof session.bindingHandle.binding.onBind === "function")
                     {
-                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                        if (eventArgs.reBinding === true)
-                        {
-                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                        }
-
+                        eventArgs.reBinding = session.bindingHandle.oldStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
                         return session.bindingHandle.binding.onBind.call(this, eventArgs);
                     }
                 }
@@ -1295,37 +1282,35 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                     if (typeof _self.onBind === "function")
                     {
-                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                        if (eventArgs.reBinding === true)
-                        {
-                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                        }
-
-                        return _self.onBind(eventArgs);
+                        eventArgs.reBinding = session.bindingHandle.oldStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
+                        return _self.onBind.call(_self, eventArgs);
                     }
                 }
             }); 
+
+
         }
     };
 
     /**Job that executes after the onBind events have been executed. Swaps out the current state and turns it into the old state while generating a new state to hold the data for the binding process going forward.
     @param {BindingSession} session The BindingSession being executed.
+    @param {Boolean} swapCurrentState Whether or not the job should execute the state swap.
     @param {EVUI.Modules.EventStream.EventStreamJobArgs} jobArgs The JobArgs for the operation.*/
-    var onBindJob = function (session, jobArgs)
+    var onBindJob = function (session, swapCurrentState, jobArgs)
     {
         if (session.cancel === true || session.bindingHandle.disposing === true) return jobArgs.cancel();
 
-        //flip the states so that we have a new state to populate and that the current state becomes the old state.
-        swapStates(session);
-
         if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
-        if (session.bindingHandle.currentState.source == null)
-        {
-            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
-            triggerDispose(session.bindingHandle);            
+        if (session.bindingArgs.bindingSource == null)
+        {            
+            triggerDispose(session.bindingHandle);
+            return jobArgs.cancel();
+        }
 
-            return jobArgs.reject("Cannot bind a null reference. " + parentPath);
+        if (swapCurrentState === true)
+        {
+            //flip the states so that we have a new state to populate and that the current state becomes the old state.
+            swapStates(session);
         }
 
         jobArgs.resolve();
@@ -1374,7 +1359,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onSetHtmlContent === "function")
                 {
-                    return _self.onSetHtmlContent(eventArgs);
+                    return _self.onSetHtmlContent.call(_self, eventArgs);
                 }
             }
         });       
@@ -1442,7 +1427,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onSetBindings === "function")
                 {
-                    return _self.onSetBindings(eventArgs);
+                    return _self.onSetBindings.call(_self, eventArgs);
                 }
             }
         });     
@@ -1558,7 +1543,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onBindHtmlContent === "function")
                 {
-                    return _self.onBindHtmlContent(eventArgs);
+                    return _self.onBindHtmlContent.call(_self, eventArgs);
                 }
             }
         });
@@ -1658,7 +1643,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 if (validateSession(session, eventArgs) === false) return;
                 if (typeof _self.onBindChildren === "function")
                 {
-                    return _self.onBindChildren(eventArgs);
+                    return _self.onBindChildren.call(_self, eventArgs);
                 }
             }
         });
@@ -1821,7 +1806,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onChildrenBound === "function")
                 {
-                    return _self.onChildrenBound(eventArgs);
+                    return _self.onChildrenBound.call(_self, eventArgs);
                 }
             }
         });
@@ -1869,7 +1854,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                 if (typeof _self.onBound === "function")
                 {
-                    return _self.onBound(eventArgs);
+                    return _self.onBound.call(_self, eventArgs);
                 }
             }
         });
@@ -1958,7 +1943,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         exeArgs.forceCompletion = true;
         exeArgs.functions = callbacks;
 
-        EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (error)
+        EVUI.Modules.Core.AsyncSequenceExecutor.execute(exeArgs, function (errors)
         {
             postBindCleanUp(session);
             jobArgs.resolve();
@@ -2662,20 +2647,24 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         }
 
-        if (session.bindingHandle.currentState.source === session.bindingHandle.oldState.source) return;
+        if (session.observedDifferences != null && (session.observedDifferences.length === 0 || (session.observedDifferences.allDifferences != null && session.observedDifferences.allDifferences.length === 0))) return; // === session.bindingHandle.oldState.source) return;
 
-        var numDiffs = session.observedDifferences.rootComparison.differences.length;
-        if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
+        //var numDiffs = session.observedDifferences.rootComparison.differences.length;
+        //if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
+        //{
+        //    var numOldBoundContent = session.bindingHandle.oldState.boundContent.length;
+        //    for (var x = 0; x < numOldBoundContent; x++)
+        //    {
+        //        var curContent = session.bindingHandle.oldState.boundContent[x];
+        //        curContent.remove();
+        //    }
+
+        //    return;
+        //}
+
+        if (session.parentSession != null && session.parentSession.isArray === true)
         {
 
-            var numOldBoundContent = session.bindingHandle.oldState.boundContent.length;
-            for (var x = 0; x < numOldBoundContent; x++)
-            {
-                var curContent = session.bindingHandle.oldState.boundContent[x];
-                curContent.remove();
-            }
-
-            return;
         }
 
         //finally, do a purge of any nodes that aren't in the new bound content list.
@@ -2696,7 +2685,6 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (oldNodes[x][key] !== true) oldNodes[x].remove();
         }
 
-        var key = Math.random();
         for (var x = 0; x < numNew; x++)
         {
             delete session.bindingHandle.currentState.boundContent[x][key];
@@ -3008,9 +2996,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             var values = attributeData.dictionary[curKey];
 
             var newAttrMeta = getNewAttributeMetadata(session, curKey, values.currentValue, values.newValue, currentMeta, newMeta);
+            if (newAttrMeta == null) continue;
+
             currentMeta.attributes[curKey] = newAttrMeta;
 
-            if (newMeta == null || newAttrMeta.value === values.currentValue) continue;
+            if (newAttrMeta == null || newAttrMeta.value === values.currentValue) continue;
 
             targetNode.setAttribute(curKey, newAttrMeta.value);
         }
@@ -3258,6 +3248,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numCurrent; x++)
         {
             var attrVal = currentValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3274,6 +3266,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numOld; x++)
         {
             var attrVal = oldValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3290,6 +3284,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numNew; x++)
         {
             var attrVal = newValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3338,7 +3334,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (existingBoundVal == null) continue;
             if (mappings[existingBoundVal.value] != null) continue;
 
-            var newBoundVal = newTokenDic[curVal.tokenizedString];
+            var newBoundVal = currentTokenDic[curVal.tokenizedString];
             mappings[existingBoundVal.value] = newBoundVal;
         }
 
@@ -3352,7 +3348,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (existingBoundVal == null) continue;
             if (mappings[existingBoundVal.value] != null) continue;
 
-            var newBoundVal = currentTokenDic[curVal.tokenizedString];
+            var newBoundVal = newTokenDic[curVal.tokenizedString];
             mappings[existingBoundVal.value] = newBoundVal;
         }
 
@@ -4573,21 +4569,21 @@ EVUI.Modules.Binding.BindingController = function (services)
                 }
 
                 //check to see if there already is a binding with a different object at the same path. If these is, we are technically rebinding that same handle, so we need to carry over some information for things to work properly
-                //var existingAtPath = getBindingContentList(mappingSession.unfoundPathDic, getNormalizedPath(path));
-                //if (existingAtPath != null)
-                //{
-                //    var nextUnprocessed = existingAtPath.getNextUnprocessedBinding();
-                //    if (nextUnprocessed != null)
-                //    {
-                //        //all of these values get moved into the "oldState" when this bindingHandle goes through its own binding process starting in swapStates()
-                //        nextUnprocessed.processed = true;
-                //        bindingHandle.currentState.boundContent = nextUnprocessed.binding.currentState.boundContent.slice(); //we need to remember the content to remove
-                //        bindingHandle.currentState.source = nextUnprocessed.binding.currentState.source; // we need the source object for diff comparisons
-                //        bindingHandle.currentState.childBindingHandles = nextUnprocessed.binding.currentState.childBindingHandles.slice(); //we need the child handles so the diffing works correctly                        
-                //        bindingHandle.newStateBound = nextUnprocessed.binding.newStateBound; //we need to flag it as having been bound
-                //        disposeBindingDispatchHandles(nextUnprocessed.binding); //clean up the old dispatch handles so we don't get a memory leak
-                //    }
-                //}
+                var existingAtPath = getBindingContentList(mappingSession.unfoundPathDic, getNormalizedPath(path));
+                if (existingAtPath != null)
+                {
+                    var nextUnprocessed = existingAtPath.getNextUnprocessedBinding();
+                    if (nextUnprocessed != null)
+                    {
+                        //all of these values get moved into the "oldState" when this bindingHandle goes through its own binding process starting in swapStates()
+                        nextUnprocessed.processed = true;
+                        bindingHandle.currentState.boundContent = nextUnprocessed.binding.currentState.boundContent.slice(); //we need to remember the content to remove
+                        bindingHandle.currentState.source = nextUnprocessed.binding.currentState.source; // we need the source object for diff comparisons
+                        bindingHandle.currentState.childBindingHandles = nextUnprocessed.binding.currentState.childBindingHandles.slice(); //we need the child handles so the diffing works correctly                        
+                        bindingHandle.newStateBound = nextUnprocessed.binding.newStateBound; //we need to flag it as having been bound
+                        //disposeBindingDispatchHandles(nextUnprocessed.binding); //clean up the old dispatch handles so we don't get a memory leak
+                    }
+                }
 
                 session.bindingHandle.currentState.childBindingHandles.push(bindingHandle);
             }
@@ -4617,6 +4613,11 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             bindingHandle.currentState.parentBindingHandle = session.bindingHandle;
             bindingHandle.currentState.parentBindingPath = curChild.path;
+
+            if (bindingHandle.currentState.htmlContent == null)
+            {
+                bindingHandle.currentState.htmlContent = session.bindingHandle.currentState.htmlContent;
+            }
 
             var segments = EVUI.Modules.Core.Utils.getValuePathSegments(curChild.path);
             if (segments.length === 0)
@@ -4735,6 +4736,11 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (curChange.bindingStructureChangeType === BindingStructureChangeType.Added) //item was added to the list of bindingChildren, add it to the process list. The processing will add it like normal.
             {
+                if (session.isArray === true) //EVUI.Modules.Core.Utils.isArray(curChange.binding.currentState.source) === true
+                {                   
+                    curChange.binding.currentState.boundContent = null;
+                }
+
                 changedBindings.push(curChange.binding);
                 curChange.applied = true;
                 continue;
@@ -5045,10 +5051,19 @@ EVUI.Modules.Binding.BindingController = function (services)
         {
             var curDiff = diffs[x];
 
+
             if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Changed || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
             {
                 var objectPath = curDiff.path;
                 if (objectPath == null) continue;
+
+                if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
+                {
+                    if (EVUI.Modules.Core.Utils.isObject(curDiff.newValue) === false && EVUI.Modules.Core.Utils.isObject(curDiff.originalValue) === false)
+                    {
+                        curDiff.type = EVUI.Modules.Observers.ObservedObjectChangeType.Changed;
+                    }
+                }
 
                 //first see if the unmodified path is a match
                 var curBinding = getBindingContentList(allBindings, objectPath);
@@ -5161,7 +5176,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                     modifiedPaths[objectPath] = curBinding.makeChangeArray(function (change)
                     {
-                        getSpecialChangeType(session, change, allBindings, allOldBindings);
+                        getSpecialChangeType(session, change, allBindings, allOldBindings, arrayDiffs, allOldArrayDiffs);
                         return change.bindingStructureChangeType;
                     });
                 }
@@ -5243,29 +5258,46 @@ EVUI.Modules.Binding.BindingController = function (services)
     var getSpecialChangeType = function (session, change, allBindings, allOldBindings, newArrayDiffs, oldArrayDiffs)
     {
         var changeTypeSet = false;
-        var newArrayChange = newArrayDiffs[change.binding.currentState.parentBindingKey];
-        if (newArrayChange != null)
-        {
-            changeTypeSet = true;
+        var otherState = change.binding.pendingState != null ? change.binding.pendingState : change.binding.oldState;
 
-            switch (newArrayChange.changeType)
+        if (session.isArray === true)
+        {
+            var arrayChange = newArrayDiffs[change.binding.currentState.parentBindingKey];
+            if (arrayChange == null)
             {
-                case EVUI.Modules.Observers.ArrayChangeType.Added:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Added;
-                    break;
-                case EVUI.Modules.Observers.ArrayChangeType.Moved:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Moved;
-                    break;
-                case EVUI.Modules.Observers.ArrayChangeType.Removed:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Removed;
-                    break;
-                case EVUI.Modules.Observers.ArrayChangeType.Shifted:
-                    change.bindingStructureChangeType = BindingStructureChangeType.Shifted;
-                    break;
+                arrayChange = oldArrayDiffs[change.binding.currentState.parentBindingKey];
+                if (arrayChange != null) delete oldArrayDiffs[change.binding.currentState.parentBindingKey];
+            }
+            else
+            {
+                delete newArrayDiffs[change.binding.currentState.parentBindingKey];
+            }
+            
+            if (arrayChange != null)
+            {        
+                switch (arrayChange.changeType)
+                {
+                    case EVUI.Modules.Observers.ArrayChangeType.Added:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Added;
+                        changeTypeSet = true;
+                        break;
+                    case EVUI.Modules.Observers.ArrayChangeType.Moved:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Moved;
+                        changeTypeSet = true;
+                        break;
+                    case EVUI.Modules.Observers.ArrayChangeType.Removed:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Removed;
+                        changeTypeSet = true;
+                        break;
+                    case EVUI.Modules.Observers.ArrayChangeType.Shifted:
+                        change.bindingStructureChangeType = BindingStructureChangeType.Shifted;
+                        changeTypeSet = true;
+                        break;
+                }                
             }
         }
 
-        var otherState = change.binding.pendingState != null ? change.binding.pendingState : change.binding.oldState;
+       
         if (otherState == null || otherState.parentBindingKey === change.binding.currentState.parentBindingKey) //if there was no old state or the keys match, the object was changed in place.
         {
             change.contentsModified = true;
@@ -5410,7 +5442,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 }
             };
 
-            EVUI.Modules.Core.Utils.require("Http", EVUI.Modules.Binding.Dependencies.Http.version);
+            EVUI.Modules.Core.Utils.require("Http");
 
             var httpOptions = null;
             if (session.bindingHandle.binding.contentLoadSettings != null)
@@ -5682,6 +5714,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var key = attributes.key;
         var name = attributes.templateName;
         var src = attributes.src;
+        var elementTemplate = attributes.elementTemplateName;
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === false)
         {
@@ -5729,6 +5762,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             attributeTemplate.templateName = name;
         }
 
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(elementTemplate) === false && parentHandle != null && EVUI.Modules.Core.Utils.isArray(parentHandle.currentState.source[path]))
+        {
+            attributeTemplate.templateName = elementTemplate;
+        }
+
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(src) === false)
         {
             if (typeof attributeTemplate.htmlContent === "string")
@@ -5761,18 +5799,19 @@ EVUI.Modules.Binding.BindingController = function (services)
     };
 
     /**Gets all the attribute values needed to make a child binding based off of the markup of an Element's attributes.
-    @param {Element} element The element to extract the elements from.
+    @param {Element} element The element to extract the attributes from.
     @returns {BindingElementAttributes} */
     var getBindingAttributes = function (element)
     {
         if (element == null) return null;
-        var attrs = EVUI.Modules.Core.Utils.getElementAttributes(element);
+
         var bindingAttributes = new BindingElementAttributes();
-        bindingAttributes.key = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
-        bindingAttributes.mode = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_Mode);
-        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplateName);
-        bindingAttributes.sourcePath = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BoundObj);
-        bindingAttributes.src = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
+        bindingAttributes.key = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
+        bindingAttributes.mode = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_Mode);
+        bindingAttributes.templateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
+        bindingAttributes.sourcePath = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BoundObj);
+        bindingAttributes.src = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
+        bindingAttributes.elementTemplateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_ElementBindingTemplate);
 
         return bindingAttributes;
     };
@@ -6166,6 +6205,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         wrapper.getValidElement = getValidElement;
         wrapper.triggerUpdate = triggerUpdate;
         wrapper.toDomNode = toDomNode;
+        wrapper.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         return wrapper;
     };
@@ -6331,18 +6371,25 @@ EVUI.Modules.Binding.BindingController = function (services)
         return result;
     };
 
+    /**Gets a path for a property that only contains "." to separate values instead of brackets (if there were any).
+    @param {String} path The path to normalize.
+    @returns {String}*/
     var getNormalizedPath = function (path)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === true) return path;
         var path = path.replace(/\.|\[|\]\.|\]/g, ".");
 
-        if (EVUI.Modules.Core.Utils.stringEndsWith(".", path) === true) path = path.substring(0, path.length - 1);
+        if (path.endsWith(".") === true) path = path.substring(0, path.length - 1);
         return path;
     };
 
     /****************************************************************************EVENT DISPATCH HANDLING******************************************************************************************** */
 
 
+    /**Calculates the hash code of an invocation of a function as an event handler.
+    @param {BinidngSession} session The session in progress.
+    @param {EVUI.Modules.Binding.BoundProperty} boundProperty The property being bound.
+    @returns*/
     var getInvocationHash = function (session, boundProperty)
     {
         return EVUI.Modules.Core.Utils.getHashCode(_salt + session.bindingHandle.id + ":" + boundProperty.path).toString(36);
@@ -6361,7 +6408,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var replacementValue = "$evui.dispatch(event, \`" + hashKey + "\`)";
 
         //look to see if we don't have the same handler there already
-        var existing = _invocationDictionary[hashKey];
+        var existing = EVUI.Modules.Binding.BindingController.BoundEvents[hashKey];
         if (existing != null)
         {
             if (existing.handler === fn)
@@ -6426,7 +6473,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         };
 
-        _invocationDictionary[handle.hashKey] = handle;
+        EVUI.Modules.Binding.BindingController.BoundEvents[handle.hashKey] = handle;
         session.bindingHandle.dispatchHandles.push(handle);
 
         return replacementValue;
@@ -6457,7 +6504,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {Any}*/
     var invokeHandle = function (eventArgs, handleHash)
     {
-        var dispatchHandle = _invocationDictionary[handleHash];
+        var dispatchHandle = EVUI.Modules.Binding.BindingController.BoundEvents[handleHash];
         if (dispatchHandle == null)
         {
             var logMessage = "Dispatch function for event " + eventArgs.type + " element " + getElementMoniker(eventArgs.currentTarget) + " could not be found.";
@@ -6731,12 +6778,6 @@ EVUI.Modules.Binding.BindingController = function (services)
     BindingHandleState.prototype.getNormalizedPath = function ()
     {
         return getNormalizedPath(this.parentBindingPath);
-
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(this.parentBindingPath) === true) return this.parentBindingPath;
-        var path = this.parentBindingPath.replace(/\.|\[|\]\.|\]/g, ".");
-
-        if (EVUI.Modules.Core.Utils.stringEndsWith(".", path) === true) path = path.substring(0, path.length - 1);
-        return path;
     }
 
     /**Wrapper object for injecting into a Binding so that it can use parts of the controller from outside the controller.
@@ -6765,6 +6806,10 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         /**Function for turning a DomTreeElement into a DOM Node object.*/
         this.toDomNode = null;
+
+        /**Controller's bubbling events manager.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = null;
     };
 
     /**Container for all things related to an active Binding in progress.
@@ -6923,6 +6968,10 @@ EVUI.Modules.Binding.BindingController = function (services)
         /**String. A combination of BindingMode and Insertion mode to give the Binding.
         @type {String}*/
         this.mode = null;
+
+        /**String. The name of the BindingTemplate to use if the item being bound is an array of elements.
+        @type {String}*/
+        this.elementTemplateName = null;
     };
 
     /**Represents the bare minimum amount of information needed to make a child Binding.
@@ -7003,7 +7052,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         this.invocationSites = [];
 
-        if (_invocationDictionary[this.hashKey] === this) delete _invocationDictionary[this.hashKey];
+        if (EVUI.Modules.Binding.BindingController.BoundEvents[this.hashKey] === this) delete EVUI.Modules.Binding.BindingController.BoundEvents[this.hashKey];
     };
 
     /**Represents a location in markup where a BindingDispatchHandle was invoked from.
@@ -7274,6 +7323,15 @@ EVUI.Modules.Binding.BindingController = function (services)
     cacheObjectKeys();
     ensureServices();
 };
+
+/**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
+@type {Object}*/
+Object.defineProperty(EVUI.Modules.Binding.BindingController, "BoundEvents", {
+    value: {},
+    writable: false,
+    enumerable: true,
+    configuable: false
+});
 
 /**A container for Html content that is stored in the BindingController that can be referenced by its key in Bindings so that the same Html can be re-used and referenced in multiple places.
 @class*/
@@ -7575,14 +7633,14 @@ EVUI.Modules.Binding.Binding = function (handle)
     Object.defineProperty(this, "boundContentFragment", {
         get: function ()
         {
-            if (_handle.currentState.boundTemplateFragment != null) return _handle.currentState.boundTemplateFragment;
+            if (_handle.currentState.boundContentFragment != null) return _handle.currentState.boundContentFragment;
 
             if (_handle.currentState.boundContentTree != null && _handle.newStateBound === false)
             {
-                _handle.currentState.boundTemplateFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
+                _handle.currentState.boundContentFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
             }
 
-            return _handle.currentState.boundTemplateFragment;
+            return _handle.currentState.boundContentFragment;
         },
         configurable: false,
         enumerable: true
@@ -7762,11 +7820,11 @@ EVUI.Modules.Binding.Binding = function (handle)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -7781,6 +7839,28 @@ EVUI.Modules.Binding.Binding = function (handle)
     /**Event that fires when the binding operation is complete and the complete content and all its children has been injected.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBound = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.wrapper.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.wrapper.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Searches all the children underneath this Binding using the predicate function to find a match.
@@ -7905,11 +7985,11 @@ EVUI.Modules.Binding.BindingTemplate = function (templateEntry)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -8209,7 +8289,7 @@ EVUI.Modules.Binding.Binder = null;
 })();
 
 /**Constructor reference for the BidningController.*/
-//EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
+EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
 
 Object.freeze(EVUI.Modules.Binding)
 
@@ -8278,4 +8358,4 @@ $evui.removeBindingHtmlContent = function (key)
     return $evui.binder.removeHtmlContent(key)
 };
 
-/*#ENDWRAP(Binding)#*/
+Object.freeze(EVUI.Modules.Binding);

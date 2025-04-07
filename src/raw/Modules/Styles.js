@@ -1,23 +1,15 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
-
-/*#INCLUDES#*/
-
-/*#BEGINWRAP(EVUI.Modules.Styles|Styles)#*/
-/*#REPLACE(EVUI.Modules.Styles|Styles)#*/
 
 /**Module for building and manipulating stylesheets at runtime without resorting to injecting a string of CSS into a style tag.
 @module*/
 EVUI.Modules.Styles = {};
 
-/*#MODULEDEF(Styles|"1.0";|"Styles")#*/
-/*#VERSIONCHECK(EVUI.Modules.Styles|Styles)#*/
-
 EVUI.Modules.Styles.Dependencies =
 {
-    Core: Object.freeze({ version: "1.0", required: true })
+    Core: Object.freeze({ required: true })
 };
 
 (function ()
@@ -986,7 +978,7 @@ EVUI.Modules.Styles.StyleSheetManager = function ()
         var numAggregationSets = _aggregationSets.length;
         for (var x = 0; x < numAggregationSets; x++)
         {
-            if (EVUI.Modules.Core.Utils.stringStartsWith(_aggregationSets[x], selector) === true) return true;
+            if (selector.startsWith(_aggregationSets[x]) === true) return true;
         }
 
         return false;
@@ -1769,5 +1761,3 @@ $evui.css = function (cssOrOptions)
 
 Object.freeze(EVUI.Modules.Styles.Constants);
 Object.freeze(EVUI.Modules.Styles);
-
-/*#ENDWRAP(Styles)#*/
