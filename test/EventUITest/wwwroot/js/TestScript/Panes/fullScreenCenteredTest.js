@@ -7,7 +7,7 @@
         id: "test",
         element: win,
         autoHideSettings: {
-            autoCloseKeys: ["Escape"]
+            autoHideKeys: ["Escape"]
         }
     });
 

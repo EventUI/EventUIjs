@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2024 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -777,7 +777,6 @@ EVUITest.TestHostController = function ()
 
                     result.catch(function (ex) //if we had an async function, listen for its failure (which would normally escape the try catch here)
                     {
-                        console.log(args);
                         fail(ex);
                     });
                 }
@@ -2100,7 +2099,7 @@ EVUITest.ValueComparer = function ()
                 var bEquals = bComparer(comparisonContext);
 
                 if (typeof aEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + aEquals + " instead.");
-                if (typeof bEquals !== "boolean") throw Error("a's custom comparer at " + comparison.path + " did not return a boolean. Returned " + bEquals + " instead.");
+                if (typeof bEquals !== "boolean") throw Error("b's custom comparer at " + comparison.path + " did not return a boolean. Returned " + bEquals + " instead.");
                 if (aEquals !== bEquals) throw Error("Custom equality disagreement: both values at " + comparison.path + " had custom value comparers that disagreed on equality. a's comparer returned " + aEquals + " and b's comparer returned " + bEquals + ".");
 
                 comparison.valuesEqual = aEquals;

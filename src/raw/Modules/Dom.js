@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -127,9 +127,10 @@ EVUI.Modules.Dom.ControlInfo = function (id, attributes)
 @param {HTMLElement|HTMLElement[]|String|JQuery} elementsOrCssSelector Either an array of HTMLElements, a single HTMLElement, a jQuery object, a CSS selector, or a string of HTML.
 @param {HTMLElement|JQuery} context A context node used to limit the scope of the search.
 @class*/
-EVUI.Modules.Dom.DomHelper = function ()
+EVUI.Modules.Dom.DomHelper = (function ()
 {
     var _domMetadataPropName = null;
+    var _snakeCaseRegex = /-[A-Za-z]{1}/gi;
 
     /** Utility object for common DOM manipulation.
     @param {HTMLElement|HTMLElement[]|String|JQuery} elementsOrCssSelector Either an array of HTMLElements, a single HTMLElement, a jQuery object, a CSS selector, or a string of HTML.
@@ -615,6 +616,78 @@ EVUI.Modules.Dom.DomHelper = function ()
         }
     };
 
+    /**Either gets the computed style value of the first matching element, or sets CSS properties on a variety 
+    @param {String|Object} propName Either the name of the CSS property to get or set, or an object containing the properties to set.
+    @param {String|Number} propValue The value to set a CSS property to.*/
+    DomHelper.prototype.css = function (propName, propValue)
+    {
+        if (this.elements.length === 0) return;
+        if (typeof propName === "string") //either getting or setting a CSS property value
+        {
+            propName = normalizeStylePropertyName(propName); //normalize snake-case to camelCase
+            if (propName == null) return;
+
+            if (typeof propValue === "undefined") //no value provided, we are getting a vaue
+            {
+                try
+                {
+                    return getComputedStyle(this.elements[0])[propName]
+                }
+                catch (ex)
+                {
+                    return;
+                }
+            }
+            else //value provided, set for all elements
+            {
+                applyToAll(this.elements, function (curEle)
+                {
+                    if (curEle.style == null) return;
+                    curEle.style[propName] = propValue;
+                });
+            }
+        }
+        else if (EVUI.Modules.Core.Utils.isObject(propName) === true) //we were passed an object of key-value pairs of CSS properties to populate
+        {
+            //build a dictionary and array list of camelCase properties and their respective values
+            var settingsObj = {};
+            var settingsProps = [];
+            var numProps = 0;
+            for (var prop in propName)
+            {
+                var camelCaseProp = normalizeStylePropertyName(prop);
+                if (prop == null) continue;
+
+                settingsObj[camelCaseProp] = propName[prop];
+                numProps = settingsProps.push(camelCaseProp);
+            }
+
+            //set all values for all elements
+            applyToAll(this.elements, function (ele)
+            {
+                if (ele.style == null) return;
+
+                for (var x = 0; x < numProps; x++)
+                {
+                    var curProp = settingsProps[x]
+                    ele.style[curProp] = settingsObj[curProp];
+                }
+            });
+        }
+    };
+
+    /**Turns a snake-case string into a camel case string. 
+    @param {String} propName The string to convert.
+    @returns {String}*/
+    var normalizeStylePropertyName = function (propName)
+    {
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(propName) === true) return null;
+        return propName.replace(_snakeCaseRegex, function (value)
+        {
+            return value.substring(1, value.length).toUpperCase();
+        })
+    };
+
     /**Performs an operation on the set of elements pertaining to a CSS class.
     @param {Element[]} elements The elements that are the target of the class operation.
     @param {String|String[]} cssClasses The CSS classes that are the subject of the operation.
@@ -1005,7 +1078,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     }
 
     return DomHelper;
-}();
+}());
 
 /**The current bounds of the element relative to the entire document using the current style and the outerWidth and outerHeight functions.
 @class*/

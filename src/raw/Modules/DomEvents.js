@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -990,38 +990,6 @@ EVUI.Modules.DomEvents.AsyncDomEventArgs = function ()
     /**Object. The public event state of the EventStream.
     @type {Object}*/
     this.state = null;
-};
-
-Object.freeze(EVUI.Modules.DomEvents);
-
-/**Adds an event listener to the stack of managed async event handlers.
-@param {EventTarget} eventTarget The target to attach the event to.
-@param {String} type The type of event to listen for.
-@param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that will handle the event.
-@param {EVUI.Modules.DomEvents.EventOptions} options The options to change the behavior of the event handler.*/
-$evui.addAsyncEventListener = function (eventTarget, type, listener, options)
-{
-    return EVUI.Modules.DomEvents.AsyncDomEventManager.addAsyncEventListener(eventTarget, type, listener, options);
-};
-
-/**Removes an event listener from the stack of managed async event handlers.
-@param {EventTarget} eventTarget The target to remove the event from.
-@param {String} type The type of event that the listener is listening for.
-@param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that was listening for the event.
-@param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listener.
-@returns {Boolean}*/
-$evui.removeAsyncEventListener = function (eventTarget, type, listener, options)
-{
-    return EVUI.Modules.DomEvents.AsyncDomEventManager.removeAsyncEventListener(eventTarget, type, listener, options);
-};
-
-/**Awaitable. Dispatches an event to the EventTarget using the normal browser EventTarget dispatching API. The Promise resolves once the last event handler on the last target in the composed path has been executed.
-@param {EventTarget} eventTarget The target to dispatch the event from.
-@param {Event} dispatchArgs The browser Event object of the event to fire.
-@returns {Promise}*/
-$evui.dispatchAsyncEvent = function (eventTarget, event)
-{
-    return EVUI.Modules.DomEvents.AsyncDomEventManager.dispatchAsyncEvent(eventTarget, event);
 };
 
 Object.freeze(EVUI.Modules.DomEvents);

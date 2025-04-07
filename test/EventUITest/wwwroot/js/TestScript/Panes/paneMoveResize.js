@@ -2,16 +2,19 @@
 {
     var d = document.createElement("div");
     d.classList.add("testDialog");
+    d.style.height = "200px";
+    d.style.width = "200px";
+    d.style.background = "blue";
 
-    $evui.css({
-        selector: ".testDialog",
-        rules:
-        {
-            height: "400px",
-            width: "500px",
-            background: "red"
-        }
-    });
+    //$evui.css({
+    //    selector: ".testDialog",
+    //    rules:
+    //    {
+    //        height: "400px",
+    //        width: "500px",
+    //        background: "red"
+    //    }
+    //});
 
     d.setAttribute("evui-pane-drag-handle", "");
 
@@ -25,18 +28,26 @@
         },
         resizeMoveSettings:
         {
-            canResizeBottom: false,
-            canResizeTop: false,
+            canResizeBottom: true,
+            canResizeTop: true,
             canDragMove: true
         },
         autoHideSettings:
         {
-            autoCloseKeys: ["Control"]
+            autoHideKeys: ["Control"]
         },
         onShow: function ()
         {
             console.log(this.myProp);
-        }
+        }, 
+        onMove: async function (args)
+        {
+            console.log("Moved", args.moveArgs);
+        },
+        onResize: async function (args)
+        {
+            console.log("Resized", args.resizeArgs);
+        },
     });
 
     $evui.panes.onInitialize = function ()

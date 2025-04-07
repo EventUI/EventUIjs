@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -170,7 +170,8 @@ EVUI.Modules.Enums.EnumValueGetter = function ()
             }
         }
 
-        if (moduleEntry == null || constValueName == null) return undefined;
+        if (moduleEntry == null) return undefined;
+        if (typeof constValueName !== "string") return moduleEntry.constants.enumObj;
         return moduleEntry.constants.values[constValueName.toLowerCase()];
     };
 

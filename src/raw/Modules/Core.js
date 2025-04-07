@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -26,22 +26,6 @@ EVUI.Modules.Core.Settings.loggingEnabled = true;
 /**Function. An alternate logging function to call in the event LoggingEnabled is set to false.
 @param {String} message The message to log.*/
 EVUI.Modules.Core.Settings.alternateLoggingFunction = function (message) { };
-
-/**Boolean. Whether or not EventUI can emit debug messages. True by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.debug = true;
-
-/**Boolean. Whether or not to trace events triggered by the EventManager. False by default.
- @type {Boolean}*/
-EVUI.Modules.Core.Settings.traceEvents = false;
-
-/**Boolean. Whether or not to trace iframe message sends and responses by the IFrameMessenger. False by default.
- @type {Boolean}*/
-EVUI.Modules.Core.Settings.traceIFrames = false;
-
-/**Boolean. If a message comes from an iframe with a white-listed origin, it will automatically be added as a child of the iframeManager. True by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.autoAddIncomingIFrames = true;
 
 /**Number. When an EventStream is running, this is the number of sequential steps that can be executed by an instance of an EventStream before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 50 by default.
 @type {Number}*/
@@ -314,6 +298,7 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
     var initEx = null;
     var initDone = false;
     var initLoadDone = false;
+    var initEventsSet = false;
 
     if (typeof (window) !== "undefined")
     {
@@ -353,6 +338,8 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
                     //detach event handlers before doing anything
                     document.removeEventListener("DOMContentLoaded", go);
                     window.removeEventListener("load", go);
+
+                    initEventsSet = false;
                 }
 
                 initLoadDone = true;
@@ -406,10 +393,12 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
             }
             else
             {
-                if (isDOM === true)
+                if (isDOM === true && initEventsSet === false)
                 {
                     document.addEventListener("DOMContentLoaded", go);
                     window.addEventListener("load", go);
+
+                    initEventsSet = true;
                 }
                 else
                 {
@@ -1188,7 +1177,17 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
 
     //check the cache for the resolved path first - if we already did this path, just return a copy of the path's array
     var existing = EVUI.Modules.Core.Utils.PathCache[propertyPath];
-    if (existing != null) return existing.slice();
+    if (existing != null)
+    {
+        try //in some rare cases paths that are the names of the properties of the Object prototype can get 'pulled' from the cache if they haven't been added before, in which case they won't have a slice method, so we let it fail and fall through to the code that will add it to the cache (and it won't fail again)
+        {
+            return existing.slice();
+        }
+        catch (ex)
+        {
+            //do nothing, we want the code below to execute if this block gets hit
+        }
+    }
 
     var segs = [];
 
@@ -1388,22 +1387,12 @@ $evui.isObject = function (o)
 @param {Array} arr The object to test.
 @returns {Boolean}*/
 EVUI.Modules.Core.Utils.isArray = function (arr)
-{
-    if (arr == null) return false;
-
-    var arrType = typeof arr;
-    if (arrType === "string" || arrType === "function") return false;
+{    
+    //note: this is an ancient function that used to have a looser definition of what 'is' an array, but that led to false positives on plain objects that were not arrays, so it got stripped down to the most basic (and reliable) check.
 
     if (Array.isArray(arr) === true) return true;
 
-    if (typeof arr.length === "number")
-    {
-        return true;
-    }
-    else
-    {    
-        return false;
-    }
+    return false;
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
@@ -1621,6 +1610,14 @@ EVUI.Modules.Core.Utils.isjQuery = function (object)
 EVUI.Modules.Core.Utils.isElement = function (object)
 {
     return object instanceof Element;
+};
+
+/**Checks to see if an object is derived from an Element-derived object.
+@param {Object} object The object to check.
+@returns {Boolean}*/
+$evui.isElement = function (object)
+{
+    return EVUI.Modules.Core.Utils.isElement(object);
 };
 
 
