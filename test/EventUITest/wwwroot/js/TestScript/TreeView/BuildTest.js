@@ -54,6 +54,16 @@
         }
     });
 
+    tree.addEventListener("built", function (args)
+    {
+        console.log("Bubbling Built");
+    });
+
+    tree.addEventListener("built", function (args)
+    {
+        console.log("Bubbling Built2");
+    });
+
     await tree.buildAsync();
 
     console.log(tree);

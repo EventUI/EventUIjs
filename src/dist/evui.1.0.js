@@ -1,5 +1,5 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
-
+﻿/**Copyright (c) 2025 Richard H Stannard
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
@@ -23,7 +23,7 @@ $evui = {};
 
 
 /********************************************************Binding.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -66,7 +66,8 @@ EVUI.Modules.Binding.Constants.Attr_HtmlContentKey = "evui-binder-html-key";
 EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl = "evui-binder-html-src";
 EVUI.Modules.Binding.Constants.Attr_BoundObj = "evui-binder-source";
 EVUI.Modules.Binding.Constants.Attr_Mode = "evui-binder-mode";
-EVUI.Modules.Binding.Constants.Attr_BindingTemplateName = "evui-binder-template-name";
+EVUI.Modules.Binding.Constants.Attr_BindingTemplate = "evui-binder-template";
+EVUI.Modules.Binding.Constants.Attr_ElementBindingTemplate = "evui-binder-element-template";
 
 EVUI.Modules.Binding.Constants.Event_OnBind = "bind";
 EVUI.Modules.Binding.Constants.Event_OnSetHtmlContent = "sethtmlcontent";
@@ -148,10 +149,6 @@ EVUI.Modules.Binding.BindingController = function (services)
     /**Array. All of the BindingTemplates that have been loaded into the BindingController.
     @type {EVUI.Modules.Binding.BindingTemplate[]}*/
     var _bindingTemplates = [];
-
-    /**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
-    @type {Object}*/
-    var _invocationDictionary = {};
 
     /**Object. Injected services into this controller to use custom 
     @type {EVUI.Modules.Binding.BindingControllerServices}*/
@@ -349,23 +346,26 @@ EVUI.Modules.Binding.BindingController = function (services)
         return null;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
-        return _bubblingEvents.addEventListener(eventName, handler, options);
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventKey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventKeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        return _bubblingEvents.removeEventListener(eventNameOrId, handler);
+        return _bubblingEvents.removeEventListener(eventKeyOrId, handler);
     };
 
     /**Event that fires immediately before the binding process begins.
@@ -376,11 +376,11 @@ EVUI.Modules.Binding.BindingController = function (services)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -1059,6 +1059,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     var rollBackStates = function (session)
     {
         if (EVUI.Modules.Core.Utils.hasFlag(session.bindingHandle.progressState, EVUI.Modules.Binding.BindingProgressStateFlags.Injected) === true) return; //can't roll back states after the binding operation is complete
+        if (session.cancel === true) return;
 
         if (session.bindingHandle.oldState != null)
         {
@@ -1093,7 +1094,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 var curHandle = session.rollbackDispatchHandles[x];
 
                 //re-set the reference in the invocation dictionary so the old handler is called
-                _invocationDictionary[curHandle.hashKey] = curHandle;
+                EVUI.Modules.Binding.BindingController.BoundEvents[curHandle.hashKey] = curHandle;
 
                 //then go re-set the reference in the dispatch handles array
                 for (var y = 0; y < numCurHandles; y++)
@@ -1122,7 +1123,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             var eh = null;
             if (session.bindingHandle.binding.parentBinding != null && session.bindingHandle.options.scopedCSSSelectors !== false) //if we're a child binding and are using scoped selectors, look inside the parent for the element
             {
-                eh = new EVUI.Modules.Dom.DomHelper(session.bindingArgs.bindingTarget, session.bindingHandle.binding.parentBinding.boundContentFragment);
+                eh = new EVUI.Modules.Dom.DomHelper(session.bindingArgs.bindingTarget, session.bindingHandle.binding.parentBinding.element);
             }
             else //otherwise look in the whole document.
             {
@@ -1166,7 +1167,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     {
         session.eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream.eventState = session.context;
-        session.eventStream.bubblingEvents = _bubblingEvents;
+        session.eventStream.bubblingEvents = [session.bindingHandle.wrapper.bubblingEvents, _bubblingEvents];
         session.eventStream.context = session.bindingHandle.binding;
         session.eventStream.extendSteps = false;
 
@@ -1265,7 +1266,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    onBindJob(session, jobArgs);
+                    onBindJob(session, true, jobArgs);
                 }
             });
         }
@@ -1277,7 +1278,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                 type: EVUI.Modules.EventStream.EventStreamStepType.Job,
                 handler: function (jobArgs)
                 {
-                    onBindJob(session, jobArgs);
+                    onBindJob(session, true, jobArgs);
                 }
             });
 
@@ -1290,13 +1291,7 @@ EVUI.Modules.Binding.BindingController = function (services)
                     if (validateSession(session, eventArgs) === false) return;
                     if (typeof session.bindingHandle.binding.onBind === "function")
                     {
-                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                        if (eventArgs.reBinding === true)
-                        {
-                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                        }
-
+                        eventArgs.reBinding = session.bindingHandle.oldStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
                         return session.bindingHandle.binding.onBind.call(this, eventArgs);
                     }
                 }
@@ -1312,37 +1307,35 @@ EVUI.Modules.Binding.BindingController = function (services)
 
                     if (typeof _self.onBind === "function")
                     {
-                        eventArgs.reBinding = session.bindingHandle.newStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
-                        if (eventArgs.reBinding === true)
-                        {
-                            eventArgs.originalContent = (session.bindingHandle.currentState != null && session.bindingHandle.currentState.boundContent != null) ? session.bindingHandle.currentState.boundContent.slice() : null;
-                            eventArgs.originalSource = (session.bindingHandle.currentState != null) ? session.bindingHandle.currentState.source : null;
-                        }
-
+                        eventArgs.reBinding = session.bindingHandle.oldStateBound; //we haven't swapped the states yet, so we set these to the values they would be after the swap.
                         return _self.onBind.call(_self, eventArgs);
                     }
                 }
             }); 
+
+
         }
     };
 
     /**Job that executes after the onBind events have been executed. Swaps out the current state and turns it into the old state while generating a new state to hold the data for the binding process going forward.
     @param {BindingSession} session The BindingSession being executed.
+    @param {Boolean} swapCurrentState Whether or not the job should execute the state swap.
     @param {EVUI.Modules.EventStream.EventStreamJobArgs} jobArgs The JobArgs for the operation.*/
-    var onBindJob = function (session, jobArgs)
+    var onBindJob = function (session, swapCurrentState, jobArgs)
     {
         if (session.cancel === true || session.bindingHandle.disposing === true) return jobArgs.cancel();
 
-        //flip the states so that we have a new state to populate and that the current state becomes the old state.
-        swapStates(session);
-
         if (validateSession(session, jobArgs) == false) return jobArgs.resolve();
-        if (session.bindingHandle.currentState.source == null)
-        {
-            var parentPath = "Parent object path: " + ((EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(session.bindingHandle.currentState.parentBindingPath) === true) ? "root." : "root." + session.bindingHandle.currentState.parentBindingPath + ".");
-            triggerDispose(session.bindingHandle);            
+        if (session.bindingArgs.bindingSource == null)
+        {            
+            triggerDispose(session.bindingHandle);
+            return jobArgs.cancel();
+        }
 
-            return jobArgs.reject("Cannot bind a null reference. " + parentPath);
+        if (swapCurrentState === true)
+        {
+            //flip the states so that we have a new state to populate and that the current state becomes the old state.
+            swapStates(session);
         }
 
         jobArgs.resolve();
@@ -2679,7 +2672,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         }
 
-        if (session.bindingHandle.currentState.source === session.bindingHandle.oldState.source) return;
+        if (session.observedDifferences != null && (session.observedDifferences.length === 0 || (session.observedDifferences.allDifferences != null && session.observedDifferences.allDifferences.length === 0))) return; // === session.bindingHandle.oldState.source) return;
 
         //var numDiffs = session.observedDifferences.rootComparison.differences.length;
         //if (numOldChildren === 0) //if we had no old bindings but had two different objects there is some clean up to be done as the new object's nodes replaced the old object's nodes
@@ -3028,9 +3021,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             var values = attributeData.dictionary[curKey];
 
             var newAttrMeta = getNewAttributeMetadata(session, curKey, values.currentValue, values.newValue, currentMeta, newMeta);
+            if (newAttrMeta == null) continue;
+
             currentMeta.attributes[curKey] = newAttrMeta;
 
-            if (newMeta == null || newAttrMeta.value === values.currentValue) continue;
+            if (newAttrMeta == null || newAttrMeta.value === values.currentValue) continue;
 
             targetNode.setAttribute(curKey, newAttrMeta.value);
         }
@@ -3278,6 +3273,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numCurrent; x++)
         {
             var attrVal = currentValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3294,6 +3291,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numOld; x++)
         {
             var attrVal = oldValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3310,6 +3309,8 @@ EVUI.Modules.Binding.BindingController = function (services)
         for (var x = 0; x < numNew; x++)
         {
             var attrVal = newValues[x];
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(attrVal) === true) continue;
+
             var difference = valueDic[attrVal];
             if (difference == null)
             {
@@ -3358,7 +3359,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (existingBoundVal == null) continue;
             if (mappings[existingBoundVal.value] != null) continue;
 
-            var newBoundVal = newTokenDic[curVal.tokenizedString];
+            var newBoundVal = currentTokenDic[curVal.tokenizedString];
             mappings[existingBoundVal.value] = newBoundVal;
         }
 
@@ -3372,7 +3373,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             if (existingBoundVal == null) continue;
             if (mappings[existingBoundVal.value] != null) continue;
 
-            var newBoundVal = currentTokenDic[curVal.tokenizedString];
+            var newBoundVal = newTokenDic[curVal.tokenizedString];
             mappings[existingBoundVal.value] = newBoundVal;
         }
 
@@ -4638,6 +4639,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             bindingHandle.currentState.parentBindingHandle = session.bindingHandle;
             bindingHandle.currentState.parentBindingPath = curChild.path;
 
+            if (bindingHandle.currentState.htmlContent == null)
+            {
+                bindingHandle.currentState.htmlContent = session.bindingHandle.currentState.htmlContent;
+            }
+
             var segments = EVUI.Modules.Core.Utils.getValuePathSegments(curChild.path);
             if (segments.length === 0)
             {
@@ -4755,8 +4761,8 @@ EVUI.Modules.Binding.BindingController = function (services)
 
             if (curChange.bindingStructureChangeType === BindingStructureChangeType.Added) //item was added to the list of bindingChildren, add it to the process list. The processing will add it like normal.
             {
-                if (session.isArray === true)
-                {
+                if (session.isArray === true) //EVUI.Modules.Core.Utils.isArray(curChange.binding.currentState.source) === true
+                {                   
                     curChange.binding.currentState.boundContent = null;
                 }
 
@@ -5070,10 +5076,19 @@ EVUI.Modules.Binding.BindingController = function (services)
         {
             var curDiff = diffs[x];
 
+
             if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Changed || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
             {
                 var objectPath = curDiff.path;
                 if (objectPath == null) continue;
+
+                if (curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Added || curDiff.type === EVUI.Modules.Observers.ObservedObjectChangeType.Removed)
+                {
+                    if (EVUI.Modules.Core.Utils.isObject(curDiff.newValue) === false && EVUI.Modules.Core.Utils.isObject(curDiff.originalValue) === false)
+                    {
+                        curDiff.type = EVUI.Modules.Observers.ObservedObjectChangeType.Changed;
+                    }
+                }
 
                 //first see if the unmodified path is a match
                 var curBinding = getBindingContentList(allBindings, objectPath);
@@ -5724,6 +5739,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var key = attributes.key;
         var name = attributes.templateName;
         var src = attributes.src;
+        var elementTemplate = attributes.elementTemplateName;
 
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === false)
         {
@@ -5771,6 +5787,11 @@ EVUI.Modules.Binding.BindingController = function (services)
             attributeTemplate.templateName = name;
         }
 
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(elementTemplate) === false && parentHandle != null && EVUI.Modules.Core.Utils.isArray(parentHandle.currentState.source[path]))
+        {
+            attributeTemplate.templateName = elementTemplate;
+        }
+
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(src) === false)
         {
             if (typeof attributeTemplate.htmlContent === "string")
@@ -5803,18 +5824,19 @@ EVUI.Modules.Binding.BindingController = function (services)
     };
 
     /**Gets all the attribute values needed to make a child binding based off of the markup of an Element's attributes.
-    @param {Element} element The element to extract the elements from.
+    @param {Element} element The element to extract the attributes from.
     @returns {BindingElementAttributes} */
     var getBindingAttributes = function (element)
     {
         if (element == null) return null;
-        var attrs = EVUI.Modules.Core.Utils.getElementAttributes(element);
+
         var bindingAttributes = new BindingElementAttributes();
-        bindingAttributes.key = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
-        bindingAttributes.mode = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_Mode);
-        bindingAttributes.templateName = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BindingTemplateName);
-        bindingAttributes.sourcePath = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_BoundObj);
-        bindingAttributes.src = attrs.getValue(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
+        bindingAttributes.key = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentKey);
+        bindingAttributes.mode = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_Mode);
+        bindingAttributes.templateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BindingTemplate);
+        bindingAttributes.sourcePath = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_BoundObj);
+        bindingAttributes.src = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_HtmlContentUrl);
+        bindingAttributes.elementTemplateName = element.getAttribute(EVUI.Modules.Binding.Constants.Attr_ElementBindingTemplate);
 
         return bindingAttributes;
     };
@@ -6208,6 +6230,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         wrapper.getValidElement = getValidElement;
         wrapper.triggerUpdate = triggerUpdate;
         wrapper.toDomNode = toDomNode;
+        wrapper.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         return wrapper;
     };
@@ -6373,6 +6396,9 @@ EVUI.Modules.Binding.BindingController = function (services)
         return result;
     };
 
+    /**Gets a path for a property that only contains "." to separate values instead of brackets (if there were any).
+    @param {String} path The path to normalize.
+    @returns {String}*/
     var getNormalizedPath = function (path)
     {
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(path) === true) return path;
@@ -6385,6 +6411,10 @@ EVUI.Modules.Binding.BindingController = function (services)
     /****************************************************************************EVENT DISPATCH HANDLING******************************************************************************************** */
 
 
+    /**Calculates the hash code of an invocation of a function as an event handler.
+    @param {BinidngSession} session The session in progress.
+    @param {EVUI.Modules.Binding.BoundProperty} boundProperty The property being bound.
+    @returns*/
     var getInvocationHash = function (session, boundProperty)
     {
         return EVUI.Modules.Core.Utils.getHashCode(_salt + session.bindingHandle.id + ":" + boundProperty.path).toString(36);
@@ -6403,7 +6433,7 @@ EVUI.Modules.Binding.BindingController = function (services)
         var replacementValue = "$evui.dispatch(event, \`" + hashKey + "\`)";
 
         //look to see if we don't have the same handler there already
-        var existing = _invocationDictionary[hashKey];
+        var existing = EVUI.Modules.Binding.BindingController.BoundEvents[hashKey];
         if (existing != null)
         {
             if (existing.handler === fn)
@@ -6468,7 +6498,7 @@ EVUI.Modules.Binding.BindingController = function (services)
             }
         };
 
-        _invocationDictionary[handle.hashKey] = handle;
+        EVUI.Modules.Binding.BindingController.BoundEvents[handle.hashKey] = handle;
         session.bindingHandle.dispatchHandles.push(handle);
 
         return replacementValue;
@@ -6499,7 +6529,7 @@ EVUI.Modules.Binding.BindingController = function (services)
     @returns {Any}*/
     var invokeHandle = function (eventArgs, handleHash)
     {
-        var dispatchHandle = _invocationDictionary[handleHash];
+        var dispatchHandle = EVUI.Modules.Binding.BindingController.BoundEvents[handleHash];
         if (dispatchHandle == null)
         {
             var logMessage = "Dispatch function for event " + eventArgs.type + " element " + getElementMoniker(eventArgs.currentTarget) + " could not be found.";
@@ -6801,6 +6831,10 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         /**Function for turning a DomTreeElement into a DOM Node object.*/
         this.toDomNode = null;
+
+        /**Controller's bubbling events manager.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = null;
     };
 
     /**Container for all things related to an active Binding in progress.
@@ -6959,6 +6993,10 @@ EVUI.Modules.Binding.BindingController = function (services)
         /**String. A combination of BindingMode and Insertion mode to give the Binding.
         @type {String}*/
         this.mode = null;
+
+        /**String. The name of the BindingTemplate to use if the item being bound is an array of elements.
+        @type {String}*/
+        this.elementTemplateName = null;
     };
 
     /**Represents the bare minimum amount of information needed to make a child Binding.
@@ -7039,7 +7077,7 @@ EVUI.Modules.Binding.BindingController = function (services)
 
         this.invocationSites = [];
 
-        if (_invocationDictionary[this.hashKey] === this) delete _invocationDictionary[this.hashKey];
+        if (EVUI.Modules.Binding.BindingController.BoundEvents[this.hashKey] === this) delete EVUI.Modules.Binding.BindingController.BoundEvents[this.hashKey];
     };
 
     /**Represents a location in markup where a BindingDispatchHandle was invoked from.
@@ -7310,6 +7348,15 @@ EVUI.Modules.Binding.BindingController = function (services)
     cacheObjectKeys();
     ensureServices();
 };
+
+/**Object. A dictionary mapping hash codes to a particular event handler for a bound element.
+@type {Object}*/
+Object.defineProperty(EVUI.Modules.Binding.BindingController, "BoundEvents", {
+    value: {},
+    writable: false,
+    enumerable: true,
+    configuable: false
+});
 
 /**A container for Html content that is stored in the BindingController that can be referenced by its key in Bindings so that the same Html can be re-used and referenced in multiple places.
 @class*/
@@ -7611,14 +7658,14 @@ EVUI.Modules.Binding.Binding = function (handle)
     Object.defineProperty(this, "boundContentFragment", {
         get: function ()
         {
-            if (_handle.currentState.boundTemplateFragment != null) return _handle.currentState.boundTemplateFragment;
+            if (_handle.currentState.boundContentFragment != null) return _handle.currentState.boundContentFragment;
 
             if (_handle.currentState.boundContentTree != null && _handle.newStateBound === false)
             {
-                _handle.currentState.boundTemplateFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
+                _handle.currentState.boundContentFragment = _handle.wrapper.toDomNode(_handle.currentState.boundContentTree, _handle); //_handle.currentState.boundContentTree.toNode();
             }
 
-            return _handle.currentState.boundTemplateFragment;
+            return _handle.currentState.boundContentFragment;
         },
         configurable: false,
         enumerable: true
@@ -7798,11 +7845,11 @@ EVUI.Modules.Binding.Binding = function (handle)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -7817,6 +7864,28 @@ EVUI.Modules.Binding.Binding = function (handle)
     /**Event that fires when the binding operation is complete and the complete content and all its children has been injected.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBound = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.wrapper.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.wrapper.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Searches all the children underneath this Binding using the predicate function to find a match.
@@ -7941,11 +8010,11 @@ EVUI.Modules.Binding.BindingTemplate = function (templateEntry)
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetHtmlContent = null;
 
-    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent
+    /**Event that fires when the htmlContent has been finalized and the bindings in the htmlContent and have been pulled from the hmtmlContent and been populated with values from the its source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onSetBindings = null;
 
-    /**Event that fires when the htmlContent has been populated with the values from the bound object.
+    /**Event that fires when the htmlContent has been populated with the values from the source object.
     @type {EVUI.Modules.Binding.Constants.Fn_BindingEventHandler}*/
     this.onBindHtmlContent = null;
 
@@ -8245,7 +8314,7 @@ EVUI.Modules.Binding.Binder = null;
 })();
 
 /**Constructor reference for the BidningController.*/
-//EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
+EVUI.Constructors.Binding = EVUI.Modules.Binding.BindingController;
 
 Object.freeze(EVUI.Modules.Binding)
 
@@ -8318,7 +8387,7 @@ Object.freeze(EVUI.Modules.Binding);
 
 
 /********************************************************Core.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -8346,22 +8415,6 @@ EVUI.Modules.Core.Settings.loggingEnabled = true;
 /**Function. An alternate logging function to call in the event LoggingEnabled is set to false.
 @param {String} message The message to log.*/
 EVUI.Modules.Core.Settings.alternateLoggingFunction = function (message) { };
-
-/**Boolean. Whether or not EventUI can emit debug messages. True by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.debug = true;
-
-/**Boolean. Whether or not to trace events triggered by the EventManager. False by default.
- @type {Boolean}*/
-EVUI.Modules.Core.Settings.traceEvents = false;
-
-/**Boolean. Whether or not to trace iframe message sends and responses by the IFrameMessenger. False by default.
- @type {Boolean}*/
-EVUI.Modules.Core.Settings.traceIFrames = false;
-
-/**Boolean. If a message comes from an iframe with a white-listed origin, it will automatically be added as a child of the iframeManager. True by default.
-@type {Boolean}*/
-EVUI.Modules.Core.Settings.autoAddIncomingIFrames = true;
 
 /**Number. When an EventStream is running, this is the number of sequential steps that can be executed by an instance of an EventStream before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 50 by default.
 @type {Number}*/
@@ -8634,6 +8687,7 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
     var initEx = null;
     var initDone = false;
     var initLoadDone = false;
+    var initEventsSet = false;
 
     if (typeof (window) !== "undefined")
     {
@@ -8673,6 +8727,8 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
                     //detach event handlers before doing anything
                     document.removeEventListener("DOMContentLoaded", go);
                     window.removeEventListener("load", go);
+
+                    initEventsSet = false;
                 }
 
                 initLoadDone = true;
@@ -8726,10 +8782,12 @@ if (EVUI.Modules.Core.Initializers == null) EVUI.Modules.Core.Initializers = [];
             }
             else
             {
-                if (isDOM === true)
+                if (isDOM === true && initEventsSet === false)
                 {
                     document.addEventListener("DOMContentLoaded", go);
                     window.addEventListener("load", go);
+
+                    initEventsSet = true;
                 }
                 else
                 {
@@ -9508,7 +9566,17 @@ EVUI.Modules.Core.Utils.getValuePathSegments = function (propertyPath)
 
     //check the cache for the resolved path first - if we already did this path, just return a copy of the path's array
     var existing = EVUI.Modules.Core.Utils.PathCache[propertyPath];
-    if (existing != null) return existing.slice();
+    if (existing != null)
+    {
+        try //in some rare cases paths that are the names of the properties of the Object prototype can get 'pulled' from the cache if they haven't been added before, in which case they won't have a slice method, so we let it fail and fall through to the code that will add it to the cache (and it won't fail again)
+        {
+            return existing.slice();
+        }
+        catch (ex)
+        {
+            //do nothing, we want the code below to execute if this block gets hit
+        }
+    }
 
     var segs = [];
 
@@ -9708,22 +9776,12 @@ $evui.isObject = function (o)
 @param {Array} arr The object to test.
 @returns {Boolean}*/
 EVUI.Modules.Core.Utils.isArray = function (arr)
-{
-    if (arr == null) return false;
-
-    var arrType = typeof arr;
-    if (arrType === "string" || arrType === "function") return false;
+{    
+    //note: this is an ancient function that used to have a looser definition of what 'is' an array, but that led to false positives on plain objects that were not arrays, so it got stripped down to the most basic (and reliable) check.
 
     if (Array.isArray(arr) === true) return true;
 
-    if (typeof arr.length === "number")
-    {
-        return true;
-    }
-    else
-    {    
-        return false;
-    }
+    return false;
 };
 
 /**Determines if an object can be treated like an array, but not necessarily have the full compliment of Array's prototype functions.
@@ -9941,6 +9999,14 @@ EVUI.Modules.Core.Utils.isjQuery = function (object)
 EVUI.Modules.Core.Utils.isElement = function (object)
 {
     return object instanceof Element;
+};
+
+/**Checks to see if an object is derived from an Element-derived object.
+@param {Object} object The object to check.
+@returns {Boolean}*/
+$evui.isElement = function (object)
+{
+    return EVUI.Modules.Core.Utils.isElement(object);
 };
 
 
@@ -10528,7 +10594,7 @@ Object.freeze(EVUI.Modules.Core.Utils);
 
 
 /********************************************************Diff.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -11746,7 +11812,7 @@ Object.freeze(EVUI.Modules.Diff);
 
 
 /********************************************************Dom.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -11875,9 +11941,10 @@ EVUI.Modules.Dom.ControlInfo = function (id, attributes)
 @param {HTMLElement|HTMLElement[]|String|JQuery} elementsOrCssSelector Either an array of HTMLElements, a single HTMLElement, a jQuery object, a CSS selector, or a string of HTML.
 @param {HTMLElement|JQuery} context A context node used to limit the scope of the search.
 @class*/
-EVUI.Modules.Dom.DomHelper = function ()
+EVUI.Modules.Dom.DomHelper = (function ()
 {
     var _domMetadataPropName = null;
+    var _snakeCaseRegex = /-[A-Za-z]{1}/gi;
 
     /** Utility object for common DOM manipulation.
     @param {HTMLElement|HTMLElement[]|String|JQuery} elementsOrCssSelector Either an array of HTMLElements, a single HTMLElement, a jQuery object, a CSS selector, or a string of HTML.
@@ -12363,6 +12430,78 @@ EVUI.Modules.Dom.DomHelper = function ()
         }
     };
 
+    /**Either gets the computed style value of the first matching element, or sets CSS properties on a variety 
+    @param {String|Object} propName Either the name of the CSS property to get or set, or an object containing the properties to set.
+    @param {String|Number} propValue The value to set a CSS property to.*/
+    DomHelper.prototype.css = function (propName, propValue)
+    {
+        if (this.elements.length === 0) return;
+        if (typeof propName === "string") //either getting or setting a CSS property value
+        {
+            propName = normalizeStylePropertyName(propName); //normalize snake-case to camelCase
+            if (propName == null) return;
+
+            if (typeof propValue === "undefined") //no value provided, we are getting a vaue
+            {
+                try
+                {
+                    return getComputedStyle(this.elements[0])[propName]
+                }
+                catch (ex)
+                {
+                    return;
+                }
+            }
+            else //value provided, set for all elements
+            {
+                applyToAll(this.elements, function (curEle)
+                {
+                    if (curEle.style == null) return;
+                    curEle.style[propName] = propValue;
+                });
+            }
+        }
+        else if (EVUI.Modules.Core.Utils.isObject(propName) === true) //we were passed an object of key-value pairs of CSS properties to populate
+        {
+            //build a dictionary and array list of camelCase properties and their respective values
+            var settingsObj = {};
+            var settingsProps = [];
+            var numProps = 0;
+            for (var prop in propName)
+            {
+                var camelCaseProp = normalizeStylePropertyName(prop);
+                if (prop == null) continue;
+
+                settingsObj[camelCaseProp] = propName[prop];
+                numProps = settingsProps.push(camelCaseProp);
+            }
+
+            //set all values for all elements
+            applyToAll(this.elements, function (ele)
+            {
+                if (ele.style == null) return;
+
+                for (var x = 0; x < numProps; x++)
+                {
+                    var curProp = settingsProps[x]
+                    ele.style[curProp] = settingsObj[curProp];
+                }
+            });
+        }
+    };
+
+    /**Turns a snake-case string into a camel case string. 
+    @param {String} propName The string to convert.
+    @returns {String}*/
+    var normalizeStylePropertyName = function (propName)
+    {
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(propName) === true) return null;
+        return propName.replace(_snakeCaseRegex, function (value)
+        {
+            return value.substring(1, value.length).toUpperCase();
+        })
+    };
+
     /**Performs an operation on the set of elements pertaining to a CSS class.
     @param {Element[]} elements The elements that are the target of the class operation.
     @param {String|String[]} cssClasses The CSS classes that are the subject of the operation.
@@ -12753,7 +12892,7 @@ EVUI.Modules.Dom.DomHelper = function ()
     }
 
     return DomHelper;
-}();
+}());
 
 /**The current bounds of the element relative to the entire document using the current style and the outerWidth and outerHeight functions.
 @class*/
@@ -12813,7 +12952,7 @@ Object.freeze(EVUI.Modules.Dom);
 
 
 /********************************************************DomEvents.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -13809,41 +13948,9 @@ EVUI.Modules.DomEvents.AsyncDomEventArgs = function ()
 
 Object.freeze(EVUI.Modules.DomEvents);
 
-/**Adds an event listener to the stack of managed async event handlers.
-@param {EventTarget} eventTarget The target to attach the event to.
-@param {String} type The type of event to listen for.
-@param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that will handle the event.
-@param {EVUI.Modules.DomEvents.EventOptions} options The options to change the behavior of the event handler.*/
-$evui.addAsyncEventListener = function (eventTarget, type, listener, options)
-{
-    return EVUI.Modules.DomEvents.AsyncDomEventManager.addAsyncEventListener(eventTarget, type, listener, options);
-};
-
-/**Removes an event listener from the stack of managed async event handlers.
-@param {EventTarget} eventTarget The target to remove the event from.
-@param {String} type The type of event that the listener is listening for.
-@param {EVUI.Modules.DomEvents.Constants.Fn_EventHandler} listener The function that was listening for the event.
-@param {EVUI.Modules.DomEvents.EventOptions} options Options used to change the behavior of the event listener.
-@returns {Boolean}*/
-$evui.removeAsyncEventListener = function (eventTarget, type, listener, options)
-{
-    return EVUI.Modules.DomEvents.AsyncDomEventManager.removeAsyncEventListener(eventTarget, type, listener, options);
-};
-
-/**Awaitable. Dispatches an event to the EventTarget using the normal browser EventTarget dispatching API. The Promise resolves once the last event handler on the last target in the composed path has been executed.
-@param {EventTarget} eventTarget The target to dispatch the event from.
-@param {Event} dispatchArgs The browser Event object of the event to fire.
-@returns {Promise}*/
-$evui.dispatchAsyncEvent = function (eventTarget, event)
-{
-    return EVUI.Modules.DomEvents.AsyncDomEventManager.dispatchAsyncEvent(eventTarget, event);
-};
-
-Object.freeze(EVUI.Modules.DomEvents);
-
 
 /********************************************************DomTree.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -16475,7 +16582,7 @@ Object.freeze(EVUI.Modules.DomTree);
 
 
 /********************************************************Enums.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -16647,7 +16754,8 @@ EVUI.Modules.Enums.EnumValueGetter = function ()
             }
         }
 
-        if (moduleEntry == null || constValueName == null) return undefined;
+        if (moduleEntry == null) return undefined;
+        if (typeof constValueName !== "string") return moduleEntry.constants.enumObj;
         return moduleEntry.constants.values[constValueName.toLowerCase()];
     };
 
@@ -17067,7 +17175,7 @@ Object.freeze(EVUI.Modules.Enums);
 
 
 /********************************************************Events.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -17424,21 +17532,6 @@ EVUI.Modules.Events.EventManager = function ()
         return session;
     };
 
-    /**Logs a tracing message about the triggering and handling of an event.
-    @param {EVUI.Modules.Events.EventTriggerArgs} triggerArgs The arguments used to trigger the event.
-    @param {InternalEventListener} eventListener An instance of InternalEventListener.*/
-    var trace = function (triggerArgs, eventListener)
-    {
-        if (EVUI.Modules.Core.Settings.traceEvents === false) return;
-
-        var handlerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventListener.handlerName) ? "unknown" : eventListener.handlerName;
-        var triggerName = EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(triggerArgs.triggerName) ? "unknown" : triggerArgs.triggerName;
-
-        var traceMessage = "BTMTRACE: Event \"" + triggerArgs.eventName + "\": (\"" + triggerName + "\") => \"" + handlerName + "\"";
-
-        EVUI.Modules.Core.Utils.log(traceMessage);
-    };
-
     /**Queues the EventSession and dispatches a new event to trigger the new EventStream.
     @param {EventSession} session The session to execute.*/
     var launchEvent = function (session)
@@ -17552,7 +17645,6 @@ EVUI.Modules.Events.EventManager = function ()
             handler: function (eventManagerArgs)
             {
                 if (typeof curListener.eventListener.handler !== "function" || curListener.mode === EventListenerMode.Removed) return;
-                trace(session.triggerArgs, eventManagerArgs.listener);
 
                 return eventManagerArgs.listener.handler(eventManagerArgs);
             }
@@ -17911,7 +18003,7 @@ Object.freeze(EVUI.Modules.Events);
 
 
 /********************************************************EventStream.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -18049,7 +18141,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
     this.context = null;
 
     /**Object. A BubblingEventsManager that bubbling events will be drawn from during the EventStream's execution.
-    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    @type {EVUI.Modules.EventStream.BubblingEventManager|EVUI.Modules.EventStream.BubblingEventManager[]}*/
     this.bubblingEvents = null;
 
     /**Number. When the EventStream is running, this is the number of sequential steps that can be executed before introducing a shot timeout to free up the thread to allow other processes to continue, otherwise an infinite step loop (which is driven by promises) will lock the thread. Small numbers will slow down the EventStream, high numbers may result in long thread locks. 250 by default.
@@ -18146,13 +18238,11 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (this.reset() === false) return false;
 
         _status = EVUI.Modules.EventStream.EventStreamStatus.Working;
-
-        //kick off the process
         triggerAsyncCall(function ()
         {
             _currentStep = _sequence[0];
             executeStep(_sequence, 0);
-        }, 0);
+        });        
 
         return true;
     };
@@ -18296,14 +18386,19 @@ EVUI.Modules.EventStream.EventStream = function (config)
         }
         else //we were likely paused by the event args, so the event handler was firing when we paused, so just start the next step
         {
-            if (_eventExecuting === false)
+            if (_eventExecuting === false) //if the event code has exited
             {
                 var index = _pausedStepIndex;
                 _pausedStepIndex = -1;
 
-                triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                //trigger the bubblinf events for the step that was paused (which will always be 1 less than the pausedStepIndex, which is the index of the paused step + 1)
+                triggerBubblingEvents(_sequence[index - 1], function ()
+                {
+                    //call the next step
+                    triggerAsyncCall(function () { executeStep(_sequence, index) }, 0);
+                });
             }
-            else
+            else //still executing an event handler
             {
                 _resumedWhileEventExecuting = true;
             }
@@ -18432,7 +18527,7 @@ EVUI.Modules.EventStream.EventStream = function (config)
             }
 
             if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.key) === true) streamStep.key = EVUI.Modules.Core.Utils.makeGuid();
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.EventKey + ")"
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(streamStep.name) === true) streamStep.name = "Step " + _sequence.length + " (" + streamStep.key + ")"
         }
         else
         {
@@ -18489,6 +18584,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (typeof handlerOrKey === "function")
         {
             handler = handlerOrKey;
+            handlerOrKey = null;
+
             handlerSet = true;
         }
         else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
@@ -18499,16 +18596,25 @@ EVUI.Modules.EventStream.EventStream = function (config)
         if (handlerSet === false && typeof handlerOrName === "function")
         {
             handler = handlerOrName;
+            handlerOrName = null;
+
             handlerSet = true;
         }
-        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrKey) === false)
+        else if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === false)
         {
             name = handlerOrName;
+        }
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(handlerOrName) === true && EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(key) === false)
+        {
+            name = key;
         }
 
         if (handlerSet === false && typeof handlerOrTimeout === "function")
         {
             handler = handlerOrTimeout;
+            handlerOrTimeout = null;
+
             handlerSet = true;
         }
         else if (typeof handlerOrTimeout === "number")
@@ -18735,13 +18841,34 @@ EVUI.Modules.EventStream.EventStream = function (config)
     @param {Function} callback A callback function to call once the sub EventStream completes.*/
     var triggerBubblingEvents = function (step, callback)
     {
-        if (_self.bubblingEvents == null || typeof _self.bubblingEvents.getBubblingEvents !== "function") return callback();
+        if (_self.bubblingEvents == null || (typeof _self.bubblingEvents.getBubblingEvents !== "function" && EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === false)) return callback();
 
         var bubblingEvents = null;
 
         try
         {
-            bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            if (EVUI.Modules.Core.Utils.isArray(_self.bubblingEvents) === true)
+            {
+                bubblingEvents = [];
+                var numBubblers = _self.bubblingEvents.length;
+                for (var x = 0; x < numBubblers; x++)
+                {
+                    var curBubbler = _self.bubblingEvents[x];
+                    if (EVUI.Modules.Core.Utils.isObject(curBubbler) === false) continue;
+                    if (typeof curBubbler.getBubblingEvents !== "function") continue;
+
+                    var curBubblingEvents = curBubbler.getBubblingEvents(step);
+                    var numEvents = (curBubblingEvents == null) ? 0 : curBubblingEvents.length;
+                    for (var y = 0; y < numEvents; y++)
+                    {
+                        bubblingEvents.push(curBubblingEvents[y]);
+                    }
+                }
+            }
+            else
+            {
+                bubblingEvents = _self.bubblingEvents.getBubblingEvents(step);
+            }           
         }
         catch (ex)
         {
@@ -18754,52 +18881,60 @@ EVUI.Modules.EventStream.EventStream = function (config)
         var numEvents = bubblingEvents.length;
         if (numEvents === 0) return callback();
 
-        var config = new EVUI.Modules.EventStream.EventStreamConfig();
-        config.context = _self.context;
-        config.canSeek = _self.canSeek;
-        config.endExecutionOnEventHandlerCrash = true;
-        config.eventState = _self.eventState;
-        config.processReturnedEventArgs = _self.processReturnedEventArgs;
-        config.skipInterval = _self.skipInterval;
-        config.extendSteps = _self.extendSteps;
-        config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
-        config.onComplete = function () { callback(); } //call the callback in the complete handler, which will fire no matter what.
-
-        var subStream = new EVUI.Modules.EventStream.EventStream(config);
-
-        //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
-        subStream.processInjectedEventArgs = function (eventArgs)
+        var p = new Promise(function (resolve)
         {
-            var processedArgs = _self.processInjectedEventArgs(eventArgs);
-            if (_self.canSeek === true && processedArgs.seek != null)
+            var config = new EVUI.Modules.EventStream.EventStreamConfig();
+            config.context = _self.context;
+            config.canSeek = _self.canSeek;
+            config.endExecutionOnEventHandlerCrash = true;
+            config.eventState = _self.eventState;
+            config.processReturnedEventArgs = _self.processReturnedEventArgs;
+            config.skipInterval = _self.skipInterval;
+            config.extendSteps = _self.extendSteps;
+            config.timeout = (typeof _self.timeout === "number") ? _self.timeout : -1;
+            config.onComplete = function () { resolve(); } //call the callback in the complete handler, which will fire no matter what.
+
+            var subStream = new EVUI.Modules.EventStream.EventStream(config);
+
+            //set up an option on the seek function to optionally seek back in the parent stream instead of the sub stream
+            subStream.processInjectedEventArgs = function (eventArgs)
             {
-                processedArgs.seek = function (indexOrKey, seekInParent)
+                var processedArgs = _self.processInjectedEventArgs(eventArgs);
+                if (_self.canSeek === true && processedArgs.seek != null)
                 {
-                    if (seekInParent === true)
+                    processedArgs.seek = function (indexOrKey, seekInParent)
                     {
-                        subStream.cancel();
-                        _self.seek(indexOrKey);
-                    }
-                    else
-                    {
-                        subStream.seek(indexOrKey);
-                    }
-                };
+                        if (seekInParent === true)
+                        {
+                            subStream.cancel();
+                            _self.seek(indexOrKey);
+                        }
+                        else
+                        {
+                            subStream.seek(indexOrKey);
+                        }
+                    };
+                }
+
+                return processedArgs;
+            };
+
+            for (var x = 0; x < numEvents; x++)
+            {
+                var curEvent = bubblingEvents[x];
+                if (curEvent == null) continue;
+
+                subStream.addStep(makeBubblingStep(step, curEvent));
             }
 
-            return processedArgs;
-        };
+            //execute the sub-stream
+            subStream.execute();
+        });
 
-        for (var x = 0; x < numEvents; x++)
+        p.then(function ()
         {
-            var curEvent = bubblingEvents[x];
-            if (curEvent == null) continue;
-
-            subStream.addStep(makeBubblingStep(step, curEvent));
-        }
-
-        //execute the sub-stream
-        subStream.execute();
+            callback();
+        });
     };
 
     /**Makes a EventStreamStep representing the "bubbling" events that come off of real events via being added by addEventListener.
@@ -18902,6 +19037,8 @@ EVUI.Modules.EventStream.EventStream = function (config)
         eventArgs.totalSteps = sequence.length;
         eventArgs.status = _self.getStatus();
         eventArgs.error = error;
+        eventArgs.state = _self.eventState;
+
         attachEvents(eventArgs, step);
 
         if (typeof _self.processInjectedEventArgs == "function" && step.type !== EVUI.Modules.EventStream.EventStreamStepType.Job) //there is a "ProcessEventArgs" override function that is going to be used to make custom event args.
@@ -19823,30 +19960,29 @@ EVUI.Modules.EventStream.EventStreamEventListenerOptions = function ()
     @type {Number}*/
     this.priority = null;
 
-    /**Boolean. Whether or not this event should fire after a local or global event.
+    /**Boolean. The type of event that should cause this event to fire.
     @type {Boolean}*/
-    this.isGlobal = false;
+    this.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
 };
 
 /**Controller for managing a stack of secondary event handlers that "bubble" in order of addition after the primary event has executed by an EventStream. Assign to an EventStream's bubblingEvents property to use.
 @class*/
-EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
+EVUI.Modules.EventStream.BubblingEventManager = function ()
 {
-    var _eventsDictionary = {}; //the internal registry of events. The keys are event names, and the values are arrays of InternalEventListners.
-    var _forceGlobal = forceGlobal;
+    var _eventsDictionary = {}; //the internal registry of events. The keys are event keys, and the values are arrays of InternalEventListners.
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventKey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.EventStream.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventKey, handler, options)
     {
         var listener = new InternalEventListener();
 
-        if (EVUI.Modules.Core.Utils.instanceOf(eventName, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
+        if (EVUI.Modules.Core.Utils.instanceOf(eventKey, EVUI.Modules.EventStream.EventStreamEventListener) === true) //handed a complete event listener object
         {
-            listener.listener = eventName;
+            listener.listener = eventKey;
 
             if (handler != null && typeof handler === "object") //second parameter could be the options object
             {
@@ -19869,11 +20005,11 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 listener.options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
             }
 
-            listener.options.immutable = eventName.immutable;
+            listener.options.immutable = eventKey.immutable;
         }
         else //handed normal parameters, make the listener object
         {
-            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventName) === true) throw Error("eventName must be a non-whitespace string.");
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(eventKey) === true) throw Error("eventKey must be a non-whitespace string.");
             if (typeof handler !== "function") throw Error("Function expected.");
             if (options == null || typeof options !== "object")
             {
@@ -19884,12 +20020,21 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 options = EVUI.Modules.Core.Utils.shallowExtend(new EVUI.Modules.EventStream.EventStreamEventListenerOptions(), options);
             }
 
-            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventName, handler, options.priority, options.immutable);
+            var eventListener = new EVUI.Modules.EventStream.EventStreamEventListener(eventKey, handler, options.priority, options.immutable);
             listener.listener = eventListener;
             listener.options = options;
         }
 
-        if (_forceGlobal === true) options.isGlobal = true;
+        //set the type of event that should raise this event
+        var lowerEventType = typeof options.eventType === "string" ? options.eventType.toLowerCase() : options.eventType;
+        if (lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent && lowerEventType !== EVUI.Modules.EventStream.EventStreamEventType.Event)
+        {
+            options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+        }
+        else
+        {
+            options.eventType = lowerEventType;
+        }       
 
         //add the listener to the events dictionary
         var existingEvents = _eventsDictionary[listener.listener.eventName];
@@ -19933,12 +20078,12 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
             //sort the list into global and non-global events
             if (step.type === EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent)
             {
-                if (curEvent.options.isGlobal === false) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent) continue;
                 eventsToFire.push(curEvent);
             }
             else 
             {
-                if (curEvent.options.isGlobal === true) continue;
+                if (curEvent.options.eventType !== EVUI.Modules.EventStream.EventStreamEventType.Event) continue;
                 eventsToFire.push(curEvent);
             }
 
@@ -19980,13 +20125,13 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
         return listeners;
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an event listener based on its event name, its id, or its handling function.
+    @param {String} eventKeyOrId The name or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventKeyOrId, handler)
     {
-        var existingList = _eventsDictionary[eventNameOrId];
+        var existingList = _eventsDictionary[eventKeyOrId];
         if (existingList != null)
         {
             var removed = false;
@@ -20003,7 +20148,7 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
 
                     if (numInList === 0)
                     {
-                        delete _eventsDictionary[eventNameOrId];
+                        delete _eventsDictionary[eventKeyOrId];
                         break;
                     }
                 }
@@ -20022,14 +20167,14 @@ EVUI.Modules.EventStream.BubblingEventManager = function (forceGlobal)
                 for (var x = 0; x < numListeners; x++)
                 {
                     var curListener = curListeners[x];
-                    if (curListener.listener.immutable === false && (curListener.handlerId === eventNameOrId || curListener.listener.handler === handler))
+                    if (curListener.listener.immutable === false && (curListener.handlerId === eventKeyOrId || curListener.listener.handler === handler))
                     {
                         curListeners.splice(x, 1);
                         numListeners--;
 
                         if (numListeners === 0)
                         {
-                            delete _eventsDictionary[eventNameOrId];
+                            delete _eventsDictionary[eventKeyOrId];
                         }
 
                         removed = true;
@@ -20106,7 +20251,7 @@ EVUI.Modules.EventStream.EventStreamStepType =
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
     Event: "event",
     /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
-    GlobalEvent: "globalEvent",
+    GlobalEvent: "global",
 
     /**Takes a string and returns a correct EventStreamStepType.
     @method GetStepType
@@ -20124,6 +20269,16 @@ EVUI.Modules.EventStream.EventStreamStepType =
     }
 };
 
+/**Sets the behavior for the Handler function in a EventStreamStep.
+ @enum*/
+EVUI.Modules.EventStream.EventStreamEventType =
+{
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args).*/
+    Event: "event",
+    /**Function is executed and is passed an event args parameter (either the default args or a custom made set of args). Exactly the same as Event, but used to flag events that are on Global instances of objects and not local instances.*/
+    GlobalEvent: "global",
+}
+
 Object.freeze(EVUI.Modules.EventStream.EventStreamStepType);
 Object.freeze(EVUI.Modules.EventStream);
 
@@ -20133,7 +20288,7 @@ EVUI.Constructors.EventStream = EVUI.Modules.EventStream.EventStream;
 
 
 /********************************************************HtmlLoader.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -20199,6 +20354,10 @@ EVUI.Modules.HtmlLoader.Constants.Fn_GetPartials_Callback = function (loadReques
  @param {EVUI.Modules.HtmlLoader.HtmlPlaceholder} placeholderResult The details of the completed placeholder load.*/
 EVUI.Modules.HtmlLoader.Constants.Fn_GetPlaceholder_Callback = function (placeholderResult) { }
 
+/**Event handler definition for HtmlLoader events. 
+@param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadEventArgs} htmlLoaderEventArgs The event args from the HtmlLoaders.*/
+EVUI.Modules.HtmlLoader.Constants.Fn_HtmlLoaderEventHandler = function (htmlLoaderEventArgs) { };
+
 Object.freeze(EVUI.Modules.HtmlLoader.Constants)
 
 /**Controller for loading HTML, either as a bunch of small partial pieces of HTML or for loading larger placeholders which can also contain placeholders.
@@ -20218,6 +20377,10 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
     /**A counter to generate ID's for each load session.
     @type {Number}*/
     var _sessionIdCtr = 0;
+
+    /**The bubbling event manager used to attach additional events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
     /**Makes a simple GET request to get Html. The request defaults to a GET with a response type of "text". If a different response type is used, the result is translated back into a string.
     @param {EVUI.Modules.HtmlLoader.HtmlRequestArgs} htmlRequestArgsOrUrl The Url of the html or the arguments for getting the Html.
@@ -20436,7 +20599,29 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
                 resolve(results);
             })
         })
-    }
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.HtmlLoader.Constants.Fn_HtmlLoaderEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _entry.link.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _entry.link.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 
     /**Internal implementation of loading all placeholders currently present in the document (and optionally, all their children). 
     @param {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs|String} placeholderLoadArgs The value of a EVUI.Modules.HtmlLoaderController.Constants.Attr_PlaceholderID attribute or a graph of HtmlPlaceholderLoadArgs.
@@ -20964,6 +21149,7 @@ EVUI.Modules.HtmlLoader.HtmlLoaderController = function (services)
         var eventStream = new EVUI.Modules.EventStream.EventStream();
         session.eventStream = eventStream;
         session.eventStream.context = session.placeholderArgs;
+        session.eventStream.bubblingEvents = _bubblingEvents;
 
         //set basic event stream properties
         setUpEventStream(session, callback);
@@ -21715,7 +21901,7 @@ Object.freeze(EVUI.Modules.HtmlLoader);
 
 
 /********************************************************Http.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -21869,23 +22055,25 @@ EVUI.Modules.Http.HttpManager = function ()
         return copy;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Http.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventkey, handler, options)
     {
-        return _bubbler.addEventListener(eventName, handler, options);
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+        return _bubbler.addEventListener(eventkey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventkeyOrId, handler)
     {
-        return _bubbler.removeEventListener(eventNameOrId, handler);
+        return _bubbler.removeEventListener(eventkeyOrId, handler);
     };
 
     /**Builds the internal RequestInstance object that manages the lifetime of the XMLHttpRequest. Sets up the EventStream's function and setting overrides.
@@ -22024,7 +22212,7 @@ EVUI.Modules.Http.HttpManager = function ()
                     if (typeof requestArgs.timeout === "number" && requestArgs.timeout > 0) xhr.timeout = requestArgs.timeout;
 
                     //add all the headers
-                    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(requestArgs.headers) === true)
+                    if (EVUI.Modules.Core.Utils.isArray(requestArgs.headers) === true)
                     {
                         var numHeaders = requestArgs.headers.length;
                         for (var x = 0; x < numHeaders; x++)
@@ -22835,7 +23023,7 @@ Object.freeze(EVUI.Modules.Http);
 
 
 /********************************************************IFrames.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -22940,6 +23128,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     @type {Number}*/
     var _defaultAskTimeout = 5000;
 
+    /**Object. Manager for adding additional bubbling events.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Represents the union of all the objects required for the IFrameManager to manage parent and child Windows.
     @class*/
     var IFrameEntry = function ()
@@ -22980,6 +23172,10 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         /**An array of the message listeners attached to this IFrame.
         @type {EVUI.Modules.IFrames.IFrameMessageListener[]}*/
         this.messageHandlers = [];
+
+        /**The bubbling event manager used to add additional events to an Iframe.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**The origin of the URL associated with either the parent window or the iframe.
         @type {String}*/
@@ -23354,6 +23550,28 @@ EVUI.Modules.IFrames.IFrameManager = function ()
         return entry.iFrame;
     };
 
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
+
     /**Creates an IFrameHandle that contains the injectable functionality for the IFrame object.
     @param {EVUI.Modules.IFrames.IFrameAddRequest} addRequest The IFrameAddRequest used as the basis for the handle.
     @returns {IFrameHandle}*/
@@ -23600,14 +23818,6 @@ EVUI.Modules.IFrames.IFrameManager = function ()
                 var incomingIFrame = getIFrameFromContentWindow(messageEvent.source); //go find the iframe element on the page that sent the message
                 if (incomingIFrame == null) return; //couldn't find it, bail
 
-                if (EVUI.Modules.Core.Settings.autoAddIncomingIFrames === true) //if we're auto-adding iframes, register the new iframe with the manager.
-                {
-                    var addResult = _self.addIFrame(targetIframe);
-                    if (addResult == null) return; //adding failed, bail
-
-                    entry = getEntryFromContentWindow(messageEvent.source); //go find the "real" object we just added and use it
-                }
-
                 if (entry == null) //if we STILL don't have an entry, make a dummy one just so the event arguments object we make later has everything it needs to work properly
                 {
                     entry = makePlaceholderEntry(incomingIFrame);
@@ -23846,6 +24056,7 @@ EVUI.Modules.IFrames.IFrameManager = function ()
     {
         var es = new EVUI.Modules.EventStream.EventStream();
         es.context = messageSession.entry.iFrame;
+        es.bubblingEvents = [messageSession.entry.handle.bubblingEvents, _bubblingEvents];
 
         es.processInjectedEventArgs = function (eventArgs)
         {
@@ -24247,6 +24458,28 @@ EVUI.Modules.IFrames.IFrame = function (iframeHandle)
     {
         return _handle.remove();
     };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.IFrames.Constants.Fn_IFrameEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _handle.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _handle.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**The event arguments for when a message is sent or received.
@@ -24450,7 +24683,7 @@ Object.freeze(EVUI.Modules.IFrames);
 
 
 /********************************************************Observers.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -25458,7 +25691,7 @@ Object.freeze(EVUI.Modules.Observers);
 
 
 /********************************************************Panes.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
  * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -25482,18 +25715,24 @@ EVUI.Modules.Panes.Constants.Fn_LoadCallback = function (success) { };
 @param {Boolean} success Whether or not the operation completed successfully.*/
 EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback = function (success) { };
 
-EVUI.Modules.Panes.Constants.CSS_Position = "evui-position";
-EVUI.Modules.Panes.Constants.CSS_ClippedX = "evui-clipped-x";
-EVUI.Modules.Panes.Constants.CSS_ClippedY = "evui-clipped-y";
-EVUI.Modules.Panes.Constants.CSS_ScrollX = "evui-scroll-x";
-EVUI.Modules.Panes.Constants.CSS_ScrollY = "evui-scroll-y"
-EVUI.Modules.Panes.Constants.CSS_Flipped = "evui-flipped";
-EVUI.Modules.Panes.Constants.CSS_Moved = "evui-moved";
-EVUI.Modules.Panes.Constants.CSS_Resized = "evui-resized";
-EVUI.Modules.Panes.Constants.CSS_Backdrop = "evui-backdrop";
-EVUI.Modules.Panes.Constants.CSS_Transition_Show = "evui-transition-show";
-EVUI.Modules.Panes.Constants.CSS_Transition_Hide = "evui-transition-hide";
-EVUI.Modules.Panes.Constants.CSS_Transition_Adjust = "evui-transition-adjust";
+/**Function definition for the event handlers attached to Panes and the PaneManager.
+@param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The Pane's event args.*/
+EVUI.Modules.Panes.Constants.Fn_PaneEventHandler = function (paneEventArgs) { };
+
+EVUI.Modules.Panes.Constants.CSS_Pane_Style = "evui-pane-style";
+EVUI.Modules.Panes.Constants.CSS_Position = "evui-pane-position";
+EVUI.Modules.Panes.Constants.CSS_ClippedX = "evui-pane-clipped-x";
+EVUI.Modules.Panes.Constants.CSS_ClippedY = "evui-pane-clipped-y";
+EVUI.Modules.Panes.Constants.CSS_ScrollX = "evui-pane-scroll-x";
+EVUI.Modules.Panes.Constants.CSS_ScrollY = "evui-pane-scroll-y"
+EVUI.Modules.Panes.Constants.CSS_Flipped = "evui-pane-flipped";
+EVUI.Modules.Panes.Constants.CSS_Moved = "evui-pane-moved";
+EVUI.Modules.Panes.Constants.CSS_Resized = "evui-pane-resized";
+EVUI.Modules.Panes.Constants.CSS_Backdrop = "evui-pane-backdrop";
+EVUI.Modules.Panes.Constants.CSS_Transition_Show = "evui-pane-transition-show";
+EVUI.Modules.Panes.Constants.CSS_Transition_Hide = "evui-pane-transition-hide";
+EVUI.Modules.Panes.Constants.CSS_Transition_Move = "evui-pane-transition-move";
+EVUI.Modules.Panes.Constants.CSS_Transition_Resize = "evui-pane-transition-resize";
 
 /**String. The name of the "template" attribute for the Pane, used to define the initial behavior for a Pane if it is being created and shown from markup.
 @type {String}*/
@@ -25546,11 +25785,15 @@ EVUI.Modules.Panes.Constants.Event_OnShow = "show";
 EVUI.Modules.Panes.Constants.Event_OnHide = "hide";
 EVUI.Modules.Panes.Constants.Event_OnUnload = "unload";
 EVUI.Modules.Panes.Constants.Event_OnLoad = "load";
+EVUI.Modules.Panes.Constants.Event_OnMove = "move";
+EVUI.Modules.Panes.Constants.Event_OnResize = "resize";
 
 EVUI.Modules.Panes.Constants.Event_OnShown = "shown";
 EVUI.Modules.Panes.Constants.Event_OnHidden = "hidden";
 EVUI.Modules.Panes.Constants.Event_OnLoaded = "loaded";
 EVUI.Modules.Panes.Constants.Event_OnUnloaded = "unloaded";
+EVUI.Modules.Panes.Constants.Event_OnMoved = "moved";
+EVUI.Modules.Panes.Constants.Event_OnResized = "resized";
 
 EVUI.Modules.Panes.Constants.Event_OnInitialize = "init";
 EVUI.Modules.Panes.Constants.Event_OnPosition = "position";
@@ -25563,6 +25806,8 @@ EVUI.Modules.Panes.Constants.Job_Hide = "job.hide";
 EVUI.Modules.Panes.Constants.Job_InitialPosition = "job.initialposition";
 EVUI.Modules.Panes.Constants.Job_FinalPosition = "job.finalposition";
 EVUI.Modules.Panes.Constants.Job_Unload = "job.unload";
+EVUI.Modules.Panes.Constants.Job_Move = "job.move";
+EVUI.Modules.Panes.Constants.Job_Resize = "job.resize";
 
 EVUI.Modules.Panes.Constants.CssPrefix = "evui-pane";
 EVUI.Modules.Panes.Constants.StepPrefix = "evui.pane";
@@ -25693,6 +25938,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @type {String[]}*/
     var _unloadArgumentFilter = ["context"];
 
+    /**Manager for adding additional events to this controller.
+    @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+    var _bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
+
     /**Settings object for dependencies used by this Pane manager.
     @class*/
     var PaneSettings = function ()
@@ -25729,6 +25978,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Object. The EventStream doing the work of the operations for the Pane.
         @type {EVUI.Modules.EventStream.EventStream}*/
         this.eventStream = null;
+
+        /**Object. The bubbling event manager for this Pane.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
 
         /**Number. Bit flags indicating the current state of the Pane (initialized, loaded, etc).
         @type {Number}*/
@@ -25767,7 +26020,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         this.lastResolvedLoadArgs = null;
 
         /**Object. The last used set of resize settings used to position the Pane.
-        @type {EVUI.Modules.Panes.PaneResizeMoveArgs}*/
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
         this.lastResizeArgs = null;
 
         /**Number. The ID of the callback that is being used to toggle off a transition effect.
@@ -25789,6 +26042,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Object. Whether or not the Pane was removed from it's manager.
         @type {Boolean}*/
         this.removed = false;
+
+        /**String. The rules of the style tag that were inlined on the root element on the Pane.
+        @type {String}*/
+        this.inlinedStyle = null;
     };
 
 
@@ -25869,6 +26126,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.userUnloadArgs = null;
 
+        /**The user's arguments being used to move the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+        this.userMoveArgs = null;
+
+        /**The user's arguments being used to resize the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+        this.userResizeArgs = null;
+
         /**The arguments being used to show/load the Pane
         @type {EVUI.Modules.Panes.PaneShowArgs} */
         this.resolvedShowArgs = null;
@@ -25884,6 +26149,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**The arguments being used to hide the Pane.
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.resolvedUnloadArgs = null;
+
+        /**The arguments being used to move the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+        this.resolvedMoveArgs = null;
+
+        /**The arguments being used to resize the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+        this.resolvedResizeArgs = null;
 
         /**Boolean. Whether or not the EventStream should be canceled then restarted with a new chain of events.
         @type {Boolean}*/
@@ -25905,7 +26178,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {Number}*/
         this.callbackOrdinal = _callbackCounter++;
 
+        /**Any. The user's contextual information about the operation.
+        @type {Any}*/
         this.context = null;
+
+        /**Object. The PaneOperationSession that was queued to run after this one.
+        @type {PaneOperationSession}*/
+        this.queuedOpSession = null;
+
+        /**Whether or not this is a queued operation that is chaining off of a prior operation.
+        @type {Boolean}*/
+        this.isQueued = false;
     };
 
     var PaneEventArgsIntepretationResult = function ()
@@ -25941,11 +26224,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**Signals that a new EventStream should follow the first and have an aggregate callback sequence of both events.*/
         Continue: "continue",
         /**Signals that the callback has been queued (which is automatic) and nothing else should happen.*/
-        Queue: "queue",
+        QueueCallback: "queuecallback",
         /**Signals that the move steps should be added.*/
         Move: "move",
         /**Signals that the resize steps should be added.*/
-        Resize: "resize"
+        Resize: "resize",
+        /**Signals that the operation should be chained to start when the current operation ends.*/
+        Queue: "queue"
     };
 
     /**Object for managing the backdrop used by Panes.
@@ -26751,6 +27036,172 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
+    /**Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.movePane = function (paneID, paneMoveArgs, callback)
+    {
+        var paneEntry = null;
+
+        if (EVUI.Modules.Core.Utils.isObject(paneMoveArgs) === false)
+        {
+            throw Error("No move destination set.");
+        }
+        else
+        {
+            var hasTop = (typeof paneMoveArgs.top === "number");
+            var hasLeft = (typeof paneMoveArgs.left === "number");
+
+            if (hasTop === false && hasLeft === false) throw Error("Invalid move destination.");
+        }
+
+        if (typeof paneID === "string") //showing based on ID
+        {
+            paneEntry = getInternalPaneEntry(paneID);
+            if (paneEntry == null) throw Error("No pane exists with an id of \"" + paneID + "\"");
+        }       
+        else if (EVUI.Modules.Core.Utils.isObject(paneID) === true) //we have either a new pane to add or a reference to an existing pane
+        {
+            paneEntry = makeOrGetPane(paneID);
+        }
+        else
+        {
+            throw Error("String or object expected.")
+        }
+
+        if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
+        if (paneEntry.link.pane.isVisible === false) throw Error("Pane must be visible to be moved.");
+        if (paneEntry.link.currentOperation != null)
+        {
+            if (paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Unload || paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Hide)
+            {
+                throw Error("Pane is currently being hidden or unloaded and cannot be moved.");
+            }
+        }
+
+        var opSession = new PaneOperationSession();
+        opSession.entry = paneEntry;
+        opSession.action = EVUI.Modules.Panes.PaneAction.Move;
+        opSession.currentAction = EVUI.Modules.Panes.PaneAction.Move;
+        opSession.callback = (typeof callback === "function") ? callback : function (success) { };
+        opSession.userMoveArgs = paneMoveArgs;
+        opSession.resolvedMoveArgs = resolvePaneMoveArgs(paneEntry, paneMoveArgs);
+        performOperation(opSession);
+    };
+
+    /**Awaitable. Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @returns {Promise<Boolean>}*/
+    this.movePaneAsync = function (paneID, paneMoveArgs)
+    {
+        return new Promise(function (resolve)
+        {
+            _self.movePane(paneID, paneMoveArgs, function (success)
+            {
+                resolve(success);
+            });
+        });
+    };
+
+    /**Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.resizePane = function (paneID, paneResizeArgs, callback)
+    {
+        var paneEntry = null;
+
+        if (EVUI.Modules.Core.Utils.isObject(paneResizeArgs) === false)
+        {
+            throw Error("Object expected - no resize dimensions set.");
+        }
+        else
+        {
+            var hasTop = (typeof paneResizeArgs.top === "number");
+            var hasLeft = (typeof paneResizeArgs.left === "number");
+            var hasBottom = typeof paneResizeArgs.bottom === "number";
+            var hasRight = typeof paneResizeArgs.right === "number";
+
+            if (hasTop === false && hasLeft === false && hasBottom === false && hasRight === false) throw Error("Invalid resize dimensions.");
+        }
+
+        if (typeof paneID === "string") //showing based on ID
+        {
+            paneEntry = getInternalPaneEntry(paneID);
+            if (paneEntry == null) throw Error("No pane exists with an id of \"" + paneID + "\"");
+        }
+        else if (EVUI.Modules.Core.Utils.isObject(paneID) === true) //we have either a new pane to add or a reference to an existing pane
+        {
+            paneEntry = makeOrGetPane(paneID);
+        }
+        else
+        {
+            throw Error("String or object expected.")
+        }
+
+        if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
+        if (paneEntry.link.pane.isVisible === false) throw Error("Pane must be visible to be resized.");
+        if (paneEntry.link.currentOperation != null)
+        {
+            if (paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Unload || paneEntry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Hide)
+            {
+                throw Error("Pane is currently being hidden or unloaded and cannot be resized.");
+            }
+        }
+
+        if (paneResizeArgs == null) //if we had no show args, make blank ones
+        {
+            paneResizeArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+        }
+
+        var opSession = new PaneOperationSession();
+        opSession.entry = paneEntry;
+        opSession.action = EVUI.Modules.Panes.PaneAction.Resize;
+        opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resize;
+        opSession.callback = (typeof callback === "function") ? callback : function (success) { };
+        opSession.userResizeArgs = paneResizeArgs;
+        opSession.resolvedResizeArgs = resolvePaneResizeArgs(paneEntry, paneResizeArgs);
+        performOperation(opSession);
+    };
+
+    /**Awaitable. Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
+    this.resizePaneAsync = function (paneID, paneResizeArgs)
+    {
+        return new Promise(function (resolve)
+        {
+            _self.resizePane(paneID, paneResizeArgs, function (success)
+            {
+                resolve(success);
+            });
+        });
+    };
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
+
     /**************************************************************************************EVENTS*************************************************************************************************************/
 
     /**Global event that fires before the load operation begins for any Pane and is not yet in the DOM and cannot be manipulated in this stage.
@@ -26818,6 +27269,34 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     /**Global event that fires after any Pane has been (potentially) removed from the DOM and had its element property reset to null. From this point on the Pane's element property is now settable to a new Element.
     @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
     this.onUnloaded = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires before any Pane is moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMove = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires after any Pane has been moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMoved = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires before any Pane is resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResize = function (paneEventArgs)
+    {
+
+    };
+
+    /**Global event that fires after any Pane has been resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResized = function (paneEventArgs)
     {
 
     };
@@ -27189,6 +27668,62 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return finalArgs;
     }
 
+    /**Joins the user's move args with the Pane's move settings to create a usable PaneMoveArgs object.
+    @param {InternalPaneEntry} paneEntry
+    @param {EVUI.Modules.Panes.PaneMoveArgs} userMoveArgs
+    @returns {EVUI.Panes.Pane.PaneMoveArgs}*/
+    var resolvePaneMoveArgs = function (paneEntry, userMoveArgs)
+    {
+        var finalArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userMoveArgs);
+
+        var resizeMoveSettings = paneEntry.link.pane.resizeMoveSettings == null ? {} : paneEntry.link.pane.resizeMoveSettings;
+        finalArgs.transition = resolvePaneTransition(resizeMoveSettings.moveTransition, userMoveArgs.transition);
+
+        var noTop = typeof finalArgs.top !== "number";
+        var noLeft = typeof finalArgs.left !== "number";    
+
+        if (noTop || noLeft)
+        {
+            var position = paneEntry.link.pane.getCurrentPosition();
+
+            if (noTop) finalArgs.top = position.top;
+            if (noLeft) finalArgs.left = position.left;
+        }
+
+        return finalArgs;
+    };
+
+    /**Joins the user's Resize args with the Pane's Resize settings to create a usable PaneResizeArgs object.
+    @param {InternalPaneEntry} paneEntry
+    @param {EVUI.Modules.Panes.PaneResizeArgs} userResizeArgs
+    @returns {EVUI.Panes.Pane.PaneResizeArgs}*/
+    var resolvePaneResizeArgs = function (paneEntry, userResizeArgs)
+    {
+        var finalArgs = new EVUI.Modules.Panes.PaneResizeArgs();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userResizeArgs);
+
+        var resizeMoveSettings = paneEntry.link.pane.resizeMoveSettings == null ? {} : paneEntry.link.pane.resizeMoveSettings;
+        finalArgs.transition = resolvePaneTransition(resizeMoveSettings.resizeTransition, userResizeArgs.transition);
+
+        var noTop = typeof finalArgs.top !== "number";
+        var noLeft = typeof finalArgs.left !== "number";  
+        var noBottom = typeof finalArgs.bottom !== "number";
+        var noRight = typeof finalArgs.right !== "number";
+
+        if (noTop || noLeft || noBottom || noRight)
+        {
+            var position = paneEntry.link.pane.getCurrentPosition();
+
+            if (noBottom) finalArgs.bottom = position.bottom;
+            if (noRight) finalArgs.right = position.right;
+            if (noTop) finalArgs.top = position.top;
+            if (noLeft) finalArgs.left = position.left;
+        }
+
+        return finalArgs;
+    };
+
     /**Resolves a transition from a graph found in the Pane object and one provided by the user.
     @param {EVUI.Modules.Panes.PaneTransition} defaultTransition The transition's default settings.
     @param {EVUI.Modules.Panes.PaneTransition} userArgsTransition The user provided arugments for the transition.
@@ -27298,17 +27833,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         if (EVUI.Modules.Core.Utils.isObject(defaultAutoClose) === true)
         {
-            if (EVUI.Modules.Core.Utils.isArray(defaultAutoClose.autoCloseKeys) === true)
+            if (EVUI.Modules.Core.Utils.isArray(defaultAutoClose.autoHideKeys) === true)
             {
-                finalArgs.autoCloseKeys = defaultAutoClose.autoCloseKeys.slice();
+                finalArgs.autoHideKeys = defaultAutoClose.autoHideKeys.slice();
             }
         }
 
         if (EVUI.Modules.Core.Utils.isObject(userArgs) === true)
         {
-            if (EVUI.Modules.Core.Utils.isArray(userArgs.autoCloseKeys) === true)
+            if (EVUI.Modules.Core.Utils.isArray(userArgs.autoHideKeys) === true)
             {
-                finalArgs.autoCloseKeys = userArgs.autoCloseKeys.slice();
+                finalArgs.autoHideKeys = userArgs.autoHideKeys.slice();
             }
         }
 
@@ -27318,7 +27853,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     /**Takes an ambiguous representation of an Element (a CSS selector, jQuery object, DomHelper object or a regular Element) and returns the corresponding Element reference.
     @param {String|jQuery|EVUI.Modules.Dom.DomHelper|Element|DocumentFragment} userElementValue
     @param {Boolean} allowFragments Whether or not DocumentFragments count as valid elements.
-    @returns*/
+    @returns {Element}*/
     var resolveElement = function (userElementValue, allowFragments)
     {
         if (typeof userElementValue === "string")
@@ -27332,12 +27867,35 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
             if (allowFragments === true && EVUI.Modules.Core.Utils.isObject(userElementValue) && userElementValue.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
             {
-                return userElementValue;
+                return userElementValue.firstElementChild;
             }
         }
 
         return null;
     }; 
+
+    /**Resolves the Pane's resize/move settings with the user's resize/move settings passed in by a user.
+    @param {EVUI.Modules.Panes.PaneResizeMoveSettings} defaultAutoClose The Pane's resize/move settings.
+    @param {EVUI.Modules.Panes.PaneResizeMoveSettings} userArgs The user resize/move settings.
+    @returns {EVUI.Modules.Panes.PaneResizeMoveSettings} */
+    var resolveResizeMoveSettings = function (defaultResizeMove, userResizeMove)
+    {
+        var finalArgs = new EVUI.Modules.Panes.PaneResizeMoveSettings();
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, defaultResizeMove);
+        EVUI.Modules.Core.Utils.shallowExtend(finalArgs, userResizeMove);
+
+        if (EVUI.Modules.Core.Utils.isObject(finalArgs.moveTransition) === true)
+        {
+            finalArgs.moveTransition = resolvePaneTransition(defaultResizeMove.moveTransition, userResizeMove.moveTransition);
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(finalArgs.resizeTransition) === true)
+        {
+            finalArgs.moveTransition = resolvePaneTransition(defaultResizeMove.resizeTransition, userResizeMove.resizeTransition);
+        }
+
+        return finalArgs;
+    };
 
     /**Creates a graph of all the properties we can determine about a Pane based on the currentTarget's attributes.
     @param {Event} event The event arguments used to trigger the action of showing or hiding the pane.
@@ -27886,17 +28444,17 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             return {
                 autoHideSettings:
                 {
-                    closeMode: EVUI.Modules.Panes.PaneCloseMode.Explicit,
-                    autoCloseKeys: ["Escape", "Enter"],
+                    hideMode: EVUI.Modules.Panes.PaneHideMode.Explicit,
+                    autoHideKeys: ["Escape", "Enter"],
                 },
                 showSettings:
                 {
                     center: true,
-                },
-                clipSettings:
-                {
-                    clipMode: EVUI.Modules.Panes.PaneClipMode.Shift,
-                    clipBounds: document.documentElement
+                    clipSettings:
+                    {
+                        clipMode: EVUI.Modules.Panes.PaneClipMode.Shift,
+                        clipBounds: document.documentElement
+                    },
                 },
                 resizeMoveSettings:
                 {
@@ -27914,8 +28472,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             return {
                 autoHideSettings:
                 {
-                    closeMode: EVUI.Modules.Panes.PaneCloseMode.GlobalClick,
-                    autoCloseKeys: ["Escape"],
+                    hideMode: EVUI.Modules.Panes.PaneHideMode.GlobalClick,
+                    autoHideKeys: ["Escape"],
                     allowChaining: true
                 },
                 showSettings:
@@ -27938,8 +28496,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             return {
                 autoHideSettings:
                 {
-                    closeMode: EVUI.Modules.Panes.PaneCloseMode.Explicit,
-                    autoCloseKeys: ["Escape", "Enter"],
+                    hideMode: EVUI.Modules.Panes.PaneHideMode.Explicit,
+                    autoHideKeys: ["Escape", "Enter"],
                 },
                 showSettings:
                 {
@@ -28028,14 +28586,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return true;
     };
 
-
     /**Makes it so Panes close in descending order of Z-Index when the keydown auto-close command is issued. Every Pane has their own listener, so this function fires once per visible Pane.
     @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoCloseArgs The auto-close args generated by the handler.
     @returns {Boolean} */
     var shouldAutoHideChainedPaneOnKeydown = function (autoCloseArgs)
     {
         //if we have no auto-close keys, this doesn't apply
-        if (autoCloseArgs.pane.autoHideSettings == null && EVUI.Modules.Core.Utils.isArray(autoCloseArgs.pane.autoHideSettings.autoCloseKeys) === false || autoCloseArgs.pane.autoHideSettings.autoCloseKeys.indexOf(autoCloseArgs.event.key) < 0) return false;
+        if (autoCloseArgs.pane.autoHideSettings == null && EVUI.Modules.Core.Utils.isArray(autoCloseArgs.pane.autoHideSettings.autoHideKeys) === false || autoCloseArgs.pane.autoHideSettings.autoHideKeys.indexOf(autoCloseArgs.event.key) < 0) return false;
 
         var visiblePanes = getPaneEntry(function (entry) { return entry.link.pane.isVisible === true }, true);
         if (visiblePanes == null) return true;
@@ -28057,7 +28614,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         autoCloseArgs.event.preventDefault();
         return true;
     };
-
 
     /** Gets a PaneEntry object based on its ID or a selector function.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneEntrySelector|String} paneIDOrSelector A selector function to select a PaneEntry object (or multiple PaneEntry objects) or the ID of the Pane to get the PaneEntry for.
@@ -28109,7 +28665,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Performs the operation described in the PaneOperationSession. Takes into account the current state of the pane being executed and will cancel, ignore, or continue operations depending on the combination of current action and requested action. 
     All execution begins asynchronously so that multiple calls in the same stack frame behave correctly.
-    @param {PaneOperationSession} opSession The operation session to execute on. */
+    @param {PaneOperationSession} opSession The operation session to execute on.*/
     var performOperation = function (opSession)
     {
         var callbackStack = getCallbackStack(opSession.entry.link, opSession.action); //add the callback to the stack of callbacks for the current operation.
@@ -28129,8 +28685,27 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             return callCallbackStack(opSession.entry.link, opSession.action, true);
         }
-        else if (actionSequence[0] === ActionSequence.Queue) //queue the callback for a duplicate operation without setting up a new event stream
+        else if (actionSequence[0] === ActionSequence.QueueCallback) //queue the callback for a duplicate operation without setting up a new event stream
         {
+            return;
+        }
+        else if (actionSequence[0] === ActionSequence.Queue && opSession.isQueued === false)
+        {
+            var lastInSequence = callbackStack.opSessions[0];
+            while (lastInSequence != null)
+            {
+                if (lastInSequence.queuedOpSession != null)
+                {
+                    lastInSequence = lastInSequence.queuedOpSession;
+                }
+                else
+                {
+                    lastInSequence.queuedOpSession = opSession;
+                    opSession.isQueued = true;
+                    break;
+                }
+            }
+
             return;
         }
 
@@ -28357,6 +28932,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 addUnloadSteps(eventStream, opSession);
             }
+            else if (curStep === ActionSequence.Move)
+            {
+                addMoveSteps(eventStream, opSession);
+            }
+            else if (curStep === ActionSequence.Resize)
+            {
+                addResizeSteps(eventStream, opSession);
+            }
         }
 
         //finally, add the complete step that will call the operations callbacks.
@@ -28373,6 +28956,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         eventStream.canSeek = true;
         eventStream.endExecutionOnEventHandlerCrash = false;
+        eventStream.bubblingEvents = [opSession.entry.link.bubblingEvents, _bubblingEvents];
+
         var curArgs = null;
 
         eventStream.processInjectedEventArgs = function (eventStreamArgs)
@@ -28404,6 +28989,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 {
                     if (opSession.resolvedUnloadArgs != null) opSession.context = opSession.resolvedUnloadArgs.context;
                 }
+                else if (opSession.action === EVUI.Modules.Panes.PaneAction.Move)
+                {
+                    if (opSession.resolvedMoveArgs != null) opSession.context = opSession.resolvedMoveArgs.context;
+                }
+                else if (opSession.action === EVUI.Modules.Panes.PaneAction.Resize)
+                {
+                    if (opSession.resolvedResizeArgs != null) opSession.context = opSession.resolvedResizeArgs.context;
+                }
             }
 
 
@@ -28412,7 +29005,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             paneArgs.loadArgs = opSession.userLoadArgs;
             paneArgs.showArgs = opSession.userShowArgs;
             paneArgs.unloadArgs = opSession.unloadArgs;
-            paneArgs.resizeMoveArgs = opSession.userResizeMoveArgs;
+            paneArgs.moveArgs = opSession.userMoveArgs;
+            paneArgs.resizeArgs = opSession.userResizeArgs;
+            paneArgs.action = opSession.action;
             paneArgs.currentAction = opSession.currentAction;
             paneArgs.paneShowMode = opSession.showMode;
             paneArgs.calculatedPosition = EVUI.Modules.Core.Utils.deepExtend({}, opSession.entry.link.lastCalculatedPosition);
@@ -28428,7 +29023,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             opSession.userLoadArgs = eventStreamArgs.loadArgs;
             opSession.userShowArgs = eventStreamArgs.showArgs;
             opSession.userUnloadArgs = eventStreamArgs.unloadArgs;
-            opSession.resizeMoveArgs = eventStreamArgs.resizeMoveArgs;
+            opSession.userResizeArgs = eventStreamArgs.resizeArgs;
+            opSession.userMoveArgs = eventStreamArgs.moveArgs;
         };
 
         eventStream.onCancel = function ()
@@ -28770,6 +29366,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible);
                     opSession.entry.link.paneStateFlags = EVUI.Modules.Core.Utils.removeFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Positioned);
 
+                    var resizeMoveSettings = resolveResizeMoveSettings(opSession.entry);
+                    if (resizeMoveSettings.restoreDefaultOnHide === true)
+                    {
+                        toggleInlinedStyle(opSession.entry, true);
+                    }
 
                     jobArgs.resolve();                    
                 }
@@ -28930,6 +29531,184 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         });
     };
 
+    /**Adds the initialize sequence steps to the EventStream.
+    @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+    @param {PaneOperationSession} opSession The operation session driving the events.*/
+    var addMoveSteps = function (eventStream, opSession)
+    {
+            eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMove,
+            key: EVUI.Modules.Panes.Constants.Event_OnMove,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Move;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onMove === "function")
+                {
+                    return opSession.entry.link.pane.onMove.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMove,
+            key: EVUI.Modules.Panes.Constants.Event_OnMove,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onMove === "function")
+                {
+                    return _self.onMove.call(_self, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Move,
+            key: EVUI.Modules.Panes.Constants.Job_Move,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                var bounds = (opSession.entry.link.lastResolvedShowArgs.clipSettings != null && opSession.entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(opSession.entry.link.lastResolvedShowArgs.clipSettings) : null;
+                var helper = new EVUI.Modules.Dom.DomHelper(opSession.entry.link.pane.element);
+
+                movePane(opSession.entry, opSession.userMoveArgs, helper, null, bounds, function ()
+                {
+                    jobArgs.resolve();
+                });
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMoved,
+            key: EVUI.Modules.Panes.Constants.Event_OnMoved,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Moved;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onMoved === "function")
+                {
+                    return opSession.entry.link.pane.onMoved.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnMoved,
+            key: EVUI.Modules.Panes.Constants.Event_OnMoved,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onMoved === "function")
+                {
+                    return _self.onMoved.call(_self, eventArgs);
+                }
+            }
+        });
+    };
+
+    /**Adds the initialize sequence steps to the EventStream.
+@param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+@param {PaneOperationSession} opSession The operation session driving the events.*/
+    var addResizeSteps = function (eventStream, opSession)
+    {
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResize,
+            key: EVUI.Modules.Panes.Constants.Event_OnResize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resize;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onResize === "function")
+                {
+                    return opSession.entry.link.pane.onResize.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResize,
+            key: EVUI.Modules.Panes.Constants.Event_OnResize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onResize === "function")
+                {
+                    return _self.onResize.call(_self, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_Resize,
+            key: EVUI.Modules.Panes.Constants.Job_Resize,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Job,
+            handler: function (jobArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                var bounds = (opSession.entry.link.lastResolvedShowArgs.clipSettings != null && opSession.entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(opSession.entry.link.lastResolvedShowArgs.clipSettings) : null;
+                var helper = new EVUI.Modules.Dom.DomHelper(opSession.entry.link.pane.element);
+
+                resizePane(opSession.entry, opSession.userResizeArgs, helper, null, bounds, function ()
+                {
+                    jobArgs.resolve();
+                });
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResized,
+            key: EVUI.Modules.Panes.Constants.Event_OnResized,
+            type: EVUI.Modules.EventStream.EventStreamStepType.Event,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                opSession.currentAction = EVUI.Modules.Panes.PaneAction.Resized;
+
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+                if (typeof opSession.entry.link.pane.onResized === "function")
+                {
+                    return opSession.entry.link.pane.onResized.call(this, eventArgs);
+                }
+            }
+        });
+
+        eventStream.addStep({
+            name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Event_OnResized,
+            key: EVUI.Modules.Panes.Constants.Event_OnResized,
+            type: EVUI.Modules.EventStream.EventStreamStepType.GlobalEvent,
+            handler: function (eventArgs)
+            {
+                if (opSession.wasCanceled === true) return;
+                if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return;
+
+                if (typeof _self.onResized === "function")
+                {
+                    return _self.onResized.call(_self, eventArgs);
+                }
+            }
+        });
+    };
+
     /**Adds the final, onComplete step to the EventStream that calls all the callbacks for the operation.
     @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
     @param {PaneOperationSession} opSession The operation session driving the events.*/
@@ -28954,6 +29733,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     opSession.entry.link.paneAction = EVUI.Modules.Panes.PaneAction.None;
                     opSession.entry.link.lastCalculatedPosition = null;
                     opSession.entry.link.currentOperation = null;
+
+                    if (opSession.queuedOpSession != null) //if we have a queued action waiting on this one to finish, we start it after all the previous callbacks have been invoked
+                    {
+                        performOperation(opSession.queuedOpSession);
+                        opSession.queuedOpSession.isQueued = false;
+                    }
+
                     args.resolve();
                 });
             }
@@ -29089,7 +29875,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 }
                 else if (currentAction === EVUI.Modules.Panes.PaneAction.Load)
                 {
-                    return [ActionSequence.Queue];
+                    return [ActionSequence.QueueCallback];
                 }
                 else if (currentAction === EVUI.Modules.Panes.PaneAction.Hide
                     || currentAction === EVUI.Modules.Panes.PaneAction.Unload
@@ -29111,7 +29897,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
             else if (currentAction === opAction)
             {
-                return [ActionSequence.Queue];
+                return [ActionSequence.QueueCallback];
             }
             else
             {
@@ -29119,10 +29905,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
         else
-        {
+        {            
             if (currentAction === opAction)
             {
-                return [ActionSequence.Queue];
+                if (opAction === EVUI.Modules.Panes.PaneAction.Move || opAction === EVUI.Modules.Panes.PaneAction.Resize)
+                {
+                    return actionSequence;
+                }
+                
+                return [ActionSequence.QueueCallback];
             }
             else
             {
@@ -29153,6 +29944,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         else if (opSession.action === EVUI.Modules.Panes.PaneAction.Unload)
         {
             sequence = getUnloadSequence(opSession);
+        }
+        else if (opSession.action === EVUI.Modules.Panes.PaneAction.Move)
+        {
+            sequence = getMoveSequence(opSession);
+        }
+        else if (opSession.action === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence = getResizeSequence(opSession);
         }
 
         return sequence;
@@ -29229,7 +30028,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var sequence = [];
 
-        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Unload) //if it's being loaded or shown (which also loads it), cancel that operation
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Unload ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize) //if it's being loaded or shown (which also loads it), cancel that operation
         {
             sequence.push(ActionSequence.CancelCurrent);
         }
@@ -29249,7 +30052,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var sequence = [];
 
-        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Hide) //cancel if anything is happening already
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Load ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Show ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Hide ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move ||
+            opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize) //cancel if anything is happening already
         {
             sequence.push(ActionSequence.CancelCurrent);
         }
@@ -29261,6 +30068,42 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         return sequence;
     };
+
+    /**
+     * 
+     * @param {PaneOperationSession} opSession
+     */
+    var getMoveSequence = function (opSession)
+    {
+        var sequence = [];
+
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence.push(ActionSequence.Queue);
+        }
+
+        sequence.push(ActionSequence.Move);
+
+        return sequence;
+    }
+
+    /**
+     * 
+     * @param {PaneOperationSession} opSession
+     */
+    var getResizeSequence = function (opSession)
+    {
+        var sequence = [];
+
+        if (opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Move || opSession.entry.link.paneAction === EVUI.Modules.Panes.PaneAction.Resize)
+        {
+            sequence.push(ActionSequence.Queue);
+        }
+
+        sequence.push(ActionSequence.Resize);
+
+        return sequence;
+    }
 
     /** Gets a CallbackStack object representing all of the queued callbacks for a given pane action.
     @param {PaneLink} link The link to the pane being executed.
@@ -29300,6 +30143,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         for (var x = 0; x < numSession; x++) //check and see if we have any linked continued steps, we need to call both lists of callbacks in one go
         {
             var curSession = callbackStack.opSessions[x];
+
+            if (curSession.isQueued === true) continue;
             if (curSession.continuedTo != null) //we have a link
             {
                 var linkedCallbackStack = getCallbackStack(link, curSession.continuedTo.action);
@@ -29374,6 +30219,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         if (typeof callback !== "function") callback = function () { };
 
+        toggleInlinedStyle(entry, false); //remove the inlined style so we can calculate the position correctly
+
         if (position == null)
         {
             entry.link.lastResolvedShowArgs = resolvedShowArgs
@@ -29381,9 +30228,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
 
         entry.link.lastCalculatedPosition = position;
-
-        removePaneCSS(entry); //remove the CSS from the stylesheet
-        removePaneClasses(entry); //remove all the existing classes from the Pane
+        
+        removePaneCSS(entry, true); //remove the CSS from the stylesheet
+        removePaneClasses(entry, true); //remove all the existing classes from the Pane
 
         if (position == null)
         {
@@ -29549,15 +30396,76 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         return setDims;
     };
 
+    /**Removes or adds the in-lined style of the Pane's root element.
+    @param {InternalPaneEntry} entry The entry being manipulated.
+    @param {Boolean} remove Whether or not to remove the inlined style classes and restore the inlined style tag.*/
+    var toggleInlinedStyle = function (entry, remove)
+    {
+        var selector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+
+        if (remove === true)
+        {
+            if (restoreInlinedStyle(entry) === true)
+            {
+                _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector);
+                entry.link.pane.element.classList.remove(EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+            }
+        }
+        else
+        {
+            if (removeInlinedStyle(entry) === true)
+            {
+                _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, entry.link.inlinedStyle);
+                entry.link.pane.element.classList.add(EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+            }
+        }
+    };
+
+    /**Removes the in-lined style from the Pane and stores it in the PaneLink.
+    @param {InternalPaneEntry} entry The entry to strip the in-lined style from.
+    @returns {Boolean}*/
+    var removeInlinedStyle = function (entry)
+    {
+        var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+        var style = ele.attr("style");
+
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === true || style === "display: inline-block;") return false;
+
+        entry.link.inlinedStyle = style;
+        ele.attr("style", "");
+
+        return true;
+    };
+
+    /**Restores the in-lined style to the Pane from the PaneLink.
+    @param {InternalPaneEntry} entry The entry to restore the in-lined style to.
+    @returns {Boolean}*/
+    var restoreInlinedStyle = function (entry)
+    {
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(entry.link.inlinedStyle) === true) return false;
+
+        var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+
+        var style = ele.attr("style");
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === false && style !== "display: inline-block;" && style !== entry.link.inlinedStyle) return true;
+
+        var style = ele.attr("style", entry.link.inlinedStyle);
+
+        return true;
+    }
+
     /**Removes all the CSS rules from the managed sheet that pertain to a particular Pane.
-    @param {InternalPaneEntry} entry The entry representing the Pane to remove the CSS of.*/
-    var removePaneCSS = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the Pane to remove the CSS of.
+    @param {Boolean} keepInlinedDefaultStyle Whether or not to remove the inlined style extracted from the element.*/
+    var removePaneCSS = function (entry, keepInlinedDefaultStyle)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
 
         for (var x = 0; x < numClasses; x++)
         {
+            if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+
             var selector = getSelector(entry, allClasses[x]);
             if (selector == null) continue;
 
@@ -29566,8 +30474,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
     /**Removes all the auto-generated CSS classes from the Pane without removing the rules from the sheet.
-    @param {InternalPaneEntry} entry The entry representing the BantmWindo to remove the classes from.*/
-    var removePaneClasses = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the BantmWindo to remove the classes from.
+    @param {Boolean} keepInlinedDefaultStyle Whether or not to remove the inlined style extracted from the element.*/
+    var removePaneClasses = function (entry, keepInlinedDefaultStyle)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
@@ -29576,6 +30485,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var eh = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
         for (var x = 0; x < numClasses; x++)
         {
+            if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+
             var curClass = allClasses[x];
             if (eh.hasClass(curClass) === true)
             {
@@ -29617,7 +30528,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var getAllClassNames = function ()
     {
         var allBaseClasses =
-            [EVUI.Modules.Panes.Constants.CSS_Position,
+            [EVUI.Modules.Panes.Constants.CSS_Pane_Style,
+            EVUI.Modules.Panes.Constants.CSS_Position,
             EVUI.Modules.Panes.Constants.CSS_ScrollX,
             EVUI.Modules.Panes.Constants.CSS_ScrollY,
             EVUI.Modules.Panes.Constants.CSS_ClippedX,
@@ -31287,184 +32199,207 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Resizes the pane by adding new CSS classes to it that override the default positioning CSS classes.
     @param {InternalPaneEntry} entry The Pane being resized or moved.
-    @param {EVUI.Modules.Panes.PaneResizeMoveArgs} resizeArgs The arguments about how it will be resized.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} resizeArgs The arguments about how it will be resized.
     @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
-    @param {Boolean} resized Whether or not the pane was only resized.
-    @param {Boolean} moved Whether or not the pane was only moved.
     @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
     @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
-    var resizePane = function (entry, resizeArgs, helper, resized, moved, dragHandles, clipBounds)
+    var resizePane = function (entry, resizeArgs, helper, dragHandles, clipBounds, callback)
     {
-        if (moved === true)
+        if (typeof callback !== "function") callback = function () { };
+
+        resizeArgs = resolvePaneResizeArgs(entry, resizeArgs);
+
+        var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
+        var style = getComputedStyle(entry.link.pane.element);
+        var minWidth = style.minWidth;
+        var minHeight = style.minHeight;
+
+        if (minWidth != null)
         {
-            if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
-            {
-                var clippedBounds = shiftMovedPaneToBounds(entry, resizeArgs, clipBounds);
-                if (clippedBounds != null)
-                {
-                    if (clippedBounds.left === resizeArgs.left && clippedBounds.top === resizeArgs.top) return;
-
-                    resizeArgs.left = clippedBounds.left;
-                    resizeArgs.top = clippedBounds.top;
-                }
-            }
-
-            var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
-
-            var rules =
-            {
-                position: "absolute",
-                top: resizeArgs.top + "px",
-                left: resizeArgs.left + "px"
-            }
-
-            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
-            helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);
-            entry.link.lastResizeArgs = resizeArgs;
+            minWidth = parseFloat(minWidth.replace("px", ""));
+            if (isNaN(minWidth) === true) minWidth = null;
         }
 
-        if (resized === true)
+        if (minHeight != null)
         {
-            var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
-            var style = getComputedStyle(entry.link.pane.element);
-            var minWidth = style.minWidth;
-            var minHeight = style.minHeight;
-
-            if (minWidth != null)
-            {
-                minWidth = parseFloat(minWidth.replace("px", ""));
-                if (isNaN(minWidth) === true) minWidth = null;
-            }
-
-            if (minHeight != null)
-            {
-                minHeight = parseFloat(minHeight.replace("px", ""));
-                if (isNaN(minHeight) === true) minHeight = null;
-            }
-
-            var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
-            if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
-            if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
-
-            var shrankX = false;
-            var shrankY = false;
-
-            if (clipBounds != null) //if we're clipping, make sure the resized bounds are within the clip zone 
-            {
-                var position = new EVUI.Modules.Panes.PanePosition();
-                position.bottom = resizeArgs.top + resizeArgs.height;
-                position.left = resizeArgs.left;
-                position.right = resizeArgs.left + resizeArgs.width;
-                position.top = resizeArgs.top;
-
-                if (isOutOfBounds(position, clipBounds, "left") === true)
-                {
-                    resizeArgs.left = clipBounds.left;
-                    resizeArgs.width = position.right - clipBounds.left;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "right") === true)
-                {
-                    resizeArgs.width = clipBounds.right - position.left;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "top") === true)
-                {
-                    resizeArgs.top = clipBounds.top;
-                    resizeArgs.height = position.bottom - clipBounds.top;
-                }
-
-                if (isOutOfBounds(position, clipBounds, "bottom") === true)
-                {
-                    resizeArgs.height = clipBounds.bottom - position.top;
-                }
-            }
-
-            //ensure that we don't shrink beyond the minimum allowable size. If there's one in CSS we use that, if not we use 2.5 times the drag buffer zone so that the drag zones for all sized never overlap.
-            //there is an issue here where it can cause a jittering effect on the bottom or right side, we have code below to correct that issue. The problem is the mouse is moving so fast that it gets into
-            //a bad state where neither the left nor the width is correct.
-            if (minHeight > resizeArgs.height || minWidth > resizeArgs.width)
-            {
-                if (entry.link.lastResizeArgs != null)
-                {
-                    if (minHeight > resizeArgs.height)
-                    {
-                        resizeArgs.height = minHeight;
-                        resizeArgs.top = (dragHandles != null) ? dragHandles.originalBounds.top : entry.link.lastResizeArgs.top;
-                        shrankY = true;
-                    }
-
-                    if (minWidth > resizeArgs.width)
-                    {
-                        resizeArgs.width = minWidth;
-                        resizeArgs.left = (dragHandles != null) ? dragHandles.originalBounds.left : entry.link.lastResizeArgs.left;
-                        shrankX = true;
-                    }
-                }
-            }
-
-            //sometimes the above logic gets it "wrong" when the mouse moves very, very fast, so we have to restore the size of the element to be its original size and position to stop the displacement jitter that happens otherwise.
-            //it only happens when dragging the top or left hand side of the pane, never the right or bottom. Because this is remembered on the next iteration, it only fires when the problem scenario occurs.
-            if (dragHandles != null && entry.link.lastResizeArgs != null)
-            {
-                if (dragHandles.growX === "left")
-                {
-                    var right = resizeArgs.left + resizeArgs.width;
-                    var oldRight = entry.link.lastResizeArgs.left + entry.link.lastResizeArgs.width;
-
-                    if (right != oldRight) //see if the right shifted either direction to the right or left. If so, restore it to the original position. The left is in flux, but the right must stay the same.
-                    {
-                        resizeArgs.left = dragHandles.originalBounds.left;
-                        resizeArgs.width = dragHandles.originalBounds.right - dragHandles.originalBounds.left;
-
-                        if (shrankX === true) //if it shrank back to the minimum size, don't reset the width
-                        {
-                            resizeArgs.width = minWidth;
-                            resizeArgs.left = dragHandles.originalBounds.right - minWidth;
-                        }
-                    }
-                }
-
-                if (dragHandles.growY === "top") 
-                {
-                    var bottom = resizeArgs.top + resizeArgs.height;
-                    var oldBottom = entry.link.lastResizeArgs.top + entry.link.lastResizeArgs.height;
-
-                    if (bottom != oldBottom) //see if the bottom shifted up or down. If so, restore it to its original position. The top is in flux, but the bottom should never move.
-                    {
-                        resizeArgs.top = dragHandles.originalBounds.top;
-                        resizeArgs.height = dragHandles.originalBounds.top - dragHandles.originalBounds.bottom;
-
-                        if (shrankY === true)  //if it shrank back to the minimum size, don't reset the height
-                        {
-                            resizeArgs.height = minHeight;
-                            resizeArgs.top = dragHandles.originalBounds.bottom - minHeight;
-                        }
-                    }
-                }
-            }          
-
-            var rules = {};
-
-            rules.position = "absolute";
-            rules.height = resizeArgs.height + "px";
-            rules.width = resizeArgs.width + "px";
-            rules.top = resizeArgs.top + "px";
-            rules.left = resizeArgs.left + "px";
-
-            _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
-            helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
-
-            entry.link.lastResizeArgs = resizeArgs;
+            minHeight = parseFloat(minHeight.replace("px", ""));
+            if (isNaN(minHeight) === true) minHeight = null;
         }
 
-        if (moved === false && resized === false) return false;
+        var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
+        if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
+        if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
 
-        applyTransition(entry, resizeArgs.resizeTransition, EVUI.Modules.Panes.Constants.CSS_Transition_Adjust, helper)
+        var shrankX = false;
+        var shrankY = false;
 
-        return true;
+        if (clipBounds != null) //if we're clipping, make sure the resized bounds are within the clip zone 
+        {
+            var position = new EVUI.Modules.Panes.PanePosition();
+            //position.bottom = resizeArgs.top + resizeArgs.height;
+            position.bottom = resizeArgs.bottom;
+            position.left = resizeArgs.left;
+            //position.right = resizeArgs.left + resizeArgs.width;
+            position.right = resizeArgs.right;
+            position.top = resizeArgs.top;
+
+            if (isOutOfBounds(position, clipBounds, "left") === true)
+            {
+                resizeArgs.left = clipBounds.left;
+                //resizeArgs.width = position.right - clipBounds.left;
+            }
+
+            if (isOutOfBounds(position, clipBounds, "right") === true)
+            {
+                //resizeArgs.width = clipBounds.right - position.left;
+                resizeArgs.right = clipBounds.right;
+            }
+
+            if (isOutOfBounds(position, clipBounds, "top") === true)
+            {
+                resizeArgs.top = clipBounds.top;
+                //resizeArgs.height = position.bottom - clipBounds.top;
+            }
+
+            if (isOutOfBounds(position, clipBounds, "bottom") === true)
+            {
+                resizeArgs.bottom = clipBounds.bottom;
+                //resizeArgs.height = clipBounds.bottom - position.top;
+            }
+        }
+
+        var height = resizeArgs.getResizedHeight();
+        var width = resizeArgs.getResizedWidth();
+
+        //ensure that we don't shrink beyond the minimum allowable size. If there's one in CSS we use that, if not we use 2.5 times the drag buffer zone so that the drag zones for all sized never overlap.
+        //there is an issue here where it can cause a jittering effect on the bottom or right side, we have code below to correct that issue. The problem is the mouse is moving so fast that it gets into
+        //a bad state where neither the left nor the width is correct.
+        if (minHeight > height || minWidth > width)
+        {
+            if (entry.link.lastResizeArgs != null)
+            {
+                if (minHeight > height)
+                {
+                    //resizeArgs.height = minHeight;                    
+                    resizeArgs.top = (dragHandles != null) ? dragHandles.originalBounds.top : entry.link.lastResizeArgs.top;
+                    resizeArgs.bottom = resizeArgs.top + minHeight;
+                    shrankY = true;
+                }
+
+                if (minWidth > width)
+                {
+                    //resizeArgs.width = minWidth;
+                    resizeArgs.left = (dragHandles != null) ? dragHandles.originalBounds.left : entry.link.lastResizeArgs.left;
+                    resizeArgs.right = resizeArgs.left + minWidth;
+                    shrankX = true;
+                }
+            }
+        }
+
+        //sometimes the above logic gets it "wrong" when the mouse moves very, very fast, so we have to restore the size of the element to be its original size and position to stop the displacement jitter that happens otherwise.
+        //it only happens when dragging the top or left hand side of the pane, never the right or bottom. Because this is remembered on the next iteration, it only fires when the problem scenario occurs.
+        if (dragHandles != null && entry.link.lastResizeArgs != null)
+        {
+            if (dragHandles.growX === "left")
+            {
+                var right = resizeArgs.right; //resizeArgs.left + resizeArgs.width;
+                var oldRight = entry.link.lastResizeArgs.right; //entry.link.lastResizeArgs.left + entry.link.lastResizeArgs.width;
+
+                if (right != oldRight) //see if the right shifted either direction to the right or left. If so, restore it to the original position. The left is in flux, but the right must stay the same.
+                {
+                    resizeArgs.left = dragHandles.originalBounds.left;
+                    resizeArgs.right = dragHandles.originalBounds.right;
+                    //resizeArgs.width = dragHandles.originalBounds.right - dragHandles.originalBounds.left;
+
+                    if (shrankX === true) //if it shrank back to the minimum size, don't reset the width
+                    {
+                        //resizeArgs.width = minWidth;                        
+                        resizeArgs.left = dragHandles.originalBounds.right - minWidth;
+                        resizeArgs.right = resizeArgs.left + minWidth;
+                    }
+                }
+            }
+
+            if (dragHandles.growY === "top") 
+            {
+                var bottom = resizeArgs.bottom; //resizeArgs.top + resizeArgs.height;
+                var oldBottom = entry.link.lastResizeArgs.bottom; //entry.link.lastResizeArgs.top + entry.link.lastResizeArgs.height;
+
+                if (bottom != oldBottom) //see if the bottom shifted up or down. If so, restore it to its original position. The top is in flux, but the bottom should never move.
+                {
+                    resizeArgs.top = dragHandles.originalBounds.top;
+                    resizeArgs.bottom = dragHandles.originalBounds.bottom;
+                    //resizeArgs.height = dragHandles.originalBounds.top - dragHandles.originalBounds.bottom;
+
+                    if (shrankY === true)  //if it shrank back to the minimum size, don't reset the height
+                    {
+                        //resizeArgs.height = minHeight;                        
+                        resizeArgs.top = dragHandles.originalBounds.bottom - minHeight;
+                        resizeArgs.bottom = resizeArgs.top + minHeight;
+                    }
+                }
+            }
+        }
+
+        var rules = {};
+
+        rules.position = "absolute";
+        rules.height = resizeArgs.getResizedHeight() + "px";
+        rules.width = resizeArgs.getResizedWidth() + "px";
+        rules.top = resizeArgs.top + "px";
+        rules.left = resizeArgs.left + "px";
+
+        _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector);
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector, rules);
+        helper.addClass(EVUI.Modules.Panes.Constants.CSS_Resized);
+
+        entry.link.lastResizeArgs = resolvePaneResizeArgs(entry, resizeArgs);
+        applyTransition(entry, resizeArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Resize, helper, function ()
+        {
+            callback();
+        });
+    };
+
+    /**Moves the pane by adding new CSS classes to it that override the default positioning CSS classes.
+    @param {InternalPaneEntry} entry The Pane being resized or moved.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} moveArgs The arguments about how it will be resized.
+    @param {EVUI.Modules.Dom.DomHelper} helper An DomHelper wrapping the Pane being manipulated.
+    @param {DragHandles} dragHandles If the pane was resized, these are the details of the trigger for the resizing via a drag operation.
+    @param {EVUI.Modules.Dom.ElementBounds} clipBounds The clipping bounds for the move or resize operation.*/
+    var movePane = function (entry, moveArgs, helper, dragHandles, clipBounds, callback)
+    {
+        if (typeof callback !== "function") callback = function () { };
+        moveArgs = resolvePaneMoveArgs(entry, moveArgs);    
+
+        if (clipBounds != null) //if we're clipping, make sure we shift it back into bounds before actually applying the move CSS
+        {
+            var clippedBounds = shiftMovedPaneToBounds(entry, moveArgs, clipBounds);
+            if (clippedBounds != null)
+            {
+                if (clippedBounds.left === moveArgs.left && clippedBounds.top === moveArgs.top) return;
+
+                moveArgs.left = clippedBounds.left;
+                moveArgs.top = clippedBounds.top;
+            }
+        }
+
+        var movedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Moved);
+
+        var rules =
+        {
+            position: "absolute",
+            top: moveArgs.top + "px",
+            left: moveArgs.left + "px"
+        }
+
+        _settings.stylesheetManager.removeRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector);
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, movedSelector, rules);
+        helper.addClass(EVUI.Modules.Panes.Constants.CSS_Moved);      
+
+        applyTransition(entry, moveArgs.transition, EVUI.Modules.Panes.Constants.CSS_Transition_Move, helper, function ()
+        {
+            callback();
+        });
     };
 
     var shiftMovedPaneToBounds = function (entry, resizeArgs, clipBounds)
@@ -31509,9 +32444,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         hookUpExplicitCloseZones(entry, resolvedShowArgs);
         hookUpAutoCloseMode(entry, resolvedShowArgs);
         hookUpKeydownClose(entry, resolvedShowArgs);
-        hookUpDrag(entry, resolvedShowArgs);
-        hookUpResize(entry, resolvedShowArgs);
         hookUpSetHighestZOrder(entry, resolvedShowArgs);
+
+        var resolvedResizeMoveSettings = resolveResizeMoveSettings(entry.link.pane.resizeMoveSettings);
+        hookUpDrag(entry, resolvedResizeMoveSettings);
+        hookUpResize(entry, resolvedResizeMoveSettings);
     };
 
     /**Hooks up any child elements of the Pane with the appropriate attribute on them to be auto-close zones for the Pane.
@@ -31528,7 +32465,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(attributeName, "click", closeZones.elements[x], function (event)
             {
-                if (entry.link.pane.autoHideSettings == null || (typeof entry.link.pane.autoHideSettings.autoCloseFilter === "function" && entry.link.pane.autoHideSettings.autoCloseFilter(context) === false)) return;
+                if (entry.link.pane.autoHideSettings == null || (typeof entry.link.pane.autoHideSettings.autoHideFilter === "function" && entry.link.pane.autoHideSettings.autoHideFilter(context) === false)) return;
 
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.Click;
@@ -31554,9 +32491,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
         var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
-        if (autoHideSettings.closeMode === EVUI.Modules.Panes.PaneCloseMode.Click) //a click anywhere will close the Pane
+        if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.Click) //a click anywhere will close the Pane
         {
-            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneCloseMode.Click, "click contextmenu", document, function (event)
+            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.Click, "click contextmenu", document, function (event)
             {
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.Click;
@@ -31588,9 +32525,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             handler.attach();
             entry.link.eventBindings.push(handler);
         }
-        else if (autoHideSettings.closeMode === EVUI.Modules.Panes.PaneCloseMode.ExteriorClick) //only a click outside the Pane's root element will close the Pane
+        else if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.ExteriorClick) //only a click outside the Pane's root element will close the Pane
         {
-            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneCloseMode.ExteriorClick, "click contextmenu", document, function (event)
+            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.ExteriorClick, "click contextmenu", document, function (event)
             {
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.ExteriorClick;
@@ -31598,7 +32535,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 context.pane = entry.link.pane;
 
                 //make sure the click comes from outside the Pane
-                if ((typeof entry.link.pane.autoHideSettings.autoCloseFilter === "function" && entry.link.pane.autoHideSettings.autoCloseFilter(context) === true) || //if the filter says it shouldn't be closed, don't hide it
+                if ((typeof entry.link.pane.autoHideSettings.autoHideFilter === "function" && entry.link.pane.autoHideSettings.autoHideFilter(context) === true) || //if the filter says it shouldn't be closed, don't hide it
                     EVUI.Modules.Core.Utils.containsElement(event.target, entry.link.pane.element) === true || //or if the element target is contained by the element, don't hide it
                     event.target === entry.link.pane.element) return; //or if the element target is the Pane itself, don't hide it
 
@@ -31627,9 +32564,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             handler.attach();
             entry.link.eventBindings.push(handler);
         }
-        else if (autoHideSettings.closeMode === EVUI.Modules.Panes.PaneCloseMode.GlobalClick) //only a click outside the Pane's root element will close the Pane
+        else if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.GlobalClick) //only a click outside the Pane's root element will close the Pane
         {
-            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneCloseMode.GlobalClick, "click contextmenu", document, function (event)
+            var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.GlobalClick, "click contextmenu", document, function (event)
             {
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.GlobalClick;
@@ -31670,12 +32607,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
         var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
-        if (autoHideSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoCloseKeys) === false) return;
+        if (autoHideSettings.autoHideKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoHideKeys) === false) return;
 
-        var handler = new EVUI.Modules.Panes.PaneEventBinding("autoCloseKey", "keydown", document, function (event)
+        var handler = new EVUI.Modules.Panes.PaneEventBinding("autoHideKey", "keydown", document, function (event)
         {
-            if (autoHideSettings.autoCloseKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoCloseKeys) === false) return;
-            if (autoHideSettings.autoCloseKeys.indexOf(event.key) === -1) return;
+            if (autoHideSettings.autoHideKeys == null || EVUI.Modules.Core.Utils.isArray(autoHideSettings.autoHideKeys) === false) return;
+            if (autoHideSettings.autoHideKeys.indexOf(event.key) === -1) return;
 
             var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
             context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.KeyDown;
@@ -31723,9 +32660,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
 
-        if (typeof resolvedAutoHideSettings.autoCloseFilter !== "function") return callback(true);
+        if (typeof resolvedAutoHideSettings.autoHideFilter !== "function") return callback(true);
 
-        var value = resolvedAutoHideSettings.autoCloseFilter(context);
+        var value = resolvedAutoHideSettings.autoHideFilter(context);
         if (EVUI.Modules.Core.Utils.isPromise(value) === true)
         {
             value.then(function (result)
@@ -31744,10 +32681,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
     /**Hooks up the drag event handler to a child element of the root Pane element.
-    @param {InternalPaneEntry} entry The entry representing the Pane that is having its drag handlers attached.*/
-    var hookUpDrag = function (entry)
+    @param {InternalPaneEntry} entry The entry representing the Pane that is having its drag handlers attached.
+    @param {EVUI.Modules.Panes.PaneResizeMoveSettings} resolveResizeMoveSettings The settings for resizing or moving the pane.*/
+    var hookUpDrag = function (entry, resolveResizeMoveSettings)
     {
-        if (entry.link.pane.element == null || (entry.link.pane.resizeMoveSettings != null && entry.link.pane.resizeMoveSettings.canDragMove !== true)) return;
+        if (entry.link.pane.element == null || (resolveResizeMoveSettings.canDragMove !== true)) return;
         var attributeName = getAttributeName(EVUI.Modules.Panes.Constants.Attribute_Drag);
 
         var paneRoot = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
@@ -31785,14 +32723,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     var xDelta = dragEvent.clientX - startX;
                     var yDelta = dragEvent.clientY - startY;
 
-                    var resizeArgs = new EVUI.Modules.Panes.PaneResizeMoveArgs();
-                    resizeArgs.height = (startPos.bottom - startPos.top);
-                    resizeArgs.width = (startPos.right - startPos.left);
-                    resizeArgs.top = startPos.top + yDelta;
-                    resizeArgs.left = startPos.left + xDelta;
-                    resizeArgs.resizeTransition = (entry.link.pane.showSettings.reclacSettings != null) ? entry.link.pane.showSettings.reclacSettings.recalcTransition : null;
+                    var moveArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+                    moveArgs.top = startPos.top + yDelta;
+                    moveArgs.left = startPos.left + xDelta;
+                    moveArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.moveTransition : null;
 
-                    resizePane(entry, resizeArgs, paneRoot, false, true, null, bounds);
+                    _self.movePane(entry.link.pane, moveArgs);
+                    //movePane(entry, resizeArgs, paneRoot, null, bounds);
                 };
 
                 document.addEventListener("mousemove", dragHandler);
@@ -31862,34 +32799,39 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 var xDelta = dragEvent.clientX - startX;
                 var yDelta = dragEvent.clientY - startY;
 
-                var resizeArgs = new EVUI.Modules.Panes.PaneResizeMoveArgs();
-                resizeArgs.height = (startPos.bottom - startPos.top);
-                resizeArgs.width = (startPos.right - startPos.left);
+                var resizeArgs = new EVUI.Modules.Panes.PaneResizeArgs();
+                //resizeArgs.height = (startPos.bottom - startPos.top);
+                //resizeArgs.width = (startPos.right - startPos.left);
+                resizeArgs.right = startPos.right;
+                resizeArgs.bottom = startPos.bottom;
                 resizeArgs.top = startPos.top;
                 resizeArgs.left = startPos.left;
-                resizeArgs.resizeTransition = (entry.link.pane.showSettings.reclacSettings != null) ? entry.link.pane.showSettings.reclacSettings.recalcTransition : null;
+                resizeArgs.transition = (entry.link.pane.resizeMoveSettings != null) ? entry.link.pane.resizeMoveSettings.resizeTransition : null;
 
                 if (dragHandles.growX === "right")
                 {
-                    resizeArgs.width += xDelta;
+                    //resizeArgs.width += xDelta;
+                    resizeArgs.right += xDelta;
                 }
                 else if (dragHandles.growX === "left")
                 {
-                    resizeArgs.width -= xDelta;
+                    //resizeArgs.width -= xDelta;
                     resizeArgs.left += xDelta;
                 }
 
                 if (dragHandles.growY === "bottom")
                 {
-                    resizeArgs.height += yDelta;
+                    //resizeArgs.height += yDelta;
+                    resizeArgs.bottom += yDelta;
                 }
                 else if (dragHandles.growY === "top")
                 {
-                    resizeArgs.height -= yDelta; 
+                    //resizeArgs.height -= yDelta; 
                     resizeArgs.top += yDelta;
                 }
 
-                resizePane(entry, resizeArgs, paneRoot, true, false, dragHandles, bounds);
+                _self.resizePane(entry.link.pane, resizeArgs);
+                //resizePane(entry, resizeArgs, paneRoot, dragHandles, bounds);
             };
 
             document.addEventListener("mousemove", dragHandler); //add the drag handler to the document
@@ -32137,7 +33079,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 return callback(false);
             }
-            else if (contents.elements.length > 1) //too many elements, but be exactly one
+            else if (contents.elements.length > 1) //too many elements, must be exactly one
             {
                 return callback(false);
             }
@@ -32418,10 +33360,6 @@ EVUI.Modules.Panes.Pane = function (entry)
     @type {EVUI.Modules.Panes.PaneShowSettings}*/
     this.showSettings = new EVUI.Modules.Panes.PaneShowSettings();
 
-    /**Object. Rules for controlling what will cause the Pane to recalculate its position.
-    @type {EVUI.Modules.Panes.PaneRecalcSettings}*/
-    this.reclacSettings = new EVUI.Modules.Panes.PaneRecalcSettings();
-
     /**Object. Settings for controlling how the Pane can be resized in response to user action.
     @type {EVUI.Modules.Panes.PaneResizeMoveSettings}*/
     this.resizeMoveSettings = new EVUI.Modules.Panes.PaneResizeMoveSettings();
@@ -32529,6 +33467,34 @@ EVUI.Modules.Panes.Pane = function (entry)
 
     };
 
+    /**Event that fires before any Pane is moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMove = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires after any Pane has been moved in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onMoved = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires before any Pane is resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResize = function (paneEventArgs)
+    {
+
+    };
+
+    /**Event that fires after any Pane has been resized in response to a DOM event or user invocation.
+    @param {EVUI.Modules.Panes.PaneEventArgs} paneEventArgs The event arguments for the Pane operation.*/
+    this.onResized = function (paneEventArgs)
+    {
+
+    };
+
     /**Shows a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
     @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} showArgs Optional. A PaneShowArgs object graph or the callback. If omitted or passed a function, the Pane's existing show/load settings are used instead.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
@@ -32602,6 +33568,41 @@ EVUI.Modules.Panes.Pane = function (entry)
         return options.link.manager.unloadPaneAsync(_entry.paneId, unloadArgs);
     };
 
+    /**Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.movePane = function (paneMoveArgs, callback)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.movePane(_entry.paneId, paneMoveArgs, callback);
+    };
+
+    /**Awaitable. Asynchronously moves a currently visible pane to a new location.
+    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @returns {Promise<Boolean>}*/
+    this.movePaneAsync = function (paneMoveArgs)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.movePaneAsync(_entry.paneId, paneMoveArgs);
+    };
+
+    /**Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
+    this.resizePane = function (paneResizeArgs, callback)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.resizePane(_entry.paneId, paneResizeArgs, callback);
+    };
+
+    /**Awaitable. Asynchronously resizes a currently visible pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
+    this.resizePaneAsync = function (paneResizeArgs)
+    {
+        if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
+        return options.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs, callback);
+    };
+
     /**Calculates and gets the absolute position of the Pane.
     @returns {EVUI.Modules.Dom.ElementBounds}*/
     this.getCurrentPosition = function ()
@@ -32625,46 +33626,65 @@ EVUI.Modules.Panes.Pane = function (entry)
             return zIndex;
         }
     };
-};
 
-/**Settings for controlling how the Pane will automatically close itself in response to user events.
-@class*/
-EVUI.Modules.Panes.PaneAutoHideSettings = function ()
-{
-    /**String. The trigger for what should close the Pane.
-    @type {String}*/
-    this.closeMode = EVUI.Modules.Panes.PaneCloseMode.Explicit;
-
-    /**Array. An array of characters/key names ("a", "b", "Escape", "Enter", etc.) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
-    @type {String[]}*/
-    this.autoCloseKeys = [];
-
-    /**Boolean. Controls whether or not a click-based closeMode will close the Pane that invoked show on the current Pane.
-    @type {Boolean}*/
-    this.allowChaining = false;
-
-    /**An optional function to use to determine if an auto-close event should hide the Pane. Return false to prevent the Pane from being hidden.
-    @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoTriggerContext The context object generated by the event handler.
-    @returns {Boolean}*/
-    this.autoCloseFilter = function (autoTriggerContext)
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.Panes.Constants.Fn_PaneEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
     {
-        return true;
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.Event;
+
+        return _entry.link.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _entry.link.bubblingEvents.removeEventListener(eventkeyOrId, handler);
     };
 };
 
-/**Enum for describing the way the Pane should automatically close.
-@enum*/
-EVUI.Modules.Panes.PaneCloseMode =
+/**Settings for controlling how the Pane will automatically hide itself in response to user events.
+@class*/
+EVUI.Modules.Panes.PaneAutoHideSettings = function ()
 {
-    /**The Pane should close on the next click.*/
+    /**String. The trigger for what should hide the Pane. Must be a value from PaneHideMode.
+    @type {String}*/
+    this.hideMode = EVUI.Modules.Panes.PaneHideMode.Explicit;
+
+    /**Array. An array of characters/key names ("a", "b", "Escape", "Enter", etc.) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
+    @type {String[]}*/
+    this.autoHideKeys = [];
+
+    /**Boolean. Controls whether or not a click-based hideMode will hide the Pane that invoked show on the current Pane.
+    @type {Boolean}*/
+    this.allowChaining = false;
+
+    /**An optional function to use to determine if an auto-hide event should hide the Pane. Return false to prevent the Pane from being hidden.
+    @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoTriggerContext The context object generated by the event handler.
+    @returns {Boolean}*/
+    this.autoHideFilter = null;
+};
+
+/**Enum for describing the way the Pane should automatically hide itself.
+@enum*/
+EVUI.Modules.Panes.PaneHideMode =
+{
+    /**The Pane should hide on the next click.*/
     GlobalClick: "globalclick",
-    /**The Pane should close on any click outside its bounds.*/
+    /**The Pane should hide on any click outside its bounds.*/
     ExteriorClick: "exteriorclick",
-    /**The pane should only close when explicitly closed.*/
+    /**The pane should only hide when explicitly closed.*/
     Explicit: "explicit"
 };
 
-Object.freeze(EVUI.Modules.Panes.PaneCloseMode);
+Object.freeze(EVUI.Modules.Panes.PaneHideMode);
 
 /**Object for containing mutually exclusive options for how to load the Pane. A Element reference takes precedent over a CSS selector (where only the first result will be used), which takes precedent over a set of Http load arguments which takes precedence over placeholder load arguments.
 @class*/
@@ -32798,7 +33818,8 @@ EVUI.Modules.Panes.PaneShowSettings = function ()
     this.alwaysOnTop = true;
 };
 
-/**Arguments for showing a Pane. Contains a set of mutually exclusive directives for describing how to display and position the Pane.Goes in the following order: position class > absolute position > relative position > anchored position > document flow > full screen > centered.*/
+/**Arguments for showing a Pane. Contains a set of mutually exclusive directives for describing how to display and position the Pane.Goes in the following order: position class > absolute position > relative position > anchored position > document flow > full screen > centered.
+@class */
 EVUI.Modules.Panes.PaneShowArgs = function ()
 {
     /**Any. Any contextual information to pass into the Pane show logic.
@@ -33258,6 +34279,14 @@ EVUI.Modules.Panes.PaneResizeMoveSettings = function ()
     /**Boolean. Whether or not the dimensions of any resized elements in a Pane will be restored to their original size when the Pane is hidden. True by default.
     @type {Boolean}*/
     this.restoreDefaultOnHide = true;
+
+    /**Object. The CSS transition that will be used when the pane is resized.
+    @type {EVUI.Modules.Panes.PaneTransition}*/
+    this.resizeTransition = null;
+
+    /**Object. The CSS transition that will be used when the pane is resmovedized.
+    @type {EVUI.Modules.Panes.PaneTransition}*/
+    this.moveTransition = null;
 };
 
 /**Object for configuring a full-screen backdrop to be placed behind a Pane.
@@ -33344,7 +34373,7 @@ EVUI.Modules.Panes.PaneEventArgs = function (entry)
     /**Stops the Pane from calling any other event handlers with the same eventType.*/
     this.stopPropagation = function () { };
 
-    /**Object. The position of the Pane that has been calculated in using the currentShowSettings.
+    /**Object. Read only. The position of the Pane that has been calculated in using the Pane's PaneShowSettings and the PaneShowArgs being used to show the Pane.
     @type {EVUI.Modules.Panes.PanePosition}*/
     this.calculatedPosition = null;
 
@@ -33380,9 +34409,13 @@ EVUI.Modules.Panes.PaneEventArgs = function (entry)
     @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
     this.unloadArgs = null;
 
-    /**Object. The arguments being used to move or resize this pane.
-    @type {EVUI.Modules.Panes.PaneResizeMoveArgs}*/
-    this.resizeMoveArgs = null;
+    /**Object. The arguments being used to move this pane.
+    @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+    this.moveArgs = null;
+
+    /**Object. The arguments being used to resize this pane.
+    @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+    this.resizeArgs = null;
 };
 
 /**Flags for describing the current state of a Pane.
@@ -33415,7 +34448,11 @@ EVUI.Modules.Panes.PaneAction =
     /**Pane is in the process of being loaded.*/
     Load: "load",
     /**Pane is in the process of being unloaded.*/
-    Unload: "unload"    
+    Unload: "unload",
+    /**The Pane is in the process of being moved.*/
+    Move: "move",
+    /**The pane is in the process of being resized.*/
+    Resize: "resize"
 };
 Object.freeze(EVUI.Modules.Panes.PaneAction);
 
@@ -33538,23 +34575,54 @@ EVUI.Modules.Panes.PaneUnloadArgs = function ()
 
 /**Arguments for resizing or moving a Pane.
 @class*/
-EVUI.Modules.Panes.PaneResizeMoveArgs = function ()
+EVUI.Modules.Panes.PaneResizeArgs = function ()
 {
-    /**Any. Any contextual information to pass into the move/resize logic.
+    /**Any. Any contextual information to pass into the Pane resize logic.
     @type {Any}*/
     this.context = undefined;
 
-    /**Number. The new height of the Pane.
+    /**Number. The distance to grow the top of the Pane, in pixels.
     @type {Number}*/
-    this.resizeTop = undefined;
+    this.top = undefined;
 
-    /**Number. The new width of the Pane.
+    /**Number. The distance to grow the left of the Pane, in pixels.
     @type {Number}*/
-    this.resizeLeft = undefined;
+    this.left = undefined;
 
-    this.resizeRight = undefined;
+    /**Number. The distance to grow the right of the Pane, in pixels. 
+    @type {Number}*/
+    this.right = undefined;
 
-    this.resizeBottom = undefined;
+    /**Number. The distance to grow the bottom of the Pane, in pixels.
+    @type {Number}*/
+    this.bottom = undefined;
+
+    /**Number. The transition to apply to the Pane when it is resized.
+    @type {EVUI.Modules.Panes.PaneTransition}*/
+    this.transition = undefined;
+};
+
+/**Gets the height of the resized Pane.
+@returns {Number}*/
+EVUI.Modules.Panes.PaneResizeArgs.prototype.getResizedHeight = function ()
+{
+    return this.bottom - this.top;
+};
+
+/**Gets the width of the resized Pane.
+@returns {Number}*/
+EVUI.Modules.Panes.PaneResizeArgs.prototype.getResizedWidth = function ()
+{
+    return this.right - this.left;
+};
+
+/**Arguments for moving a Pane.
+@class*/
+EVUI.Modules.Panes.PaneMoveArgs = function ()
+{
+    /**Any. Any contextual information to pass into the Pane move logic.
+    @type {Any}*/
+    this.context = undefined;
 
     /**Number. The new top position of the Pane.
     @type {Number}*/
@@ -33564,13 +34632,9 @@ EVUI.Modules.Panes.PaneResizeMoveArgs = function ()
     @type {Number}*/
     this.left = undefined;
 
-    /**Number. The transition to apply to the Pane when it is resized.
-    @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.resizeTransition = undefined;
-
     /**Number. The transition to apply to the Pane when it is moved.
     @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.moveTransition = undefined;
+    this.transition = undefined;
 };
 
 /**Enum for indicating what type of arguments object the PaneEventArgs.currentArguments property is.
@@ -33586,10 +34650,14 @@ EVUI.Modules.Panes.PaneArgumentType =
     /**Arguments are PaneUnloadArgs.*/
     Unload: "unload",
     /**Arguments are PaneMoveResizeArgs.*/
-    MoveResize: "moveResize"
+    Move: "move",
+    /**Arguments are PaneMoveResizeArgs.*/
+    Resize: "resize"
 };
 Object.freeze(EVUI.Modules.Panes.PaneArgumentType);
 
+/**Dependencies used by the PaneManager.
+@class */
 EVUI.Modules.Panes.PaneManagerServices = function ()
 {
     /**Object. The HttpManager used to make web requests from the PaneManager.
@@ -33675,7 +34743,7 @@ Object.freeze(EVUI.Modules.Panes);
 
 
 /********************************************************Styles.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
+/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -35441,8 +36509,8 @@ Object.freeze(EVUI.Modules.Styles);
 
 
 /********************************************************TreeView.js********************************************************/
-/**Copyright (c) 2023 Richard H Stannard
-
+/**Copyright (c) 2025 Richard H Stannard
+ * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
 
@@ -35819,8 +36887,6 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
             throw Error("Invalid action.");
         }
     };
-
-
 
     /**Issues the command to build a node (or the entire tree view) from a TreeView object.
     @param {TreeViewEntry} treeViewEntry The TreeView invoking the command.
@@ -36251,6 +37317,7 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
         opSession.eventStream = new EVUI.Modules.EventStream.EventStream();
         opSession.eventStream.context = opSession.nodeEntry.node;
         opSession.eventStream.extendSteps = false;
+        opSession.eventStream.bubblingEvents = [opSession.nodeEntry.bubblingEvents, opSession.nodeEntry.treeViewEntry.bubblingEvents];
 
         opSession.eventStream.onCancel = function ()
         {
@@ -38095,6 +39162,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         /**Gets a valid element for the root node of the TreeView based on ambiguous user input.*/
         this.getValidElement = getValidRootElement;
+
+        /**The event manager used to attach more events to the TreeView.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
     };
 
     /**Object that is injected into a TreeViewNode and is used internally to perform all operations on TreeViewNodes.
@@ -38239,6 +39310,10 @@ EVUI.Modules.TreeView.TreeViewController = function (services)
 
         /**Triggers the disposal of this node.*/
         this.dispose = disposeTreeViewNode;
+
+        /**The event manager used to attach additional events to the node.
+        @type {EVUI.Modules.EventStream.BubblingEventManager}*/
+        this.bubblingEvents = new EVUI.Modules.EventStream.BubblingEventManager();
     };
 
     /**Represents one of the objects used by the internal Binding to stamp out a tree view child node list for each child source object in the user's source object
@@ -38388,7 +39463,7 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
         enumerable: true
     });
 
-    /**Object. The HTMLElement under which the TreeView will be appended under.
+    /**Object. The HTMLElement under which the TreeView will be appended.
     @type {Element}*/
     this.element = null;
     Object.defineProperty(this, "element", {
@@ -38617,6 +39692,28 @@ EVUI.Modules.TreeView.TreeView = function (tvEntry)
     /**Event that fires after a collapse operation completes.
     @type {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler}*/
     this.onCollapsed = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _treeViewEntry.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _treeViewEntry.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Expands all the TreeViewNodes in the TreeView.
@@ -39075,6 +40172,28 @@ EVUI.Modules.TreeView.TreeViewNode = function (nodeEntry)
     /**Event that fires after a collapse operation completes.
     @type {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler}*/
     this.onCollapsed = null;
+
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
+    @param {EVUI.Modules.TreeView.Constants.Fn_TreeViewEventHandler} handler The function to fire.
+    @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
+    @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
+    this.addEventListener = function (eventkey, handler, options)
+    {
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+
+        return _nodeEntry.bubblingEvents.addEventListener(eventkey, handler, options);
+    };
+
+    /**Removes an event listener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
+    @param {Function} handler The handling function of the event to remove.
+    @returns {Boolean}*/
+    this.removeEventListener = function (eventkeyOrId, handler)
+    {
+        return _nodeEntry.bubblingEvents.removeEventListener(eventkeyOrId, handler);
+    };
 };
 
 /**Object for containing configuration options for a TreeView and its TreeViewNodes.

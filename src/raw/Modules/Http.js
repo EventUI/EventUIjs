@@ -1,4 +1,4 @@
-﻿/**Copyright (c) 2023 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -152,23 +152,25 @@ EVUI.Modules.Http.HttpManager = function ()
         return copy;
     };
 
-    /**Add an event listener to fire after an event with the same name has been executed.
-    @param {String} eventName The name of the event in the EventStream to execute after.
+    /**Add an event listener to fire after an event with the same key has been executed.
+    @param {String} eventkey The key of the event in the EventStream to execute after.
     @param {EVUI.Modules.Http.Constants.Fn_Event_Handler} handler The function to fire.
     @param {EVUI.Modules.EventStream.EventStreamEventListenerOptions} options Options for configuring the event.
     @returns {EVUI.Modules.EventStream.EventStreamEventListener}*/
-    this.addEventListener = function (eventName, handler, options)
+    this.addEventListener = function (eventkey, handler, options)
     {
-        return _bubbler.addEventListener(eventName, handler, options);
+        if (EVUI.Modules.Core.Utils.isObject(options) === false) options = new EVUI.Modules.EventStream.EventStreamEventListenerOptions();
+        options.eventType = EVUI.Modules.EventStream.EventStreamEventType.GlobalEvent;
+        return _bubbler.addEventListener(eventkey, handler, options);
     };
 
-    /**Removes an EventStreamEventListener based on its event name, its id, or its handling function.
-    @param {String} eventNameOrId The name or ID of the event to remove.
+    /**Removes an EventStreamEventListener based on its event key, its id, or its handling function.
+    @param {String} eventkeyOrId The key or ID of the event to remove.
     @param {Function} handler The handling function of the event to remove.
     @returns {Boolean}*/
-    this.removeEventListener = function (eventNameOrId, handler)
+    this.removeEventListener = function (eventkeyOrId, handler)
     {
-        return _bubbler.removeEventListener(eventNameOrId, handler);
+        return _bubbler.removeEventListener(eventkeyOrId, handler);
     };
 
     /**Builds the internal RequestInstance object that manages the lifetime of the XMLHttpRequest. Sets up the EventStream's function and setting overrides.
@@ -307,7 +309,7 @@ EVUI.Modules.Http.HttpManager = function ()
                     if (typeof requestArgs.timeout === "number" && requestArgs.timeout > 0) xhr.timeout = requestArgs.timeout;
 
                     //add all the headers
-                    if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(requestArgs.headers) === true)
+                    if (EVUI.Modules.Core.Utils.isArray(requestArgs.headers) === true)
                     {
                         var numHeaders = requestArgs.headers.length;
                         for (var x = 0; x < numHeaders; x++)
