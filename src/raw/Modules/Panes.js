@@ -7907,7 +7907,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.resizePaneAsync = function (paneResizeArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs, callback);
+        return options.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs);
     };
 
     /**Calculates and gets the absolute position of the Pane.
