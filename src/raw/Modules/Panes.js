@@ -1644,7 +1644,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         finalArgs.showTransition = resolvePaneTransition(defaultShowSettings.showTransition, userShowArgs.showTransition);
         finalArgs.clipSettings = resolvePaneClipSettings(defaultShowSettings.clipSettings, userShowArgs.clipSettings);
-        finalArgs.backdropSettings = resolveBackdropSettings(defaultShowSettings.backdropSettings, userShowArgs.backdropSettings)
+        finalArgs.backdropSettings = resolveBackdropSettings(defaultShowSettings.backdropSettings, userShowArgs.backdropSettings);
+        if (typeof finalArgs.alwaysOnTop !== "boolean") finalArgs.alwaysOnTop = true;
 
 
         //figure out what the default position mode is and what the user's position mode is
@@ -2774,7 +2775,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     canResizeLeft: true,
                     canResizeRight: true,
                     canResizeTop: true,
-                    dragHanldeMargin: 20
+                    dragHandleMargin: 20
                 }
             };
         }
@@ -5617,6 +5618,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         else
         {
             positionBounds = new EVUI.Modules.Dom.ElementBounds();
+            if (typeof relativeSettings.top !== "number") relativeSettings.top = 0;
+            if (typeof relativeSettings.left !== "number") relativeSettings.left = 0;
+
             positionBounds.left = relativeSettings.left;
             positionBounds.top = relativeSettings.top;
             positionBounds.right = relativeSettings.left;
@@ -5874,7 +5878,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         if (resolvedShowArgs.absolutePosition != null) //we have a value for absolute position
         {
-            if (resolvedShowArgs.absolutePosition.left !== 0 || resolvedShowArgs.absolutePosition.top !== 0) //at least one of the x or y values must be non-zero for this mode to apply
+            if (typeof resolvedShowArgs.absolutePosition.left === "number" || typeof resolvedShowArgs.absolutePosition.top === "number") //at least one of the x or y values must be non-zero for this mode to apply
             {
                 return EVUI.Modules.Panes.PaneShowMode.AbsolutePosition;
             }
@@ -5882,11 +5886,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         if (resolvedShowArgs.relativePosition != null) //we have a value for relative position
         {
-            if (resolvedShowArgs.relativePosition.relativeElement != null && resolvedShowArgs.relativePosition.relativeElement.isConnected === true) 
+            if (resolvedShowArgs.relativePosition.relativeElement != null) 
             {
                 return EVUI.Modules.Panes.PaneShowMode.RelativePosition; //the relative element must be part of the DOM to be a valid target to orient around (so we can get its position)
             }
-            else if (resolvedShowArgs.relativePosition.left !== 0 || resolvedShowArgs.relativePosition.top !== 0)
+            else if (typeof resolvedShowArgs.relativePosition.left === "number" || typeof resolvedShowArgs.relativePosition.top === "number")
             {
                 return EVUI.Modules.Panes.PaneShowMode.RelativePosition; //if one of the coordinates is non zero value it can be a target for orientation
             }
@@ -5894,10 +5898,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         if (resolvedShowArgs.anchors != null) //we have a value for anchors
         {
-            if ((resolvedShowArgs.anchors.bottom != null && (resolvedShowArgs.anchors.bottom.isConnected === true || resolvedShowArgs.anchors.bottom === window))
-                || (resolvedShowArgs.anchors.left != null && (resolvedShowArgs.anchors.left.isConnected === true || resolvedShowArgs.anchors.left === window))
-                || (resolvedShowArgs.anchors.right != null && (resolvedShowArgs.anchors.right.isConnected === true || resolvedShowArgs.anchors.right === window))
-                || (resolvedShowArgs.anchors.top != null && (resolvedShowArgs.anchors.top.isConnected === true || resolvedShowArgs.anchors.top === window)))
+            if ((resolvedShowArgs.anchors.bottom != null)
+                || (resolvedShowArgs.anchors.left != null)
+                || (resolvedShowArgs.anchors.right != null)
+                || (resolvedShowArgs.anchors.top != null))
             {
                 return EVUI.Modules.Panes.PaneShowMode.Anchored; //at least one anchor must be non-null and connected to the DOM to be a valid target (so we can get its position)
             }
@@ -6446,7 +6450,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             case EVUI.Modules.Panes.PaneClipMode.Shift:
                 return clipMode;
             default:
-                return EVUI.Modules.Panes.PaneClipMode.Shift;
+                return EVUI.Modules.Panes.PaneClipMode.Overflow;
         }
     };
 
@@ -6537,7 +6541,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             if (isNaN(minHeight) === true) minHeight = null;
         }
 
-        var minDimension = entry.link.pane.resizeMoveSettings.dragHanldeMargin * 2.5;
+        var minDimension = entry.link.pane.resizeMoveSettings.dragHandleMargin * 2.5;
         if (minWidth == null || minWidth < minDimension) minWidth = minDimension;
         if (minHeight == null || minHeight < minDimension) minHeight = minDimension;
 
@@ -6687,7 +6691,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             var clippedBounds = shiftMovedPaneToBounds(entry, moveArgs, clipBounds);
             if (clippedBounds != null)
             {
-                if (clippedBounds.left === moveArgs.left && clippedBounds.top === moveArgs.top) return;
+                if (clippedBounds.left === moveArgs.left && clippedBounds.top === moveArgs.top) return callback();
 
                 moveArgs.left = clippedBounds.left;
                 moveArgs.top = clippedBounds.top;
@@ -6716,10 +6720,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var shiftMovedPaneToBounds = function (entry, resizeArgs, clipBounds)
     {
         var currentPosition = new EVUI.Modules.Panes.PanePosition(EVUI.Modules.Panes.PaneShowMode.AbsolutePosition);
+        var dimensions = entry.link.pane.getCurrentPosition();
         currentPosition.top = resizeArgs.top;
         currentPosition.left = resizeArgs.left;
-        currentPosition.bottom = resizeArgs.top + resizeArgs.height;
-        currentPosition.right = resizeArgs.left + resizeArgs.width;
+        currentPosition.bottom = dimensions.height;
+        currentPosition.right = dimensions.width;
 
         var observer = new EVUI.Modules.Observers.ObjectObserver(currentPosition);
         shiftToBounds(entry, currentPosition, clipBounds);
@@ -7169,7 +7174,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         var mouseX = downEvent.clientX;
         var mouseY = downEvent.clientY;
-        var growMargin = entry.link.pane.resizeMoveSettings.dragHanldeMargin;
+        var growMargin = entry.link.pane.resizeMoveSettings.dragHandleMargin;
         var growBounds = new EVUI.Modules.Dom.ElementBounds();
 
         //make a new set of bounds that is the inset of the main frame that the mouse position has to be between in order to trigger a grow event.
@@ -8000,20 +8005,20 @@ EVUI.Modules.Panes.PaneAutoHideSettings = function ()
 {
     /**String. The trigger for what should hide the Pane. Must be a value from PaneHideMode.
     @type {String}*/
-    this.hideMode = EVUI.Modules.Panes.PaneHideMode.Explicit;
+    this.hideMode = undefined
 
     /**Array. An array of characters/key names ("a", "b", "Escape", "Enter", etc.) that will automatically trigger the Pane to be hidden when pressed. Corresponds to the KeyboardEvent.key property.
     @type {String[]}*/
-    this.autoHideKeys = [];
+    this.autoHideKeys = undefined
 
     /**Boolean. Controls whether or not a click-based hideMode will hide the Pane that invoked show on the current Pane.
     @type {Boolean}*/
-    this.allowChaining = false;
+    this.allowChaining = undefined
 
     /**An optional function to use to determine if an auto-hide event should hide the Pane. Return false to prevent the Pane from being hidden.
     @param {EVUI.Modules.Panes.PaneAutoTriggerContext} autoTriggerContext The context object generated by the event handler.
     @returns {Boolean}*/
-    this.autoHideFilter = null;
+    this.autoHideFilter = undefined
 };
 
 /**Enum for describing the way the Pane should automatically hide itself.
@@ -8036,11 +8041,11 @@ EVUI.Modules.Panes.PaneLoadSettings = function ()
 {
     /**Object. The Element to show as the Pane.
     @type {Element}*/
-    this.element = null;
+    this.element = undefined;
 
     /**String. A CSS selector that is used to go find the Element to show as the Pane. Only the first result is used.
     @type {String}*/
-    this.selector = null;
+    this.selector = undefined;
 
     /**Object. If using a CSS selector to find the root element of a Pane, this is the context limiting element to search inside of.
     @type {Element}*/
@@ -8048,11 +8053,11 @@ EVUI.Modules.Panes.PaneLoadSettings = function ()
 
     /**Object. HttpRequestArgs for making a Http request to go get the Pane's HTML.
     @type {EVUI.Modules.Http.HttpRequestArgs}*/
-    this.httpLoadArgs = null;
+    this.httpLoadArgs = undefined;
 
     /**Object. PlaceholderLoadArgs for making a series of Http requests to load the Pane as an existing placeholder.
     @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
-    this.placeholderLoadArgs = null;
+    this.placeholderLoadArgs = undefined;
 };
 
 /**Indicates the method by which the element for the Pane will be obtained.
@@ -8078,31 +8083,31 @@ EVUI.Modules.Panes.PaneLoadArgs = function ()
 {
     /**Any. Any contextual information to pass into the Pane load logic.
     @type {Any}*/
-    this.context = null;
+    this.context = undefined;
 
     /**Object. The Element to show as the Pane.
     @type {Element}*/
-    this.element = null;
+    this.element = undefined;
 
     /**String. A CSS selector that is used to go find the Element to show as the Pane. Only the first result is used.
     @type {String}*/
-    this.selector = null;
+    this.selector = undefined;
 
     /**Object. If using a CSS selector to find the root element of a Pane, this is the context limiting element to search inside of.
     @type {Element}*/
-    this.contextElement = null;
+    this.contextElement = undefined;
 
     /**Object. HttpRequestArgs for making a Http request to go get the Pane's HTML.
     @type {EVUI.Modules.Http.HttpRequestArgs}*/
-    this.httpLoadArgs = null;
+    this.httpLoadArgs = undefined;
 
     /**Object. PlaceholderLoadArgs for making a series of Http requests to load the Pane as an existing placeholder.
     @type {EVUI.Modules.HtmlLoader.HtmlPlaceholderLoadArgs}*/
-    this.placeholderLoadArgs = null;
+    this.placeholderLoadArgs = undefined;
 
     /**Boolean. Whether or not to re-load the Pane.
     @type {Boolean}*/
-    this.reload = false;
+    this.reload = undefined;
 };
 
 /**Object for containing a set of mutually exclusive directives for describing how to display and position the Pane. Goes in the following order: position class > absolute position > relative position > anchored position > document flow > full screen > centered.
@@ -8111,55 +8116,55 @@ EVUI.Modules.Panes.PaneShowSettings = function ()
 {
     /**String. The name of a CSS class (or an array of CSS classes, or a space-separated CSS classes) that are used to position the Pane.
     @type {String|String[]}*/
-    this.positionClass = null;
+    this.positionClass = undefined;
 
     /**Object. An absolute position for the Pane to be placed at relative to the current view port.
     @type {EVUI.Modules.Panes.PaneAbsolutePosition}*/
-    this.absolutePosition = null;
+    this.absolutePosition = undefined;
 
     /**Object. A description for how to position the Pane relative to a x,y point or relative to the edges of another Element.
     @type {EVUI.Modules.Panes.PaneRelativePosition}*/
-    this.relativePosition = null;
+    this.relativePosition = undefined;
 
     /**Object. A description of other elements to anchor the Pane to and stretch it between its top/bottom or left/right bounding elements.
     @type {EVUI.Modules.Panes.PaneAnchors}*/
-    this.anchors = null;
+    this.anchors = undefined;
 
     /**Object. A description of how to insert the Pane into the DOM relative to another element.
     @type {EVUI.Modules.Panes.PaneDocumentFlow}*/
-    this.documentFlow = null;
+    this.documentFlow = undefined;
 
     /**Object. Rules for describing the bounds and overflow behavior of the Pane.
     @type {EVUI.Modules.Panes.PaneClipSettings}*/
-    this.clipSettings = null;
+    this.clipSettings = undefined;
 
     /**Boolean. Whether or not to full screen the Pane to cover the entire current view port.
     @type {Boolean}*/
-    this.fullscreen = false;
+    this.fullscreen = undefined;
 
     /**Whether or not to explicitly position the Pane so that it is centered on the screen's current view port.
     @type {Boolean}*/
-    this.center = false;
+    this.center = undefined;
 
     /**Object. Contains the details of the CSS transition to use to show the Pane (if a transition is desired). If omitted, the Pane is positioned then shown by manipulating the display property directly.
     @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.showTransition = null;
+    this.showTransition = undefined;
 
     /**Object. Contains the details of the CSS transition to use to hide the Pane (if a transition is desired). If omitted, the Pane is positioned then shown by manipulating the display property directly.
     @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.hideTransition = null;
+    this.hideTransition = undefined;
 
     /**Boolean. Whether or not to include the height and width when positioning the element (when it is not clipped).
     @type {Boolean}*/
-    this.setExplicitDimensions = false;
+    this.setExplicitDimensions = undefined;
 
     /**Object. The settings for a backdrop to appear when the Pane is being displayed.
     @type {EVUI.Modules.Panes.PaneBackdropSettings}*/
-    this.backdropSettings = null;
+    this.backdropSettings = undefined;
 
     /**Boolean. Whether or not to increment the z-index of the pane to be the highest visible pane when the Pane's element gets a mousedown event.
     @type {Boolean}*/
-    this.alwaysOnTop = true;
+    this.alwaysOnTop = undefined;
 };
 
 /**Arguments for showing a Pane. Contains a set of mutually exclusive directives for describing how to display and position the Pane.Goes in the following order: position class > absolute position > relative position > anchored position > document flow > full screen > centered.
@@ -8231,15 +8236,13 @@ EVUI.Modules.Panes.PaneShowArgs = function ()
 @class*/
 EVUI.Modules.Panes.PaneDocumentFlow = function ()
 {
-    var _relativeElement = null;
-
     /**Object. The Element (or CSS selector of the Element) that the Pane will be inserted into the document flow relative to.
     @type {Element|String}*/
-    this.relativeElement = null;
+    this.relativeElement = undefined;
 
     /**String. A value from EVUI.Modules.Pane.PaneDocumentFlowMode indicating whether or not to append, prepend, or insert before/after the relative element. Appends the Pane as a child to the reference element by default.
     @type {String}*/
-    this.mode = EVUI.Modules.Panes.PaneDocumentFlowMode.Append;
+    this.mode = undefined;
 };
 
 /**Object for describing the dimensions that the Pane should fit inside of and what to do when it overflows those bounds.
@@ -8248,19 +8251,19 @@ EVUI.Modules.Panes.PaneClipSettings = function ()
 {
     /**String. A value from the EVUI.Modules.Pane.PaneClipMode enum indicating the behavior when the Pane spills outside of the clipBounds. Defaults to "overflow".
     @type {String}*/
-    this.mode = EVUI.Modules.Panes.PaneClipMode.Overflow;
+    this.mode = undefined;
 
     /**Object. An Element (or CSS selector of an Element) or an ElementBounds object describing the bounds to which the pane will attempt to fit inside. If omitted, the pane's current view port is used.
     @type {Element|EVUI.Modules.Dom.ElementBounds|String}*/
-    this.clipBounds = null;
+    this.clipBounds = undefined;
 
     /**Boolean. Whether or not scrollbars should appear on the X-axis when the Pane has been clipped.
     @type {Boolean}*/
-    this.scrollXWhenClipped = false;
+    this.scrollXWhenClipped = undefined;
 
     /**Boolean. Whether or not scrollbars should appear on the Y-axis when the Pane has been clipped.
     @type {Boolean}*/
-    this.scrollYWhenClipped = false;
+    this.scrollYWhenClipped = undefined;
 };
 
 /**Enum for indicating the behavior of the Pane when it overflows its clipBounds.
@@ -8299,11 +8302,11 @@ EVUI.Modules.Panes.PaneAbsolutePosition = function (options)
 {
     /**Number. The Y-Coordinate of the top edge of the Pane.
     @type {Number}*/
-    this.top = 0;
+    this.top = undefined;
 
     /**Number. The X-Coordinate of the left edge of the Pane.
     @type {Number}*/
-    this.left = 0;
+    this.left = undefined;
 };
 
 /**Object for containing the relative location of the Pane relative to a given point or reference Element.
@@ -8312,27 +8315,27 @@ EVUI.Modules.Panes.PaneRelativePosition = function ()
 {
     /**Number. The X-Coordinate to align the Pane to if it is not being aligned with an Element.
     @type {Number}*/
-    this.left = 0;
+    this.left = undefined;
 
     /**Number. The Y-Coordinate to align the Pane to if it is not being aligned with an Element.
     @type {Number}*/
-    this.top = 0;
+    this.top = undefined;
 
-    /**String. The orientation of the Pane relative to the point or element. "bottom right" by default. If only "left" or "right" is specified, "bottom" is implied; if only "bottom" or "top" is specified, "right" is implied..
+    /**String. The orientation of the Pane relative to the point or element. "bottom right" by default. If only "left" or "right" is specified, "bottom" is implied; if only "bottom" or "top" is specified, "right" is implied.
     @type {String}*/
-    this.orientation = EVUI.Modules.Panes.RelativePositionOrientation.Bottom + " " + EVUI.Modules.Panes.RelativePositionOrientation.Right;
+    this.orientation = undefined;
 
     /**String. The alignment of the Pane relative to the side of the point or element.
     @type {String}*/
-    this.alignment = EVUI.Modules.Panes.RelativePositionAlignment.None;
+    this.alignment = undefined;
 
     /**Object. An Element (or CSS selector of an Element) to be used as a point or reference for the Pane to be placed next to. Defers to an x,y point specification.
     @type {Element|String}*/
-    this.relativeElement = null;
+    this.relativeElement = undefined;
 
     /**Boolean. Whether or not the cursor should be used as the relative point to position the Pane at if being called from an MouseEvent event handler.
     @type {Boolean} */
-    this.useCursor = false;
+    this.useCursor = undefined;
 };
 
 /**Enum set for orientations of a Pane relative to a point or element. Any combination of left/right and top/bottom is valid.
@@ -8377,27 +8380,27 @@ EVUI.Modules.Panes.PaneAnchors = function ()
 {
     /**Object. The Element (or CSS selector of the Element) above the Pane whose bottom edge will be the boundary of the top of the Pane.
     @type {Element|String}*/
-    this.top = null;
+    this.top = undefined;
 
     /**Object. The Element (or CSS selector of the Element) to the Left of the Pane whose right edge will be the boundary of the left side of the Pane.
     @type {Element|String}*/
-    this.left = null;    
+    this.left = undefined;    
 
     /**Object. The Element (or CSS selector of the Element) below the Pane whose top edge will be the boundary for the bottom side of the Pane.
     @type {Element|String}*/
-    this.bottom = null;    
+    this.bottom = undefined;    
 
     /**Object. The Element (or CSS selector of the Element) to the right of the Pane whose left edge will be the boundary for the right side of the Pane.
     @type {Element|String}*/
-    this.right = null;   
+    this.right = undefined;   
 
     /**The alignment to give the X axis when it is not anchored explicitly to a left or right element. Must be a value from EVUI.Modules.Pane.PopInAnchorAlignment.
     @type {String}*/
-    this.alignX = EVUI.Modules.Panes.AnchorAlignment.Elastic;
+    this.alignX = undefined;
 
     /**The alignment to give the Y axis when it is not anchored explicitly to a top or bottom element. Must be a value from EVUI.Modules.Pane.PopInAnchorAlignment.
     @type {String}*/
-    this.alignY = EVUI.Modules.Panes.AnchorAlignment.Elastic;
+    this.alignY = undefined;
 };
 
 /**Controls the alignment along the X or Y axis when it would otherwise be ambiguous when only anchored to elements on the opposite axis.
@@ -8584,7 +8587,7 @@ EVUI.Modules.Panes.PaneResizeMoveSettings = function ()
 
     /**Number. The width in pixels of the margin around the edges of the Pane's root element that will be the clickable zone for triggering a resize operation (in pixels). 15 by default.
     @type {Numner}*/
-    this.dragHanldeMargin = 15;
+    this.dragHandleMargin = 15;
 
     /**Boolean. Whether or not the dimensions of any resized elements in a Pane will be restored to their original size when the Pane is hidden. True by default.
     @type {Boolean}*/
