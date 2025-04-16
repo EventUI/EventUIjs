@@ -258,7 +258,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         this.httpManager = null;
 
         /**Object. The HtmlLoaderController used by the PaneManager to load and inject HTML partials.
-        @type {EVUI.Modules.HtmlLoader.HtmlLoader}*/
+        @type {EVUI.Modules.HtmlLoader.HtmlLoaderController}*/
         this.htmlLoader = null;
 
         /**Object. The StylesheetManager used by the PaneManager to do runtime CSS manipulation.
@@ -2721,6 +2721,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                     context.propertyName === "loadAsync" ||
                     context.propertyName === "unload" ||
                     context.propertyName === "unloadAsync" ||
+                    context.propertyName === "move" ||
+                    context.propertyName === "moveAsync" ||
+                    context.propertyName === "resize" ||
+                    context.propertyName === "resizeAsync" ||
                     context.propertyName === "getCurrentPosition" ||
                     context.propertyName === "getCurrentZIndex")
                 {
@@ -7381,14 +7385,32 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 return callback(false);
             }
 
-            var contents = new EVUI.Modules.Dom.DomHelper(html);
+            var contents = new EVUI.Modules.Dom.DomHelper(html.trim());
             if (contents.elements.length === 0) //no element
             {
                 return callback(false);
             }
-            else if (contents.elements.length > 1) //too many elements, must be exactly one
+            else if (contents.elements.length > 1) //too many elements, must be exactly one - but see if we have any 'noise' elements surrounding our main element that we can ignore before failing
             {
-                return callback(false);
+                //walk the list of elements (which can actually be text nodes, comments, cdata, etc) and see how many actual ELEMENTS there are in the list. If there's exactly one, we're good - otherwise, fail.
+                var numElements = contents.elements.length;
+                var targetEle = null;
+                for (var x = 0; x < numElements; x++)
+                {
+                    var curEle = contents.elements[x];
+                    if (curEle.nodeType === Node.ELEMENT_NODE)
+                    {
+                        if (targetEle != null) return callback(false); //second element found, fail.    
+                        targetEle = curEle;
+                    }
+                }
+
+                //didn't find a valid element, fail
+                if (targetEle == null) return callback(false);
+
+                //found exactly one element, all good
+                entry.link.pane.element = targetEle;
+                return callback(true);
             }
             else
             {
@@ -7410,9 +7432,24 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 return callback(false);
             }
-            else if (placeholderLoadResult.loadedContent.length > 1) //too many elements
+            else if (placeholderLoadResult.loadedContent.length > 1) //too many elements - but see if we have any 'noise' elements surrounding our main element that we can ignore before failing
             {
-                return callback(false);
+                var targetEle = null;
+                var numPlaceholderContent = placeholderLoadResult.loadedContent.length;
+                for (var x = 0; x < numPlaceholderContent; x++)
+                {
+                    var curElement = placeholderLoadResult.loadedContent[x];
+                    if (curElement.nodeType === Node.ELEMENT_NODE)
+                    {
+                        if (targetEle != null) return callback(false); //second element found, fail.
+                        targetEle = curElement;
+                    }
+                }
+
+                if (targetEle == null) return callback(false); //no valid element found, fail.
+
+                entry.link.pane.element = targetEle;
+                return callback(true);
             }
             else
             {
@@ -8297,40 +8334,6 @@ EVUI.Modules.Panes.PaneRelativePosition = function ()
     @type {Boolean} */
     this.useCursor = false;
 };
-
-/**Object for describing how the Pane will recalculate its position.
-@class*/
-EVUI.Modules.Panes.PaneRecalcSettings = function ()
-{
-    /**String. Controls how the Pane will recalculate itself in response to the browser pane resizing. Must be a value from PaneResizeResponseMode.
-    @type {String}*/
-    this.paneResizeResponse = EVUI.Modules.Panes.PaneResizeResponseMode.None;
-
-    /**Boolean. Whether or not the position of the Pane should be continuously recalculated based on a set interval. Beware of performance implications when using this option.
-    @type {Boolean}*/
-    this.poll = false;
-
-    /**Number. The number of milliseconds to wait between each recalculation of the Pane's position. Shorter intervals come at a higher performance penalty.
-    @type {Number}*/
-    this.pollInterval = 150;
-
-    /**Object. The transition to apply when the Pane is resized or moved.
-    @type {EVUI.Modules.Panes.PaneTransition}*/
-    this.recalcTransition = null;
-};
-
-/**Controls how the Pane will recalculate itself in response to the browser pane resizing.
-@ennum*/
-EVUI.Modules.Panes.PaneResizeResponseMode =
-{
-    /**The Pane will not resize in response to the browser pane resizing.*/
-    None: "none",
-    /**The Pane will resize in response to the browser pane resizing on every triggering of the event.*/
-    RealTime: "realtime",
-    /**The Pane will resize in response to the browser pane resizing after a short delay once the browser has stopped resizing.*/
-    OnComplete: "oncomplete"
-};
-Object.freeze(EVUI.Modules.Panes.PaneResizeResponseMode)
 
 /**Enum set for orientations of a Pane relative to a point or element. Any combination of left/right and top/bottom is valid.
 @enum*/
