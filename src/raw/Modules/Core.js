@@ -33,7 +33,7 @@ EVUI.Modules.Core.Settings.stepsBetweenWaits = 250;
 
 /**Number. When positioning a Pane (or Pane-driven) UI component, this is the minimum Z-Index to use to start setting the z-indexes at. 100 by default.
 @type {Number}*/
-EVUI.Modules.Core.Settings.defaultMinimumZIndex = 100;
+EVUI.Modules.Core.Settings.defaultMinimumZIndex = 1075;
 
 /**Constants table for the Core module.*/
 EVUI.Modules.Core.Constants = {};
@@ -1732,45 +1732,6 @@ EVUI.Modules.Core.Utils.shallowExtend = function (target, source, filter)
 $evui.extend = function (target, source, filter)
 {
     return EVUI.Modules.Core.Utils.shallowExtend(target, source, filter);
-};
-
-/**Utility function for returning a new, fresh object or extending the properties of a partial object onto an existing or fresh object.
-@param {Object} newObj The freshly constructed object with no modifications.
-@param {Object} existingObj The existing object that may need to be modified.
-@param {Object} modifiedObj The object or partial object that represents the modifications to apply to the new or existing objects.
-@param {EVUI.Constants.Utils.Fn_ExtendPropertyFilter|String[]} filter An optional filter function used to filter out properties from the source to extend onto the target, return false to filter the property. Or an array of property names to not extend onto the target object.
-@returns {Object} */
-EVUI.Modules.Core.Utils.makeOrExtendObject = function (newObj, existingObj, modifiedObj, filter)
-{
-    if (existingObj == null)
-    {
-        if (modifiedObj == null)
-        {
-            return newObj;
-        }
-        else
-        {
-            return EVUI.Modules.Core.Utils.shallowExtend(newObj, modifiedObj, filter);
-        }
-    }
-    else
-    {
-        if (modifiedObj == null)
-        {
-            return existingObj;
-        }
-        else
-        {
-            if (existingObj instanceof newObj.constructor)
-            {
-                return EVUI.Modules.Core.Utils.shallowExtend(existingObj, modifiedObj);
-            }
-            else
-            {
-                return EVUI.Modules.Core.Utils.shallowExtend(newObj, modifiedObj);
-            }
-        }
-    }
 };
 
 /**An awaitable function that waits a given amount of time in milliseconds.
