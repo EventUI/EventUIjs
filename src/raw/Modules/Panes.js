@@ -5614,6 +5614,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             if (ele.elements.length === 0 || ele.elements[0].isConnected === false) return null;
 
             positionBounds = ele.offset();
+            positionBounds.right = positionBounds.left + ele.outerWidth();
+            positionBounds.bottom = positionBounds.top + ele.outerHeight();
         }
         else
         {
@@ -6116,6 +6118,29 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var shiftedY = false;
         var delta = 0;
         var relativePositioned = position.mode === EVUI.Modules.Panes.PaneShowMode.RelativePosition;
+        var relativeElementBounds = null;
+        if (relativePositioned === true)
+        {
+            if (EVUI.Modules.Core.Utils.isElement(resolvedShowArgs.relativePosition.relativeElement))
+            {
+                var relEleHelper = new EVUI.Modules.Dom.DomHelper(resolvedShowArgs.relativePosition.relativeElement);
+                relativeElementBounds = relEleHelper.offset();
+                relativeElementBounds.right = relativeElementBounds.left + relEleHelper.outerWidth();
+                relativeElementBounds.bottom = relativeElementBounds.top + relEleHelper.outerHeight();
+            }
+            else if (typeof resolvedShowArgs.relativePosition.left === "number" && typeof resolvedShowArgs.relativePosition.top === "number")
+            {
+                relativeElementBounds = new EVUI.Modules.Dom.ElementBounds();
+                relativeElementBounds.left = resolvedShowArgs.relativePosition.left;
+                relativeElementBounds.top = resolvedShowArgs.relativePosition.top;
+                relativeElementBounds.right = resolvedShowArgs.relativePosition.left;
+                relativeElementBounds.bottom = resolvedShowArgs.relativePosition.top;
+            }
+            else
+            {
+                relativeElementBounds = bounds;
+            }
+        }
 
         var positionCopy = EVUI.Modules.Core.Utils.shallowExtend({}, position);
         delete positionCopy.mode;
@@ -6130,7 +6155,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
             shiftedX = true;
 
-            if (relativePositioned === true && overlaps(position, bounds) === true)
+            if (relativePositioned === true && overlaps(position, relativeElementBounds) === true)
             {
                 return flipRelativePosition(entry, positionCopy, bounds, clipSettings, resolvedShowArgs, previousClipSettings);
             }
@@ -6146,7 +6171,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 position.left -= delta;
                 shiftedX = true;
 
-                if (relativePositioned === true && overlaps(position, bounds) === true)
+                if (relativePositioned === true && overlaps(position, relativeElementBounds) === true)
                 {
                     return flipRelativePosition(entry, positionCopy, bounds, clipSettings, resolvedShowArgs, previousClipSettings);
                 }
@@ -6161,7 +6186,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             position.bottom += delta;
             shiftedY = true;
 
-            if (relativePositioned === true && overlaps(position, bounds) === true)
+            if (relativePositioned === true && overlaps(position, relativeElementBounds) === true)
             {
                 return flipRelativePosition(entry, positionCopy, bounds, clipSettings, resolvedShowArgs, previousClipSettings);
             }
@@ -6177,7 +6202,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 position.top -= delta;
                 shiftedY = true;
 
-                if (relativePositioned === true && overlaps(position, bounds) === true)
+                if (relativePositioned === true && overlaps(position, relativeElementBounds) === true)
                 {
                     return flipRelativePosition(entry, positionCopy, bounds, clipSettings, resolvedShowArgs, previousClipSettings);
                 }
@@ -6234,6 +6259,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             if (ele.elements.length === 0 || ele.elements[0].isConnected === false) return null;
 
             eleBounds = ele.offset();
+            eleBounds.right = eleBounds.left + ele.outerWidth();
+            eleBounds.bottom = eleBounds.top + ele.outerHeight(); 
         }
         else
         {
