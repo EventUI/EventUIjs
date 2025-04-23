@@ -6838,6 +6838,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.Click, "click contextmenu", document, function (event)
             {
+                //if something has triggered a show of this pane before it gets to this point, don't cancel it with a hide
+                if (entry.link.currentOperation != null && entry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Show) return;
+
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.Click;
                 context.event = event;
@@ -6872,6 +6875,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.ExteriorClick, "click contextmenu", document, function (event)
             {
+                //if something has triggered a show of this pane before it gets to this point, don't cancel it with a hide
+                if (entry.link.currentOperation != null && entry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Show) return;
+
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.ExteriorClick;
                 context.event = event;
@@ -6911,6 +6917,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.GlobalClick, "click contextmenu", document, function (event)
             {
+                //if something has triggered a show of this pane before it gets to this point, don't cancel it with a hide
+                if (entry.link.currentOperation != null && entry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Show) return;
+
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.GlobalClick;
                 context.event = event;
