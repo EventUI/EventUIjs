@@ -3560,10 +3560,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 if (typeof opSession.entry.link.pane.onShow === "function")
                 {
                     opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
-
-                    var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
-                    opSession.entry.link.lastCalculatedPosition = position;
-
                     return opSession.entry.link.pane.onShow.call(this, eventArgs)
                 }
             }
@@ -3578,10 +3574,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 if (typeof _self.onShow === "function")
                 {
                     opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
-
-                    var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
-                    opSession.entry.link.lastCalculatedPosition = position;
-
                     return _self.onShow.call(_self, eventArgs)
                 }
             }
@@ -3738,9 +3730,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {PaneOperationSession} opSession The operation session driving the events.*/
     var addPositionSteps = function (eventStream, opSession)
     {
-        var positionObserver = null;
-        var showArgsObserver = null;
-
         eventStream.addStep({
             name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_InitialPosition,
             key: EVUI.Modules.Panes.Constants.Job_InitialPosition,
@@ -3748,7 +3737,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             handler: function (jobArgs)
             {
                 opSession.action = EVUI.Modules.Panes.PaneAction.Show;
-                opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
+                opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);                
 
                 var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
                 opSession.entry.link.lastCalculatedPosition = position;
@@ -3765,11 +3754,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 if (typeof opSession.entry.link.pane.onPosition === "function")
                 {
-                    opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
-
-                    var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
-                    opSession.entry.link.lastCalculatedPosition = position;
-
                     return opSession.entry.link.pane.onPosition.call(this, eventArgs)
                 }
             }
