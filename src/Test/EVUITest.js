@@ -1084,7 +1084,7 @@ EVUITest.TestHostArgs = function ()
 
 /**An object which runs simple tests on a constructor argument parameter.
 @param {Any} value The value to make an assertion operation on.
-@param {EVUITest.AssertionSettings} settings Optional arguments to feed into the Assertion.
+@param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} settings Optional arguments to feed into the Assertion.
 @class*/
 EVUITest.Assertion = function (value, settings)
 {
@@ -1241,7 +1241,7 @@ EVUITest.Assertion = function (value, settings)
     };
 
     /**Determines if two values are "equivalent" in that
-    1. If both are objects, at least one of their property values do not match regardless if the object references differ.
+    1. If both are objects, their property values match (excluding functions) regardless if the object references differ.
     
     Otherwise equivalence is based on strict ValueCompareOptions by default.
     @param {Any} b The value to compare against the Assertion's value.
@@ -1254,6 +1254,7 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.compareType = EVUITest.ValueCompareType.Equivalency;
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
+        defaultSettings.functionCompareType = EVUITest.FunctionCompareType.Ignore;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1262,8 +1263,8 @@ EVUITest.Assertion = function (value, settings)
     };
 
     /**Determines if two values are NOT "equivalent" in that:
-    1. If both are objects, at least one of their property values do not match regardless if the object references differ.
-    
+    1. If both are objects, at least one of their property values do not match (excluding functions) regardless if the object references differ.
+
     Otherwise equivalence is based on strict ValueCompareOptions by default.
     @param {Any} b The value to compare against the Assertion's value.
     @param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} compareOptions Optional. The options for the operation - can be a YOLO of any combination of ValueCompareOptions, AssertionLogOptions, or AssertionSettings.
@@ -1275,6 +1276,7 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.compareType = EVUITest.ValueCompareType.Equivalency;
         defaultSettings.shortCircuit = true;
         defaultSettings.ignoreReferences = true;
+        defaultSettings.functionCompareType = EVUITest.FunctionCompareType.Ignore;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1287,6 +1289,7 @@ EVUITest.Assertion = function (value, settings)
     2. If an object being compared is an array, the order of elements does not matter.
     3. If strings are being compared, their case does not matter.
     4. When objects are compared, mismatches in their child object's relative hierarchy are ignored as long as their property values match.
+    5. If both are objects, the functions attached to the objects are ignored.
 
     Otherwise, loose equality is used by default.
     @param {Any} b The value to compare against the Assertion's value.
@@ -1303,6 +1306,7 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.strictEquals = false;
         defaultSettings.ignoreCase = true;
         defaultSettings.ignoreRelativeReferences = true;
+        defaultSettings.functionCompareType = EVUITest.FunctionCompareType.Ignore;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1315,6 +1319,7 @@ EVUITest.Assertion = function (value, settings)
     2. If an object being compared is an array, the order of elements does not matter.
     3. If strings are being compared, their case does not matter.
     4. When objects are compared, mismatches in their child object's relative hierarchy are ignored as long as their property values match.
+    5. If both are objects, the functions attached to the objects are ignored.
 
     Otherwise, loose equality is used by default.
     @param {any} b The value to compare against the Assertion's value.
@@ -1331,6 +1336,7 @@ EVUITest.Assertion = function (value, settings)
         defaultSettings.strictEquals = false;
         defaultSettings.ignoreCase = true;
         defaultSettings.ignoreRelativeReferences = true;
+        defaultSettings.functionCompareType = EVUITest.FunctionCompareType.Ignore;
 
         var error = executeAssertion(b, compareOptions, defaultSettings);
         if (error != null) throw new Error(error.message);
@@ -1435,6 +1441,7 @@ EVUITest.Assertion = function (value, settings)
             if (typeof userSettings.recursive === "boolean") compareOptions.recursive = userSettings.recursive;
             if (typeof userSettings.shortCircuit === "boolean") compareOptions.shortCircuit = userSettings.shortCircuit;
             if (typeof userSettings.strictEquals === "boolean") compareOptions.strictEquals = userSettings.strictEquals;
+            if (typeof userSettings.functionCompareType === "string") compareOptions.functionCompareType = userSettings.functionCompareType;
         }
 
         if (typeof userSettings.logOptions === "object" && userSettings.logOptions != null)
@@ -2257,6 +2264,30 @@ EVUITest.ValueComparer = function ()
             if (b === undefined) b = null;
         }
 
+        var aFunc = typeof a === "function";
+        var bFunc = typeof b === "function";
+
+        if (aFunc === true || bFunc === true) 
+        {
+            if (context.options.functionCompareType === EVUITest.FunctionCompareType.Ignore) //if either is a function and we're ignoring function comparisons, just return true
+            {
+                return true;
+            }
+            else if (aFunc === true && bFunc === true) //if both are functions, see if their "value" (their string text) or reference are the same
+            {
+                if (context.options.functionCompareType === EVUITest.FunctionCompareType.Value)
+                {
+                    a = a.toString();
+                    b = b.toString();
+                }
+                else if (context.options.functionCompareType === EVUITest.FunctionCompareType.Reference)
+                {
+                    return a == b;
+                }
+            }
+        }
+        
+
         if (context.options.strictEquals === false)
         {
             return a == b;
@@ -2617,6 +2648,7 @@ EVUITest.ValueComparer = function ()
         var nullCheckOnly;
         var shortCircuit;
         var ignoreRelativeReferences;
+        var functionCompareType;
 
         //pull all the options off of the user's options object
         if (isObject(options) === true)
@@ -2631,6 +2663,7 @@ EVUITest.ValueComparer = function ()
             nullCheckOnly = options.nullCheckOnly;
             shortCircuit = options.shortCircuit;
             ignoreRelativeReferences - options.ignoreRelativeReferences;
+            functionCompareType = options.functionCompareType;
         }
         else
         {
@@ -2644,6 +2677,7 @@ EVUITest.ValueComparer = function ()
         if (typeof nullCheckOnly !== "boolean") nullCheckOnly = true;
         if (typeof shortCircuit !== "boolean") shortCircuit = true;
         if (typeof ignoreRelativeReferences !== "boolean") ignoreRelativeReferences = false;
+        
 
         if (Array.isArray(equalityComparers) === false) equalityComparers = [];
 
@@ -2670,18 +2704,21 @@ EVUITest.ValueComparer = function ()
             if (typeof strictEquals !== "boolean") strictEquals = true;
             if (typeof ignoreReferences !== "boolean") ignoreReferences = true;
             if (typeof ignoreOrder !== "boolean") ignoreOrder = false;
+            if (typeof functionCompareType !== "string") functionCompareType = EVUITest.FunctionCompareType.Ignore;
         }
         else if (compareType === EVUITest.ValueCompareType.Roughly)
         {
             if (typeof strictEquals !== "boolean") strictEquals = false;
             if (typeof ignoreReferences !== "boolean") ignoreReferences = true;
             if (typeof ignoreOrder !== "boolean") ignoreOrder = true;
+            if (typeof functionCompareType !== "string") functionCompareType = EVUITest.FunctionCompareType.Ignore;
         }
         else
         {
             if (typeof strictEquals !== "boolean") strictEquals = true;
             if (typeof ignoreReferences !== "boolean") ignoreReferences = false;
             if (typeof ignoreOrder !== "boolean") ignoreOrder = false;
+            if (typeof functionCompareType !== "string") functionCompareType = EVUITest.FunctionCompareType.Reference;
         }
 
         //populate the full options object with all the resolved values
@@ -2695,6 +2732,7 @@ EVUITest.ValueComparer = function ()
         options.nullCheckOnly = nullCheckOnly;
         options.shortCircuit = shortCircuit;
         options.ignoreRelativeReferences = ignoreRelativeReferences;
+        options.functionCompareType = functionCompareType;
 
         return options;
     };
@@ -2928,6 +2966,20 @@ EVUITest.ValueResultType =
     Predicate: "predicate"
 };
 
+/**Enum for determining how functions are determined to be equal (or ignored entirely) when comparing two objects.
+ @enum */
+EVUITest.FunctionCompareType =
+{
+    /**Default.*/
+    None: "none",
+    /**Functions will be ignored and will not be compared.*/
+    Ignore: "ignore",
+    /**Functions must be the same reference in order to be considered equal.*/
+    Reference: "reference",
+    /**Functions must either be the same reference or have the same .toString() value to be considered equal.*/
+    Value: "value"
+};
+
 /**The result of comparing two values.
 @class*/
 EVUITest.ValueCompareResult = function (parent)
@@ -3107,6 +3159,10 @@ EVUITest.ValueCompareOptions = function ()
     /**Boolean. Whether or not to stop the comparison process as soon as the first difference is found between two objects. True by default.
     @type {Boolean}*/
     this.shortCircuit = true;
+
+    /**String. The way in which functions should be compared in object graphs.
+    @type {String}*/
+    this.functionCompareType = EVUITest.FunctionCompareType.None;
 };
 
 /**A special default comparer designed to determine if two Nodes are equivalent (equivalent textContent, attributes, and/or childNodes).*/
@@ -3254,7 +3310,7 @@ EVUITest.ValueEqualityContext.prototype.assert = function (value, options)
 
 /**Creates an Assertion that can be used for unit testing values and objects against other values and objects.
 @param {Any} value The value to compare against.
-@param {EVUITest.AssertionSettings} settings Any non-default settings to apply to the assertion or its underlying comparison logic.
+@param {EVUITest.AssertionSettings|EVUITest.ValueCompareOptions|EVUITest.AssertionLogOptions} settings Any non-default settings to apply to the assertion or its underlying comparison logic.
 @returns {EVUITest.Assertion}*/
 $evui.assert = function (value, settings)
 {
