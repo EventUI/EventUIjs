@@ -1,4 +1,4 @@
-/**Copyright (c) 2025 Richard H Stannard
+﻿/**Copyright (c) 2025 Richard H Stannard
  * 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.*/
@@ -6837,7 +6837,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var hookUpAutoCloseMode = function (entry, resolvedShowArgs)
     {
         if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
-        var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
+        var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings, resolvedShowArgs.autoHideSettings);
 
         if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.Click) //a click anywhere will close the Pane
         {
