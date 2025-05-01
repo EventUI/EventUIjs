@@ -8,8 +8,32 @@ var argArray = [
     [null, undefined, true], //by default null and undefined are considered equal
     [null, null, true],
     [undefined, undefined, true]
-]
+];
 
+var SomeObj = function ()
+{
+    this.a = 1;
+    this.b = 2;
+
+    this.someFunction = function ()
+    {
+        console.log("asdf");
+    }
+};
+
+var functionCompareTypeArgs = function* ()
+{
+    var baseObj = new SomeObj();
+    var otherObj = new SomeObj();
+
+    yield [baseObj, otherObj, EVUITest.FunctionCompareType.Ignore, true];
+    yield [baseObj, otherObj, EVUITest.FunctionCompareType.Reference, false];
+    yield [baseObj, otherObj, EVUITest.FunctionCompareType.Value, true];
+    yield [baseObj, { ...baseObj }, EVUITest.FunctionCompareType.Reference, true];
+    yield [baseObj, { ...baseObj, someFunction: function () { } }, EVUITest.FunctionCompareType.Value, false];
+    yield [baseObj, { ...baseObj, someFunction: function () { } }, EVUITest.FunctionCompareType.Reference, false];
+    yield [baseObj, { ...baseObj, someFunction: function () { } }, EVUITest.FunctionCompareType.Ignore, true];
+}
 
 var argGenerator = function* ()
 {
@@ -101,6 +125,27 @@ $evui.testHost.runAsync({
         try
         {
             result = $evui.assert(a).is(b);
+            testArgs.outputWriter.logInfo(result.message);
+        }
+        catch (ex)
+        {
+            testArgs.outputWriter.logInfo(ex.message);
+            throw ex;
+        }
+    }
+});
+
+$evui.testHost.runAsync({
+    name: "Assertion - functionCompareType",
+    testArgs: functionCompareTypeArgs,
+    test: function (testArgs, a, b, compareType, valuesMatch)
+    {
+        testArgs.options.shouldFail = !valuesMatch;
+        var result = null;
+
+        try
+        {
+            result = $evui.assert(a, { functionCompareType: compareType }).isEquivalentTo(b);
             testArgs.outputWriter.logInfo(result.message);
         }
         catch (ex)

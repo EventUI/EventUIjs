@@ -438,7 +438,7 @@ EVUI.Modules.Dom.DomHelper = (function ()
 
         offset.left = bounds.left + window.scrollX;
         offset.top = bounds.top + window.scrollY;
-        offset.right = offset.left + bounds.width
+        offset.right = offset.left + bounds.width;
         offset.bottom = offset.top + bounds.height;
 
         element.style.display = inlinedDisplay;

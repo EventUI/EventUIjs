@@ -45,7 +45,7 @@
             canResizeLeft: true,
             canResizeRight: true,
             canResizeTop: true,
-            dragHanldeMargin: 20
+            dragHandleMargin: 20
         },
         onLoaded: function (paneArgs)
         {
