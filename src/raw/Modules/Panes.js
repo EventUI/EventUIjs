@@ -3560,10 +3560,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 if (typeof opSession.entry.link.pane.onShow === "function")
                 {
                     opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
-
-                    var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
-                    opSession.entry.link.lastCalculatedPosition = position;
-
                     return opSession.entry.link.pane.onShow.call(this, eventArgs)
                 }
             }
@@ -3578,10 +3574,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 if (typeof _self.onShow === "function")
                 {
                     opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
-
-                    var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
-                    opSession.entry.link.lastCalculatedPosition = position;
-
                     return _self.onShow.call(_self, eventArgs)
                 }
             }
@@ -3738,9 +3730,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {PaneOperationSession} opSession The operation session driving the events.*/
     var addPositionSteps = function (eventStream, opSession)
     {
-        var positionObserver = null;
-        var showArgsObserver = null;
-
         eventStream.addStep({
             name: EVUI.Modules.Panes.Constants.StepPrefix + "." + EVUI.Modules.Panes.Constants.Job_InitialPosition,
             key: EVUI.Modules.Panes.Constants.Job_InitialPosition,
@@ -3748,7 +3737,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             handler: function (jobArgs)
             {
                 opSession.action = EVUI.Modules.Panes.PaneAction.Show;
-                opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
+                opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);                
 
                 var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
                 opSession.entry.link.lastCalculatedPosition = position;
@@ -3765,11 +3754,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             {
                 if (typeof opSession.entry.link.pane.onPosition === "function")
                 {
-                    opSession.resolvedShowArgs = resolvePaneShowArgs(opSession.entry, opSession.userShowArgs);
-
-                    var position = getPosition(opSession.entry, opSession.resolvedShowArgs);
-                    opSession.entry.link.lastCalculatedPosition = position;
-
                     return opSession.entry.link.pane.onPosition.call(this, eventArgs)
                 }
             }
@@ -6838,6 +6822,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.Click, "click contextmenu", document, function (event)
             {
+                //if something has triggered a show of this pane before it gets to this point, don't cancel it with a hide
+                if (entry.link.currentOperation != null && entry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Show) return;
+
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.Click;
                 context.event = event;
@@ -6872,6 +6859,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.ExteriorClick, "click contextmenu", document, function (event)
             {
+                //if something has triggered a show of this pane before it gets to this point, don't cancel it with a hide
+                if (entry.link.currentOperation != null && entry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Show) return;
+
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.ExteriorClick;
                 context.event = event;
@@ -6911,6 +6901,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             var handler = new EVUI.Modules.Panes.PaneEventBinding(EVUI.Modules.Panes.PaneHideMode.GlobalClick, "click contextmenu", document, function (event)
             {
+                //if something has triggered a show of this pane before it gets to this point, don't cancel it with a hide
+                if (entry.link.currentOperation != null && entry.link.currentOperation.action === EVUI.Modules.Panes.PaneAction.Show) return;
+
                 var context = new EVUI.Modules.Panes.PaneAutoTriggerContext();
                 context.triggerType = EVUI.Modules.Panes.PaneAutoTriggerType.GlobalClick;
                 context.event = event;
