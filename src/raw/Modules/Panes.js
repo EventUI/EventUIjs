@@ -6837,7 +6837,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var hookUpAutoCloseMode = function (entry, resolvedShowArgs)
     {
         if (entry.link.pane.element == null || entry.link.pane.autoHideSettings == null) return;
-        var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings, resolvedShowArgs.autoHideSettings);
+        var autoHideSettings = resolveAutoHideSettings(entry.link.pane.autoHideSettings);
 
         if (autoHideSettings.hideMode === EVUI.Modules.Panes.PaneHideMode.Click) //a click anywhere will close the Pane
         {
