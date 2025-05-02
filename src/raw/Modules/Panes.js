@@ -2892,11 +2892,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {InternalPaneEntry[]} visiblePanes All the panes that are currently visible
     @returns {Boolean}*/
     let isDescendent = function (child, parent, visiblePanes) {
-        if (child.link.currentOperation == null || child.link.currentOperation.resolvedShowArgs == null || child.link.currentOperation.resolvedShowArgs.relativePosition == null) {
-            return false;
-        }
-
-        let relativeElement = child.link.currentOperation.resolvedShowArgs.relativePosition.relativeElement;
+        let relativeElement = child.link?.currentOperation?.resolvedShowArgs?.relativePosition?.relativeElement || child?.link?.lastResolvedShowArgs?.relativePosition?.relativeElement;
+        if (relativeElement == null) return false;
+        
         if (parent.link.pane.element.contains(relativeElement)) return true;
 
         for (let i = 0; i < visiblePanes.length; i++) {
