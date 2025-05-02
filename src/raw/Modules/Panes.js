@@ -5772,11 +5772,16 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     var getOrientationAlignment = function (relativeSettings)
     {
         var orientations = (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(relativeSettings.orientation) == false) ? relativeSettings.orientation.toLowerCase().trim().split(/\s+/) : ["right", "bottom"];
+        
         var xOrientation = (getRelativeOrientationAxis(orientations[0]) === "x") ? orientations[0] : orientations[1];
-        if (xOrientation == null) xOrientation = EVUI.Modules.Panes.RelativePositionOrientation.Right;
+        if (xOrientation !== EVUI.Modules.Panes.RelativePositionOrientation.Right && xOrientation !== EVUI.Modules.Panes.RelativePositionOrientation.Left) {
+            xOrientation = EVUI.Modules.Panes.RelativePositionOrientation.Right;
+        }
 
         var yOrientation = (getRelativeOrientationAxis(orientations[1]) === "y") ? orientations[1] : orientations[0];
-        if (yOrientation == null) yOrientation = EVUI.Modules.Panes.RelativePositionOrientation.Bottom;
+        if (yOrientation !== EVUI.Modules.Panes.RelativePositionOrientation.Bottom && yOrientation !== EVUI.Modules.Panes.RelativePositionOrientation.Top) {
+            yOrientation = EVUI.Modules.Panes.RelativePositionOrientation.Bottom;
+        }
 
         return { xOrientation: xOrientation, yOrientation: yOrientation };
     };
