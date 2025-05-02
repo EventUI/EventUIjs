@@ -7,7 +7,7 @@ if ($evui == null) $evui = {};
 
 /**Root namespace for the EventUI Test library.
 @namespace*/
-EVUITest = {};
+EVUITest = {}; 
 
 /**Constants table for the EventUI Test library.
 @static*/
