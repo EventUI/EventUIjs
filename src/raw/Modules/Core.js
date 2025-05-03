@@ -1045,7 +1045,7 @@ EVUI.Modules.Core.DeepExtenderOptions = function ()
     @type {EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter|String[]}*/
     this.filter = null;
 
-    /**An optional filter function used to filter out properties from the source to extend onto the target, return false to not extend the property onto the target object. Or an array of property names to not extend onto the target object.
+    /**An optional filter function used to filter out properties to not recurse deeper into the object hierarchy when found. Or an array of property names to not recurse into when found.
     @type {EVUI.Modules.Core.Constants.Fn_DeepExtendPropertyFilter}*/
     this.recursionFilter = null;
 };
