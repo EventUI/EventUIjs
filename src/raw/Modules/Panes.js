@@ -1256,11 +1256,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {EVUI.Modules.Panes.Pane|String} paneID Either a Pane object graph to make into a new Pane, an existing Pane, or the string ID of the Pane to load.
     @param {EVUI.Modules.Panes.PaneLoadArgs} paneLoadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead.
     @returns {Promise<Boolean>}*/
-    this.loadPaneAsync = function (paneOrID, paneLoadArgs)
+    this.loadPaneAsync = function (paneID, paneLoadArgs)
     {
         return new Promise(function (resolve, reject)
         {
-            _self.loadPane(paneOrID, paneLoadArgs, function (success)
+            _self.loadPane(paneID, paneLoadArgs, function (success)
             {
                 resolve(success);
             })
@@ -1300,8 +1300,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
         else if (EVUI.Modules.Core.Utils.isObject(paneID) === true)
         {
-            paneID = paneID.id;
-            paneEntry = getPaneEntry(paneID, false);
+            paneEntry = makeOrGetPane(paneID);
         }
 
         if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
@@ -1332,11 +1331,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {EVUI.Modules.Panes.Pane|String} paneID Either the string ID or the Pane reference of the Pane to unload.
     @param {EVUI.Modules.Panes.PaneUnloadArgs} paneUnloadArgs Optional. A PaneUnloadArgs object graph or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead.
     @returns {Promise<Boolean>}*/
-    this.unloadPaneAsync = function (paneOrID, paneUnloadArgs)
+    this.unloadPaneAsync = function (paneID, paneUnloadArgs)
     {
         return new Promise(function (resolve, reject)
         {
-            _self.unloadPane(paneOrID, paneUnloadArgs, function (success)
+            _self.unloadPane(paneID, paneUnloadArgs, function (success)
             {
                 resolve(success);
             });
@@ -2671,8 +2670,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var id = yoloPane.id;
         var existing = getInternalPaneEntry(id);
 
-        //found an existing pane, return it and we're done.
-        if (existing != null) return existing;
+        //found an existing pane, erxtend the parameters onto it, return it, and then we're done.
+        if (existing != null)
+        {
+            extendPane(existing.link.pane, yoloPane); //extend the properties of the pane with the yolo object passed in by the user
+            return existing;
+        }
 
         //we don't have an existing pane - make one based on the yolo passed in
         var internalEntry = new InternalPaneEntry();
@@ -2689,6 +2692,16 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         //add the pane to the internal list of panes so it can be used later
         _entries.push(internalEntry); 
 
+        extendPane(paneToExtend, yoloPane); //extend the properties of the pane with the yolo object passed in by the user
+        
+        return internalEntry;
+    };
+
+    /**Extends properties from a parameter Pane graph onto a real Pane object reference.
+    @param {EVUI.Modules.Panes.Pane} paneToExtend An actual Pane object to receive properties.
+    @param {EVUI.Modules.Panes.Pane} yoloPane A partial objecr graph of a pane to receive object properties.*/
+    var extendPane = function (paneToExtend, yoloPane)
+    {
         var deepExtendOptions = new EVUI.Modules.Core.DeepExtenderOptions();
         deepExtendOptions.recursionFilter = function (context)
         {
@@ -2703,7 +2716,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 return true;
             }
         };
-
         deepExtendOptions.filter = function (context)
         {
             //filter out all the read-only properties or any of the properties that rely on a closure to work
@@ -2737,13 +2749,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         };
 
         //get the graph of the default settings for a Pane based on the "template" property of the yolo
-        var defaultPane = getDefaultPane(yoloPane.template, internalEntry);
+        var defaultPane = getDefaultPane(yoloPane.template);
         EVUI.Modules.Core.Utils.deepExtend(paneToExtend, defaultPane);
-        
+
         //copy the properties of the safe copy of the yolo onto the real Pane
         EVUI.Modules.Core.Utils.deepExtend(paneToExtend, yoloPane, deepExtendOptions);
-        
-        return internalEntry;
     };
 
     /**Creates an object graph with the default settings for the given template type.
