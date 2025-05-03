@@ -353,6 +353,10 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**String. The rules of the style tag that were inlined on the root element on the Pane.
         @type {String}*/
         this.inlinedStyle = null;
+
+        /**String. The name of the template that the pane's properties were based off of.
+        @type {String}*/
+        this.template = null;
     };
 
 
@@ -2673,6 +2677,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         //found an existing pane, erxtend the parameters onto it, return it, and then we're done.
         if (existing != null)
         {
+            if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(yoloPane.template) === false) existing.link.template = yoloPane.template;
             extendPane(existing.link.pane, yoloPane); //extend the properties of the pane with the yolo object passed in by the user
             return existing;
         }
