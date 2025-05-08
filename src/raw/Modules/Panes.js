@@ -2892,7 +2892,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     @param {InternalPaneEntry[]} visiblePanes All the panes that are currently visible
     @returns {Boolean}*/
     let isDescendent = function (child, parent, visiblePanes) {
-        let relativeElement = child.link?.currentOperation?.resolvedShowArgs?.relativePosition?.relativeElement || child?.link?.lastResolvedShowArgs?.relativePosition?.relativeElement;
+        let relativeElement = child?.link?.lastResolvedShowArgs?.relativePosition?.relativeElement;
+        if (child.link?.currentOperation?.action === 'show') relativeElement = child.link?.currentOperation?.resolvedShowArgs?.relativePosition?.relativeElement
         if (relativeElement == null) return false;
         
         if (parent.link.pane.element.contains(relativeElement)) return true;
@@ -6465,14 +6466,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             r2 = bounds1;
         }
 
-        if (r2.top > r1.top && r2.top < r1.bottom) {
+        if (r2.top >= r1.top && r2.top <= r1.bottom && r2.bottom !== r1.top && r1.bottom !== r2.top) {
+            if (r2.left === r1.right || r2.right === r1.left) return false;
             //there is vertical overlap
             if (r1.left >= r2.left) {
                 //r2 is leftmost
-                return r1.left < r2.right;
+                return r1.left <= r2.right;
             } else {
                 //r1 is the leftmost
-                return r2.left < r1.right;
+                return r2.left <= r1.right;
             }
         } else {
             return false;
