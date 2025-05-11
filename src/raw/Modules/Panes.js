@@ -7956,7 +7956,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.load = function (loadArgs, callback)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.loadPane(_entry.paneId, loadArgs, callback);
+        return _entry.link.manager.loadPane(_entry.paneId, loadArgs, callback);
     };
 
     /**Awaitable. Asynchronously loads a Pane. 
@@ -7966,7 +7966,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.loadAsync = function (loadArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.loadPaneAsync(_entry.paneId, loadArgs);
+        return _entry.link.manager.loadPaneAsync(_entry.paneId, loadArgs);
     }
 
     /**Asynchronously unloads a Pane, which disconnects the Pane's element and removes it from the DOM if it was loaded remotely. Provides a callback that is called after the operation has completed successfully or otherwise.
@@ -7975,7 +7975,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.unload = function (unloadArgs, callback)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.unloadPane(_entry.paneId, unloadArgs, callback);
+        return _entry.link.manager.unloadPane(_entry.paneId, unloadArgs, callback);
     };
 
     /**Awaitable. Asynchronously unloads a Pane, which disconnects the Pane's element and removes it from the DOM if it was loaded remotely.
@@ -7984,7 +7984,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.unloadAsync = function (unloadArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.unloadPaneAsync(_entry.paneId, unloadArgs);
+        return _entry.link.manager.unloadPaneAsync(_entry.paneId, unloadArgs);
     };
 
     /**Asynchronously moves a currently visible pane to a new location.
@@ -7993,7 +7993,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.movePane = function (paneMoveArgs, callback)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.movePane(_entry.paneId, paneMoveArgs, callback);
+        return _entry.link.manager.movePane(_entry.paneId, paneMoveArgs, callback);
     };
 
     /**Awaitable. Asynchronously moves a currently visible pane to a new location.
@@ -8002,7 +8002,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.movePaneAsync = function (paneMoveArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.movePaneAsync(_entry.paneId, paneMoveArgs);
+        return _entry.link.manager.movePaneAsync(_entry.paneId, paneMoveArgs);
     };
 
     /**Asynchronously resizes a currently visible pane.
@@ -8011,7 +8011,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.resizePane = function (paneResizeArgs, callback)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.resizePane(_entry.paneId, paneResizeArgs, callback);
+        return _entry.link.manager.resizePane(_entry.paneId, paneResizeArgs, callback);
     };
 
     /**Awaitable. Asynchronously resizes a currently visible pane.
@@ -8019,7 +8019,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     this.resizePaneAsync = function (paneResizeArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
-        return options.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs);
+        return _entry.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs);
     };
 
     /**Calculates and gets the absolute position of the Pane.
