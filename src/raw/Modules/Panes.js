@@ -7160,6 +7160,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 downEvent.preventDefault();
                 downEvent.stopPropagation();
 
+                if (entry.link.lastResolvedShowArgs?.alwaysOnTop === true)
+                {
+                    setNextHighestZIndex(entry);
+                }
+
                 var dragHandler = function (dragEvent)
                 {
                     dragEvent.preventDefault();
@@ -7196,21 +7201,27 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var handler = new EVUI.Modules.Panes.PaneEventBinding(null, "mousedown", paneEntry.link.pane.element, function (eventArgs)
         {
             if (resolvedShowSettings != null && resolvedShowSettings.alwaysOnTop !== true) return;
-
-            var curZIndex = paneEntry.link.pane.getCurrentZIndex();
-            if (curZIndex >= EVUI.Modules.Panes.Constants.GlobalZIndex) return;
-
-            EVUI.Modules.Panes.Constants.GlobalZIndex++;
-
-            curZIndex = EVUI.Modules.Panes.Constants.GlobalZIndex;
-            var selector = "." + paneEntry.link.paneCSSName + "." + EVUI.Modules.Panes.Constants.CSS_Position;
-
-            _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
-            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, { zIndex: curZIndex });
+            setNextHighestZIndex(paneEntry);
         });
 
         handler.attach();
         paneEntry.link.eventBindings.push(handler);
+    };
+
+    /**Sets the Pane to have the highest Z-Index of all other panes so it is on top of the others.
+    @param {InternalPaneEntry} paneEntry The Pane to increment the Z-Index for.*/
+    var setNextHighestZIndex = function (paneEntry)
+    {
+        var curZIndex = paneEntry.link.pane.getCurrentZIndex();
+        if (curZIndex >= EVUI.Modules.Panes.Constants.GlobalZIndex) return;
+
+        EVUI.Modules.Panes.Constants.GlobalZIndex++;
+
+        curZIndex = EVUI.Modules.Panes.Constants.GlobalZIndex;
+        var selector = "." + paneEntry.link.paneCSSName + "." + EVUI.Modules.Panes.Constants.CSS_Position;
+
+        _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
+        _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, { zIndex: curZIndex });
     };
 
     /**Hooks up the resize event handler to the root Pane element.
@@ -7231,10 +7242,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             var startY = downEvent.clientY;
             entry.link.lastResizeArgs = null;           
 
-            var bounds = (entry.link.lastResolvedShowArgs.clipSettings != null && entry.link.lastResolvedShowArgs.clipSettings.mode === EVUI.Modules.Panes.PaneClipMode.Shift) ? getClipBounds(entry.link.lastResolvedShowArgs.clipSettings) : null;
-
             downEvent.preventDefault();
             downEvent.stopPropagation();
+
+            if (entry.link.lastResolvedShowArgs?.alwaysOnTop === true)
+            {
+                setNextHighestZIndex(entry);
+            }
 
             var dragHandler = function (dragEvent) //handler for handling mouse move events after the drag event has begun.
             {
@@ -7245,8 +7259,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 var yDelta = dragEvent.clientY - startY;
 
                 var resizeArgs = new EVUI.Modules.Panes.PaneResizeArgs();
-                //resizeArgs.height = (startPos.bottom - startPos.top);
-                //resizeArgs.width = (startPos.right - startPos.left);
                 resizeArgs.right = startPos.right;
                 resizeArgs.bottom = startPos.bottom;
                 resizeArgs.top = startPos.top;
@@ -7255,28 +7267,23 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
                 if (dragHandles.growX === "right")
                 {
-                    //resizeArgs.width += xDelta;
                     resizeArgs.right += xDelta;
                 }
                 else if (dragHandles.growX === "left")
                 {
-                    //resizeArgs.width -= xDelta;
                     resizeArgs.left += xDelta;
                 }
 
                 if (dragHandles.growY === "bottom")
                 {
-                    //resizeArgs.height += yDelta;
                     resizeArgs.bottom += yDelta;
                 }
                 else if (dragHandles.growY === "top")
                 {
-                    //resizeArgs.height -= yDelta; 
                     resizeArgs.top += yDelta;
                 }
 
                 _self.resizePane(entry.link.pane, resizeArgs);
-                //resizePane(entry, resizeArgs, paneRoot, dragHandles, bounds);
             };
 
             document.addEventListener("mousemove", dragHandler); //add the drag handler to the document
