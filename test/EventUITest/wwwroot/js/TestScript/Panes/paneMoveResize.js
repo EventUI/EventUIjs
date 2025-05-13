@@ -30,7 +30,8 @@
         {
             canResizeBottom: true,
             canResizeTop: true,
-            canDragMove: true
+            canDragMove: true,
+            retainResizedDimensions: true
         },
         autoHideSettings:
         {
