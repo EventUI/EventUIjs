@@ -7205,8 +7205,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             curZIndex = EVUI.Modules.Panes.Constants.GlobalZIndex;
             var selector = "." + paneEntry.link.paneCSSName + "." + EVUI.Modules.Panes.Constants.CSS_Position;
 
-            EVUI.Modules.Styles.Manager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
-            EVUI.Modules.Styles.Manager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, { zIndex: curZIndex });
+            _settings.stylesheetManager.ensureSheet(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, { lock: true });
+            _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, selector, { zIndex: curZIndex });
         });
 
         handler.attach();
