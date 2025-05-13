@@ -357,6 +357,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**String. The name of the template that the pane's properties were based off of.
         @type {String}*/
         this.template = null;
+
+        /**Number. The height of the Pane after is was resized by a user action or API call.
+        @type {Number}*/
+        this.resizedHeight = -1;
+
+        /**Number. The width of the Pane after it was resized by a user action or API call.
+        @type {Number}*/
+        this.resizedWidth = -1;
     };
 
 
@@ -1463,7 +1471,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         if (paneResizeArgs == null) //if we had no show args, make blank ones
         {
-            paneResizeArgs = new EVUI.Modules.Panes.PaneMoveArgs();
+            paneResizeArgs = new EVUI.Modules.Panes.PaneResizeArgs();
         }
 
         var opSession = new PaneOperationSession();
@@ -4771,8 +4779,34 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var style = ele.attr("style");
         if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === false && style !== "display: inline-block;" && style !== entry.link.inlinedStyle) return true;
 
-        var style = ele.attr("style", entry.link.inlinedStyle);
+        var inlinedStyle = entry.link.inlinedStyle;
 
+        //if we're retaining the resized dimensions of the pane, strip the height and with
+        if (entry.link.pane.resizeMoveSettings?.retainResizedDimensions === true)
+        {
+            //but only do this if we have an actual resized class created for the Pane, otherwise we leave it alone
+            var resizedStyle = _settings.stylesheetManager.getRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized));
+            if (resizedStyle.length > 0)
+            {
+                var heightIndex = inlinedStyle.toLowerCase().indexOf("height");
+                if (heightIndex > -1)
+                {
+                    var nextSemicolon = inlinedStyle.indexOf(";", heightIndex);
+                    inlinedStyle = inlinedStyle.substring(0, heightIndex) + inlinedStyle.substring(nextSemicolon + 1);
+                }
+
+                var widthIndex = inlinedStyle.toLowerCase().indexOf("width");
+                if (widthIndex > -1)
+                {
+                    var nextSemicolon = inlinedStyle.indexOf(";", widthIndex);
+                    inlinedStyle = inlinedStyle.substring(0, widthIndex) + inlinedStyle.substring(nextSemicolon + 1);
+                }
+
+                inlinedStyle = inlinedStyle.trim();
+            }
+        }
+
+        var style = ele.attr("style", inlinedStyle);
         return true;
     }
 
@@ -4783,10 +4817,31 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     {
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
+        var retainResizedDimensions = entry.link.pane.resizeMoveSettings != null && entry.link.pane.resizeMoveSettings.retainResizedDimensions === true;
 
         for (var x = 0; x < numClasses; x++)
         {
             if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+            if (retainResizedDimensions === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Resized)
+            {
+                //before doing anything, make sure the pane was actually resized first
+                var resizedSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Resized);
+                if (_settings.stylesheetManager.getRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, resizedSelector).length === 0) continue;
+
+                //if the pane was resized and has default dimensions, strip them from the style record so the resized size will apply the next time it is shown and will be accounted for in all the positioning calculations
+                var defaultSelector = getSelector(entry, EVUI.Modules.Panes.Constants.CSS_Pane_Style);
+                var defaultStyle = _settings.stylesheetManager.getRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, defaultSelector);
+                if (defaultStyle.length > 0)
+                { 
+                    //set the height and width to "null", which is the magic value for the CSS style sheet manager to delete a property from a rule
+                    defaultStyle[0].rules.height = "null";
+                    defaultStyle[0].rules.width = "null";
+
+                    _settings.stylesheetManager.setRules(EVUI.Modules.Styles.Constants.DefaultStyleSheetName, defaultStyle[0]);
+                }               
+
+                continue; //if keeping resized size, don't remove the resized class
+            }
 
             var selector = getSelector(entry, allClasses[x]);
             if (selector == null) continue;
@@ -4803,11 +4858,13 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var allClasses = getAllClassNames();
         var numClasses = allClasses.length;
         var existingClasses = [];
+        var retainResizedDimensions = entry.link.pane.resizeMoveSettings != null && entry.link.pane.resizeMoveSettings.retainResizedDimensions === true;
 
         var eh = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
         for (var x = 0; x < numClasses; x++)
         {
             if (keepInlinedDefaultStyle === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Pane_Style) continue; //don't remove the default style
+            if (retainResizedDimensions === true && allClasses[x] === EVUI.Modules.Panes.Constants.CSS_Resized) continue; //if keeping resized size, don't remove the resized class
 
             var curClass = allClasses[x];
             if (eh.hasClass(curClass) === true)
@@ -4859,7 +4916,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             EVUI.Modules.Panes.Constants.CSS_Flipped,
             EVUI.Modules.Panes.Constants.CSS_Transition_Show,
             EVUI.Modules.Panes.Constants.CSS_Transition_Hide,
-            EVUI.Modules.Panes.Constants.CSS_Transition_Adjust,
             EVUI.Modules.Panes.Constants.CSS_Resized,
             EVUI.Modules.Panes.Constants.CSS_Moved];
 
@@ -6717,11 +6773,14 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
 
+        entry.link.resizedHeight = resizeArgs.getResizedHeight()
+        entry.link.resizedWidth = resizeArgs.getResizedWidth()
+
         var rules = {};
 
         rules.position = "absolute";
-        rules.height = resizeArgs.getResizedHeight() + "px";
-        rules.width = resizeArgs.getResizedWidth() + "px";
+        rules.height = entry.link.resizedHeight + "px";
+        rules.width = entry.link.resizedWidth + "px";
         rules.top = resizeArgs.top + "px";
         rules.left = resizeArgs.left + "px";
 
@@ -8670,6 +8729,10 @@ EVUI.Modules.Panes.PaneResizeMoveSettings = function ()
     /**Object. The CSS transition that will be used when the pane is resmovedized.
     @type {EVUI.Modules.Panes.PaneTransition}*/
     this.moveTransition = null;
+
+    /**Boolean. Whether or not, a show operation following a resize operation will remember and set the height and width of the Pane to be the last resized dimensions.
+    @type {Boolean}*/
+    this.retainResizedDimensions = false;
 };
 
 /**Object for configuring a full-screen backdrop to be placed behind a Pane.
