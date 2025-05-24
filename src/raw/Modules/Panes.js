@@ -326,19 +326,19 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {EVUI.Modules.Panes.PaneLoadArgs}*/
         this.lastResolvedLoadArgs = null;
 
-        /**Object. The last set of load settings used to load the Pane.
+        /**Object. The last set of hide arguments used to hide the Pane.
         @type {EVUI.Modules.Panes.PaneHideArgs}*/
         this.lastResolvedHideArgs = null;
 
-        /**Object. The last set of load settings used to load the Pane.
+        /**Object. The last set of unload arguments used to unload the Pane.
         @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
         this.lastResolvedUnloadArgs = null;
 
-        /**Object. The last set of load settings used to load the Pane.
+        /**Object. The last set of move arguments used to move the Pane.
         @type {EVUI.Modules.Panes.PaneMoveArgs}*/
         this.lastResolvedMoveArgs = null;
 
-        /**Object. The last set of load settings used to load the Pane.
+        /**Object. The last set of resize arguments used to resize the Pane.
         @type {EVUI.Modules.Panes.PaneResizeArgs}*/
         this.lastResolvedResizeArgs = null;
 
