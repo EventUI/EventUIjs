@@ -326,6 +326,22 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         @type {EVUI.Modules.Panes.PaneLoadArgs}*/
         this.lastResolvedLoadArgs = null;
 
+        /**Object. The last set of load settings used to load the Pane.
+        @type {EVUI.Modules.Panes.PaneHideArgs}*/
+        this.lastResolvedHideArgs = null;
+
+        /**Object. The last set of load settings used to load the Pane.
+        @type {EVUI.Modules.Panes.PaneUnloadArgs}*/
+        this.lastResolvedUnloadArgs = null;
+
+        /**Object. The last set of load settings used to load the Pane.
+        @type {EVUI.Modules.Panes.PaneMoveArgs}*/
+        this.lastResolvedMoveArgs = null;
+
+        /**Object. The last set of load settings used to load the Pane.
+        @type {EVUI.Modules.Panes.PaneResizeArgs}*/
+        this.lastResolvedResizeArgs = null;
+
         /**Object. The last used set of resize settings used to position the Pane.
         @type {EVUI.Modules.Panes.PaneResizeArgs}*/
         this.lastResizeArgs = null;
@@ -353,6 +369,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         /**String. The rules of the style tag that were inlined on the root element on the Pane.
         @type {String}*/
         this.inlinedStyle = null;
+
+        this.alteredInlinedStyle = null;
 
         /**String. The name of the template that the pane's properties were based off of.
         @type {String}*/
@@ -1023,7 +1041,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Shows a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
     @param {String|EVUI.Modules.Panes.Pane} paneID Either a Pane object graph to make into a new Pane, a real Pane reference, or the string ID of the Pane to show.
-    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneShowArgs Optional. A PaneShowArgs object graph or the callback. If omitted or passed a function, the Pane's existing show/load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} paneShowArgs Optional. A PaneShowArgs object graph or the callback. If omitted or passed a function, the Pane's existing show/load settings are used instead. If true is passed, the previous PaneShowArgs used for showing the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
     this.showPane = function (paneID, paneShowArgs, callback)
     {
@@ -1089,11 +1107,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             callback = paneShowArgs;
             paneShowArgs = null;
         }
+        else if (typeof paneShowArgs === "boolean" && paneShowArgs === true) //if we were passed true, use the last show args
+        {
+            paneShowArgs = paneEntry.link.lastResolvedShowArgs;
+        }
 
-        if (paneShowArgs == null) //if we had no show args, make blank ones
+        if (EVUI.Modules.Core.Utils.isObject(paneShowArgs) === false) //if we had no show args, make blank ones
         {
             paneShowArgs = new EVUI.Modules.Panes.PaneShowArgs();
-            paneShowArgs.loadArgs = new EVUI.Modules.Panes.PaneLoadArgs();
+            paneShowArgs.loadArgs = new EVUI.Modules.Panes.PaneLoadArgs();            
         }
 
         var opSession = new PaneOperationSession();
@@ -1110,7 +1132,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Awaitable. Shows a Pane asynchronously.
     @param {String|EVUI.Modules.Panes.Pane} paneID Either a Pane object graph to make into a new Pane, a real Pane reference, or the string ID of the Pane to show.
-    @param {EVUI.Modules.Panes.PaneShowArgs} paneShowArgs Optional. A PaneShowArgs object graph. If omitted the Pane's existing show/load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneShowArgs|Boolean} paneShowArgs Optional. A PaneShowArgs object graph or the callback. If omitted, the Pane's existing show/load settings are used instead. If true is passed, the previous PaneShowArgs used for showing the Pane are used.
     @returns {Promise<Boolean>}*/
     this.showPaneAsync = function (paneID, paneShowArgs)
     {
@@ -1125,7 +1147,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Hides a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
     @param {String|EVUI.Modules.Panes.Pane} paneID Either the ID of the Pane to hide or the Pane to hide.
-    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneHideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted or passed a function, the Pane's existing hide/unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} paneHideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted or passed a function, the Pane's existing hide/unload settings are used instead. If passed true, the previous PaneHideArgs used to hide the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
     this.hidePane = function (paneID, paneHideArgs, callback)
     {
@@ -1166,12 +1188,16 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             callback = paneHideArgs;
             paneHideArgs = null;
         }
+        else if (typeof paneHideArgs === "boolean" && paneHideArgs === true) //if we were passed true, use the last hide args
+        {
+            paneHideArgs = paneEntry.link.lastResolvedHideArgs;
+        }
 
-        if (paneHideArgs == null) //no args, make dummy ones
+        if (EVUI.Modules.Core.Utils.isObject(paneHideArgs) === false)
         {
             paneHideArgs = new EVUI.Modules.Panes.PaneHideArgs();
             paneHideArgs.unloadArgs = new EVUI.Modules.Panes.PaneUnloadArgs();
-        }
+        }        
 
         var opSession = new PaneOperationSession();
         opSession.entry = paneEntry;
@@ -1188,7 +1214,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Awaitable. Hides a Pane asynchronously.
     @param {String|EVUI.Modules.Panes.Pane} paneID Either the ID of the Pane to hide or the Pane to hide.
-    @param {EVUI.Modules.Panes.PaneHideArgs} paneHideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted, the Pane's existing hide/unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneHideArgs|Boolean} paneHideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted, the Pane's existing hide/unload settings are used instead.  If passed true, the previous PaneHideArgs used to hide the Pane are used.
     @returns {Promise<Boolean>}*/
     this.hidePaneAsync = function (paneID, paneHideArgs)
     {
@@ -1203,7 +1229,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Asynchronously loads a Pane. Provides a callback that is called after the operation has completed successfully or otherwise.
     @param {EVUI.Modules.Panes.Pane|String} paneID Either a Pane object graph to make into a new Pane, an existing Pane, or the string ID of the Pane to load.
-    @param {EVUI.Modules.Panes.PaneLoadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneLoadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneLoadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} paneLoadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead. If passed true, the previous PaneLoadArgs used to load the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.loadPane = function (paneID, paneLoadArgs, callback)
     {
@@ -1246,12 +1272,16 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         {
             callback = paneLoadArgs;
             paneLoadArgs = null;
-        }        
-
-        if (paneLoadArgs == null) //no load args - make a dummy
-        {
-            paneLoadArgs = new EVUI.Modules.Panes.PaneLoadArgs();           
         }
+        else if (typeof paneLoadArgs === "boolean" && paneLoadArgs === true) //if we were passed true, use the last load args
+        {
+            paneLoadArgs = paneEntry.link.lastResolvedLoadArgs;
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(paneLoadArgs) === false)
+        {
+            paneLoadArgs = new EVUI.Modules.Panes.PaneLoadArgs(); 
+        }                 
 
         var opSession = new PaneOperationSession();
         opSession.entry = paneEntry;
@@ -1266,7 +1296,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Awaitable. Asynchronously loads a Pane.
     @param {EVUI.Modules.Panes.Pane|String} paneID Either a Pane object graph to make into a new Pane, an existing Pane, or the string ID of the Pane to load.
-    @param {EVUI.Modules.Panes.PaneLoadArgs} paneLoadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneLoadArgs|Boolean} paneLoadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead. If passed true, the previous PaneLoadArgs used to load the Pane are used.
     @returns {Promise<Boolean>}*/
     this.loadPaneAsync = function (paneID, paneLoadArgs)
     {
@@ -1281,7 +1311,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Asynchronously unloads a Pane, which disconnects the Pane's element and removes it from the DOM if it was loaded remotely. Provides a callback that is called after the operation has completed successfully or otherwise.
     @param {EVUI.Modules.Panes.Pane|String} paneID Either the string ID or the Pane reference of the Pane to unload.
-    @param {EVUI.Modules.Panes.PaneUnloadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneUnloadArgs Optional. A PaneUnloadArgs object graph representing arguments for unloading a Pane or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneUnloadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} paneUnloadArgs Optional. A PaneUnloadArgs object graph representing arguments for unloading a Pane or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead. If passed true, the previous PaneUnloadArgs used to unload the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.unloadPane = function (paneID, paneUnloadArgs, callback)
     {
@@ -1322,11 +1352,15 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             callback = paneUnloadArgs;
             paneUnloadArgs = null;
         }
+        else if (typeof paneUnloadArgs === "boolean" && paneUnloadArgs === true) //if we were passed true, use the last unload args
+        {
+            paneUnloadArgs = paneEntry.link.lastResolvedUnloadArgs;
+        }
 
-        if (paneUnloadArgs == null)
+        if (EVUI.Modules.Core.Utils.isObject(paneUnloadArgs) === false)
         {
             paneUnloadArgs = new EVUI.Modules.Panes.PaneUnloadArgs();
-        }
+        }        
 
         var opSession = new PaneOperationSession();
         opSession.entry = paneEntry;
@@ -1341,7 +1375,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Awaitable. Asynchronously unloads a Pane, which disconnects the Pane's element and removes it from the DOM if it was loaded remotely.
     @param {EVUI.Modules.Panes.Pane|String} paneID Either the string ID or the Pane reference of the Pane to unload.
-    @param {EVUI.Modules.Panes.PaneUnloadArgs} paneUnloadArgs Optional. A PaneUnloadArgs object graph or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneUnloadArgs|Boolean} paneUnloadArgs Optional. A PaneUnloadArgs object graph or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead. If passed true, the previous PaneUnloadArgs used to unload the Pane are used.
     @returns {Promise<Boolean>}*/
     this.unloadPaneAsync = function (paneID, paneUnloadArgs)
     {
@@ -1356,23 +1390,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Asynchronously moves a currently visible pane to a new location.
     @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
-    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.PaneMoveArgs|Boolean} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane. If passed true, the previous PaneMoveArgs used to move the Pane are used (this includes drag operations).
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.movePane = function (paneID, paneMoveArgs, callback)
     {
         var paneEntry = null;
-
-        if (EVUI.Modules.Core.Utils.isObject(paneMoveArgs) === false)
-        {
-            throw Error("No move destination set.");
-        }
-        else
-        {
-            var hasTop = (typeof paneMoveArgs.top === "number");
-            var hasLeft = (typeof paneMoveArgs.left === "number");
-
-            if (hasTop === false && hasLeft === false) throw Error("Invalid move destination.");
-        }
 
         if (typeof paneID === "string") //showing based on ID
         {
@@ -1389,6 +1411,22 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
 
         if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
+
+        if (typeof paneMoveArgs === "boolean" && paneMoveArgs === true)
+        {
+            paneMoveArgs = paneEntry.link.lastResolvedMoveArgs;
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(paneMoveArgs) === false)
+        {
+            throw Error("No move destination set.");
+        }
+
+        var hasTop = (typeof paneMoveArgs.top === "number");
+        var hasLeft = (typeof paneMoveArgs.left === "number");
+
+        if (hasTop === false && hasLeft === false) throw Error("Invalid move destination. Requires a 'top' or 'left' property with a number value.");       
+
         if (paneEntry.link.pane.isVisible === false) throw Error("Pane must be visible to be moved.");
         if (paneEntry.link.currentOperation != null)
         {
@@ -1410,7 +1448,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Awaitable. Asynchronously moves a currently visible pane to a new location.
     @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to move.
-    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.PaneMoveArgs|Boolean} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane. If passed true, the previous PaneMoveArgs used to move the Pane are used (this includes drag operations).
     @returns {Promise<Boolean>}*/
     this.movePaneAsync = function (paneID, paneMoveArgs)
     {
@@ -1425,26 +1463,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Asynchronously resizes a currently visible pane.
     @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
-    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs|Boolean} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane. If passed true, the previous PaneResizeArgs used to resize the Pane are used (this includes drag operations).
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.resizePane = function (paneID, paneResizeArgs, callback)
     {
         var paneEntry = null;
-
-        if (EVUI.Modules.Core.Utils.isObject(paneResizeArgs) === false)
-        {
-            throw Error("Object expected - no resize dimensions set.");
-        }
-        else
-        {
-            var hasTop = (typeof paneResizeArgs.top === "number");
-            var hasLeft = (typeof paneResizeArgs.left === "number");
-            var hasBottom = typeof paneResizeArgs.bottom === "number";
-            var hasRight = typeof paneResizeArgs.right === "number";
-
-            if (hasTop === false && hasLeft === false && hasBottom === false && hasRight === false) throw Error("Invalid resize dimensions.");
-        }
-
         if (typeof paneID === "string") //showing based on ID
         {
             paneEntry = getInternalPaneEntry(paneID);
@@ -1460,6 +1483,27 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         }
 
         if (paneEntry == null) throw Error("No pane with an ID of " + paneID + " exists.");
+
+        if (typeof paneResizeArgs === "boolean" && paneResizeArgs === true) //if we were passed true, use the last resize args
+        {
+            paneResizeArgs = paneEntry.link.lastResolvedResizeArgs;
+        }
+
+        if (EVUI.Modules.Core.Utils.isObject(paneResizeArgs) === false)
+        {
+            throw Error("Object expected - no resize dimensions set.");
+        }
+        else
+        {
+            var hasTop = (typeof paneResizeArgs.top === "number");
+            var hasLeft = (typeof paneResizeArgs.left === "number");
+            var hasBottom = typeof paneResizeArgs.bottom === "number";
+            var hasRight = typeof paneResizeArgs.right === "number";
+
+            if (hasTop === false && hasLeft === false && hasBottom === false && hasRight === false) throw Error("Invalid resize dimensions. Must have a 'top', 'left', 'right', or 'bottom' property with a numeric value.");
+        }       
+
+       
         if (paneEntry.link.pane.isVisible === false) throw Error("Pane must be visible to be resized.");
         if (paneEntry.link.currentOperation != null)
         {
@@ -1469,10 +1513,6 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
             }
         }
 
-        if (paneResizeArgs == null) //if we had no show args, make blank ones
-        {
-            paneResizeArgs = new EVUI.Modules.Panes.PaneResizeArgs();
-        }
 
         var opSession = new PaneOperationSession();
         opSession.entry = paneEntry;
@@ -1486,7 +1526,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Awaitable. Asynchronously resizes a currently visible pane.
     @param {EVUI.Modules.Panes.Pane|String} paneID  Either the string ID or the Pane reference of the Pane to resize.
-    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
+    @param {EVUI.Modules.Panes.PaneResizeArgs|Boolean} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.  If passed true, the previous PaneResizeArgs used to resize the Pane are used (this includes drag operations).
+    @returns {Promise<Boolean>}*/
     this.resizePaneAsync = function (paneID, paneResizeArgs)
     {
         return new Promise(function (resolve)
@@ -3464,6 +3505,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 }
 
                 opSession.resolvedLoadArgs = resolvePaneLoadArgs(opSession.entry.link.pane.loadSettings, opSession.userLoadArgs);
+                opSession.entry.link.lastResolvedLoadArgs = opSession.resolvedLoadArgs;
 
                 if (opSession.resolvedLoadArgs.reload === true)
                 {
@@ -3694,6 +3736,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 if (EVUI.Modules.Core.Utils.hasFlag(opSession.entry.link.paneStateFlags, EVUI.Modules.Panes.PaneStateFlags.Visible) === false) return jobArgs.resolve();
 
                 opSession.resolvedHideArgs = resolvePaneHideArgs(opSession.entry, opSession.userHideArgs);
+                opSession.entry.link.lastResolvedHideArgs = opSession.resolvedHideArgs;
 
                 var rootHidden = false;
                 var transitionApplied = false;
@@ -3911,6 +3954,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
                 movePane(opSession.entry, opSession.userMoveArgs, helper, null, bounds, function ()
                 {
+                    opSession.entry.link.lastResolvedMoveArgs = opSession.resolvedMoveArgs;
                     jobArgs.resolve();
                 });
             }
@@ -3951,8 +3995,8 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
     };
 
     /**Adds the initialize sequence steps to the EventStream.
-@param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
-@param {PaneOperationSession} opSession The operation session driving the events.*/
+    @param {EVUI.Modules.EventStream.EventStream} eventStream The event stream to receive the events.
+    @param {PaneOperationSession} opSession The operation session driving the events.*/
     var addResizeSteps = function (eventStream, opSession)
     {
         eventStream.addStep({
@@ -4000,6 +4044,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
                 resizePane(opSession.entry, opSession.userResizeArgs, helper, null, bounds, function ()
                 {
+                    opSession.entry.link.lastResolvedResizeArgs = opSession.resolvedResizeArgs;
                     jobArgs.resolve();
                 });
             }
@@ -4137,7 +4182,9 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 
                 try
                 {
-                    opSession.resolvedUnloadArgs = resolvePaneUnloadArgs(opSession.entry, opSession.userUnloadArgs);                    
+                    opSession.resolvedUnloadArgs = resolvePaneUnloadArgs(opSession.entry, opSession.userUnloadArgs);       
+                    opSession.entry.link.lastResolvedUnloadArgs = opSession.resolvedUnloadArgs;
+
                     unloadRootElement(opSession.entry, opSession.entry.link.lastResolvedShowArgs);                    
                 }
                 catch (ex)
@@ -4777,7 +4824,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
         var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
 
         var style = ele.attr("style");
-        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === false && style !== "display: inline-block;" && style !== entry.link.inlinedStyle) return true;
+        if (EVUI.Modules.Core.Utils.stringIsNullOrWhitespace(style) === false && style !== "display: inline-block;" && style !== entry.link.alteredInlinedStyle) return true;
 
         var inlinedStyle = entry.link.inlinedStyle;
 
@@ -4803,7 +4850,12 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
                 }
 
                 inlinedStyle = inlinedStyle.trim();
+                entry.link.alteredInlinedStyle = inlinedStyle;
             }
+        }
+        else
+        {
+            entry.link.alteredInlinedStyle = null; //if we're not retaining the resized dimensions, we don't need to keep the altered inlined style
         }
 
         var style = ele.attr("style", inlinedStyle);
@@ -5144,6 +5196,11 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
         var position = new EVUI.Modules.Panes.PanePosition(mode);
         var ele = new EVUI.Modules.Dom.DomHelper(entry.link.pane.element);
+
+        if (entry.link.pane.resizeMoveSettings?.retainResizedDimensions === false && entry.link.pane.resizeMoveSettings?.restoreDefaultOnHide === true)
+        {
+            restoreInlinedStyle(entry); //if the pane is resized and we are restoring the default dimensions, restore the inlined style so we can measure it correctly.
+        }
 
         //get the position of the pane based on the detected display mode
         if (mode === EVUI.Modules.Panes.PaneShowMode.AbsolutePosition)
@@ -7981,7 +8038,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Shows a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
-    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} showArgs Optional. A PaneShowArgs object graph or the callback. If omitted or passed a function, the Pane's existing show/load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} showArgs Optional. A PaneShowArgs object graph or the callback. If omitted or passed a function, the Pane's existing show/load settings are used instead. If true is passed, the previous PaneShowArgs used for showing the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
     this.show = function (showArgs, callback)
     {
@@ -7990,7 +8047,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Awaitable. Shows a Pane asynchronously.
-    @param {EVUI.Modules.Panes.PaneShowArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} showArgs Optional. A PaneShowArgs object graph. If omitted, the Pane's existing show/load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneShowArgs|Boolean} showArgs Optional. A PaneShowArgs object graph. If omitted, the Pane's existing show/load settings are used instead. If true is passed, the previous PaneShowArgs used for showing the Pane are used.
     @returns {Promise<Boolean>}*/
     this.showAsync = function (showArgs)
     {
@@ -7999,7 +8056,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Hides a Pane asynchronously. Provides a callback that is called once the Pane operation has completed successfully or otherwise.
-    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} hideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted or passed a function, the Pane's existing hide/unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} hideArgs Optional. A PaneHideArgs object graph or a callback function. If omitted or passed a function, the Pane's existing hide/unload settings are used instead. If true is passed, the previous PaneHideArgs used for hiding the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback that is called once the operation completes.*/
     this.hide = function (hideArgs, callback)
     {
@@ -8008,7 +8065,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Awaitable. Hides a Pane asynchronously. 
-    @param {EVUI.Modules.Panes.PaneHideArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} hideArgs Optional. A PaneHideArgs object graph. If omitted, the Pane's existing hide/unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneHideArgs|Boolean} hideArgs Optional. A PaneHideArgs object graph. If omitted, the Pane's existing hide/unload settings are used instead. If true is passed, the previous PaneHideArgs used for hiding the Pane are used.
     @returns {Promise<Boolean>}*/
     this.hideAsync = function (hideArgs)
     {
@@ -8017,7 +8074,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Asynchronously loads a Pane. Provides a callback that is called after the operation has completed successfully or otherwise.
-    @param {EVUI.Modules.Panes.PaneLoadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} loadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead.
+    @param {EVUI.Modules.Panes.PaneLoadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} loadArgs Optional. A PaneLoadArgs object graph or a callback. If omitted or passed a function, the Pane's existing load settings are used instead. If true is passed, the previous PaneLoadArgs used for loading the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.load = function (loadArgs, callback)
     {
@@ -8026,8 +8083,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Awaitable. Asynchronously loads a Pane. 
-    @param {EVUI.Modules.Panes.PaneLoadArgs} loadArgs Optional. A PaneLoadArgs object graph. If omitted, the Pane's existing load settings are used instead.
-    @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.
+    @param {EVUI.Modules.Panes.PaneLoadArgs|Boolean} loadArgs Optional. A PaneLoadArgs object graph. If omitted, the Pane's existing load settings are used instead. If true is passed, the previous PaneLoadArgs used for loading the Pane are used.
     @returns {Promise<Boolean>}*/
     this.loadAsync = function (loadArgs)
     {
@@ -8036,7 +8092,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     }
 
     /**Asynchronously unloads a Pane, which disconnects the Pane's element and removes it from the DOM if it was loaded remotely. Provides a callback that is called after the operation has completed successfully or otherwise.
-    @param {EVUI.Modules.Panes.PaneUnloadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneUnloadArgs Optional. A PaneUnloadArgs object graph representing arguments for unloading a Pane or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneUnloadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback|Boolean} paneUnloadArgs Optional. A PaneUnloadArgs object graph representing arguments for unloading a Pane or a callback. If omitted or passed a function, the Pane's existing unload settings are used instead. If true is passed, the previous PaneUnloadArgs used for unloading the Pane are used.
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
     this.unload = function (unloadArgs, callback)
     {
@@ -8045,7 +8101,7 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Awaitable. Asynchronously unloads a Pane, which disconnects the Pane's element and removes it from the DOM if it was loaded remotely.
-    @param {EVUI.Modules.Panes.PaneUnloadArgs|EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} paneUnloadArgs Optional. A PaneUnloadArgs object graph representing arguments for unloading a Pane. If omitted, the Pane's existing unload settings are used instead.
+    @param {EVUI.Modules.Panes.PaneUnloadArgs|Boolean} paneUnloadArgs Optional. A PaneUnloadArgs object graph representing arguments for unloading a Pane. If omitted, the Pane's existing unload settings are used instead. If true is passed, the previous PaneUnloadArgs used for unloading the Pane are used.
     @returns {Promise<Boolean>}*/
     this.unloadAsync = function (unloadArgs)
     {
@@ -8054,35 +8110,36 @@ EVUI.Modules.Panes.Pane = function (entry)
     };
 
     /**Asynchronously moves a currently visible pane to a new location.
-    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.PaneMoveArgs|Boolean} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane. If true is passed, the previous PaneMoveArgs used for moving the Pane are used (this includes drag operations).
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
-    this.movePane = function (paneMoveArgs, callback)
+    this.move = function (paneMoveArgs, callback)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
         return _entry.link.manager.movePane(_entry.paneId, paneMoveArgs, callback);
     };
 
     /**Awaitable. Asynchronously moves a currently visible pane to a new location.
-    @param {EVUI.Modules.Panes.PaneMoveArgs} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane.
+    @param {EVUI.Modules.Panes.PaneMoveArgs|Boolean} paneMoveArgs A PaneMoveArgs object graph representing arguments for moving a Pane. If true is passed, the previous PaneMoveArgs used for moving the Pane are used (this includes drag operations).
     @returns {Promise<Boolean>}*/
-    this.movePaneAsync = function (paneMoveArgs)
+    this.moveAsync = function (paneMoveArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
         return _entry.link.manager.movePaneAsync(_entry.paneId, paneMoveArgs);
     };
 
     /**Asynchronously resizes a currently visible pane.
-    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.
+    @param {EVUI.Modules.Panes.PaneResizeArgs|Boolean} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane. If true is passed, the previous PaneResizeArgs used for resizing the Pane are used (this includes drag operations).
     @param {EVUI.Modules.Panes.Constants.Fn_PaneOperationCallback} callback Optional. A callback to call once the operation completes.*/
-    this.resizePane = function (paneResizeArgs, callback)
+    this.resize = function (paneResizeArgs, callback)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
         return _entry.link.manager.resizePane(_entry.paneId, paneResizeArgs, callback);
     };
 
     /**Awaitable. Asynchronously resizes a currently visible pane.
-    @param {EVUI.Modules.Panes.PaneResizeArgs} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane.*/
-    this.resizePaneAsync = function (paneResizeArgs)
+    @param {EVUI.Modules.Panes.PaneResizeArgs|Boolean} paneResizeArgs A PaneResizeArgs object graph representing arguments for resizing a Pane. If true is passed, the previous PaneResizeArgs used for moving the Pane are used (this includes drag operations).
+    @returns {Promise<Boolean>}*/
+    this.resizeAsync = function (paneResizeArgs)
     {
         if (_entry.link.removed === true) throw Error("Pane was removed from its PaneManager and cannot perform operations.");
         return _entry.link.manager.resizePaneAsync(_entry.paneId, paneResizeArgs);
