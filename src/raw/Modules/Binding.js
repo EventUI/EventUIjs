@@ -7801,7 +7801,7 @@ EVUI.Modules.Binding.Binding = function (handle)
         }
 
         EVUI.Modules.Core.Utils.shallowExtend(this, template, ["templateName"]);
-        _handle.templateName = templateName;
+        _handle.templateName = template.templateName;
 
         return true;
     };
