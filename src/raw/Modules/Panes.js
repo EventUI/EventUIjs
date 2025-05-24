@@ -2753,7 +2753,7 @@ EVUI.Modules.Panes.PaneManager = function (paneManagerServices)
 
     /**Extends properties from a parameter Pane graph onto a real Pane object reference.
     @param {EVUI.Modules.Panes.Pane} paneToExtend An actual Pane object to receive properties.
-    @param {EVUI.Modules.Panes.Pane} yoloPane A partial objecr graph of a pane to receive object properties.*/
+    @param {EVUI.Modules.Panes.Pane} yoloPane A partial object graph of a pane to receive object properties.*/
     var extendPane = function (paneToExtend, yoloPane)
     {
         var deepExtendOptions = new EVUI.Modules.Core.DeepExtenderOptions();
